@@ -86,7 +86,7 @@ configuration:
     description: Default entities used by HA-aware templates when printer-level list is empty.
   mqtt:
     name: MQTT Discovery
-    description: MQTT bridge for Home Assistant device/entity discovery and controls (defaults assume HA Mosquitto).
+    description: MQTT bridge for Home Assistant device/entity discovery and controls (defaults assume HA Mosquitto and Supervisor service metadata).
     fields:
       enabled:
         name: Enable MQTT

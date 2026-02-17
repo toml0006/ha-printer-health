@@ -92,6 +92,8 @@ If `printers` is empty, the add-on falls back to:
 
 Enable MQTT to expose each printer as a Home Assistant device with sensors and controls.
 By default, the add-on assumes the Home Assistant Mosquitto add-on (`core-mosquitto`).
+On Supervisor installs, it also queries the local MQTT service metadata and can auto-apply
+host/port/auth defaults when left unset.
 
 ```yaml
 mqtt:

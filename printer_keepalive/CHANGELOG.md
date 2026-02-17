@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5
+
+- Added Supervisor MQTT service defaults resolution at startup:
+  - Queries `http://supervisor/services/mqtt` when running under Supervisor.
+  - Auto-applies local broker host/port when MQTT host is unset/default.
+  - Auto-applies broker credentials when using the local Supervisor broker.
+- Bumped runtime/app metadata version to `0.3.5`.
+
 ## 0.3.4
 
 - Defaulted MQTT settings to assume Home Assistant's Mosquitto add-on:

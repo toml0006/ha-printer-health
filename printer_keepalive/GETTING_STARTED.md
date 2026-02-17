@@ -77,6 +77,8 @@ mqtt:
 ```
 
 Defaults already assume Home Assistant Mosquitto (`enabled: true`, `host: core-mosquitto`).
+On Supervisor installs, the add-on also reads `services/mqtt` and can auto-fill
+broker host/port/credentials when those values are not explicitly set.
 Set `username`/`password` if your broker requires authentication for this add-on.
 
 Then restart `Printer Keepalive`. New entities should appear automatically.

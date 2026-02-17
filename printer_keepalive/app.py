@@ -32,10 +32,11 @@ import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
-APP_VERSION = "0.3.4"
+APP_VERSION = "0.3.5"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 DEFAULT_SUPERVISOR_MQTT_HOST = "core-mosquitto"
+SUPERVISOR_API_BASE = "http://supervisor"
 
 OPTIONS_PATH = Path("/data/options.json")
 STATE_PATH = Path("/data/state.json")
@@ -197,6 +198,20 @@ def option_int(options: dict[str, Any], key: str, default: int, low: int, high: 
     return max(low, min(high, numeric))
 
 
+def bool_from_any(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value != 0
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return None
+
+
 def option_str_list(options: dict[str, Any], key: str) -> list[str]:
     value = options.get(key, [])
     if not isinstance(value, list):
@@ -221,6 +236,34 @@ def load_options() -> dict[str, Any]:
         return payload
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Invalid JSON in options file: {exc}") from exc
+
+
+def supervisor_token_env() -> str:
+    return os.environ.get("SUPERVISOR_TOKEN", "").strip()
+
+
+def supervisor_get_service(service: str) -> dict[str, Any] | None:
+    token = supervisor_token_env()
+    if not token:
+        return None
+
+    request = Request(f"{SUPERVISOR_API_BASE}/services/{quote(service, safe='')}")
+    request.add_header("Authorization", f"Bearer {token}")
+    request.add_header("Content-Type", "application/json")
+
+    try:
+        with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, ValueError) as exc:
+        log(f"Supervisor service request failed for {service}: {exc}")
+        return None
+
+    if isinstance(payload, dict):
+        data = payload.get("data")
+        if isinstance(data, dict):
+            return data
+        return payload
+    return None
 
 
 def default_cadence_for_type(printer_type: str) -> int:
@@ -403,17 +446,63 @@ def parse_mqtt_config(options: dict[str, Any]) -> MqttConfig:
     if enabled and not host and os.environ.get("SUPERVISOR_TOKEN", "").strip():
         host = DEFAULT_SUPERVISOR_MQTT_HOST
     port = option_int(mqtt_opts, "port", 1883, 1, 65535)
+    username = option_str(mqtt_opts, "username", "")
+    password = option_str(mqtt_opts, "password", "")
+    tls = option_bool(mqtt_opts, "tls", False)
+
+    if enabled:
+        mqtt_service = supervisor_get_service("mqtt")
+        if isinstance(mqtt_service, dict):
+            service_host = str(mqtt_service.get("host", "")).strip()
+            host_is_default = host in {"", DEFAULT_SUPERVISOR_MQTT_HOST}
+            applied_service_defaults = False
+
+            if host_is_default and service_host:
+                host = service_host
+                applied_service_defaults = True
+
+                service_port_raw = mqtt_service.get("port")
+                try:
+                    service_port = int(service_port_raw)
+                except (TypeError, ValueError):
+                    service_port = 0
+                if 1 <= service_port <= 65535:
+                    port = service_port
+                    applied_service_defaults = True
+
+                service_tls = bool_from_any(mqtt_service.get("ssl"))
+                protocol = str(mqtt_service.get("protocol", "")).strip().lower()
+                if service_tls is None and protocol in {"mqtts", "ssl", "tls"}:
+                    service_tls = True
+                if service_tls is True:
+                    tls = True
+                    applied_service_defaults = True
+
+            if service_host and host == service_host:
+                if not username:
+                    username = str(mqtt_service.get("username", "")).strip()
+                    if username:
+                        applied_service_defaults = True
+                if not password:
+                    password = str(mqtt_service.get("password", ""))
+                    if password:
+                        applied_service_defaults = True
+
+            if applied_service_defaults and host:
+                auth_label = "with auth" if username else "without auth"
+                tls_label = "tls" if tls else "no-tls"
+                log(f"Using Supervisor MQTT service defaults ({host}:{port}, {auth_label}, {tls_label}).")
 
     return MqttConfig(
         enabled=enabled and bool(host),
         host=host,
         port=port,
-        username=option_str(mqtt_opts, "username", ""),
-        password=option_str(mqtt_opts, "password", ""),
+        username=username,
+        password=password,
         discovery_prefix=option_str(mqtt_opts, "discovery_prefix", "homeassistant") or "homeassistant",
         topic_prefix=option_str(mqtt_opts, "topic_prefix", "printer_keepalive") or "printer_keepalive",
         retain=option_bool(mqtt_opts, "retain", True),
-        tls=option_bool(mqtt_opts, "tls", False),
+        tls=tls,
         client_id=option_str(mqtt_opts, "client_id", f"printer_keepalive_{os.getpid()}"),
     )
 
@@ -457,7 +546,7 @@ DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
 
 MQTT_CONFIG = parse_mqtt_config(OPTIONS)
 
-SUPERVISOR_TOKEN = os.environ.get("SUPERVISOR_TOKEN", "").strip()
+SUPERVISOR_TOKEN = supervisor_token_env()
 DEFAULT_SUPERVISOR_API_BASE = "http://supervisor/core/api"
 HASS_API_BASE = DEFAULT_SUPERVISOR_API_BASE
 HASS_AUTH_TOKEN = SUPERVISOR_TOKEN
