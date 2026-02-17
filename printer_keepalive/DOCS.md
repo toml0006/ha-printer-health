@@ -91,14 +91,15 @@ If `printers` is empty, the add-on falls back to:
 ### MQTT Discovery (for HA devices/entities)
 
 Enable MQTT to expose each printer as a Home Assistant device with sensors and controls.
+By default, the add-on assumes the Home Assistant Mosquitto add-on (`core-mosquitto`).
 
 ```yaml
 mqtt:
   enabled: true
-  host: 192.168.1.10
+  host: core-mosquitto
   port: 1883
-  username: homeassistant
-  password: your_password
+  username: ""
+  password: ""
   discovery_prefix: homeassistant
   topic_prefix: printer_keepalive
   retain: true

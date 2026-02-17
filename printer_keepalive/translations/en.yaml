@@ -86,14 +86,14 @@ configuration:
     description: Default entities used by HA-aware templates when printer-level list is empty.
   mqtt:
     name: MQTT Discovery
-    description: Optional MQTT bridge for Home Assistant device/entity discovery and controls.
+    description: MQTT bridge for Home Assistant device/entity discovery and controls (defaults assume HA Mosquitto).
     fields:
       enabled:
         name: Enable MQTT
-        description: Publish HA discovery and state topics for all configured printers.
+        description: Publish HA discovery and state topics for all configured printers. Enabled by default.
       host:
         name: MQTT Host
-        description: Broker hostname or IP address.
+        description: Broker hostname or IP address. Defaults to core-mosquitto on HA Supervisor.
       port:
         name: MQTT Port
         description: Broker port, usually 1883 or 8883.

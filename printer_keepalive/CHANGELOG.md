@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4
+
+- Defaulted MQTT settings to assume Home Assistant's Mosquitto add-on:
+  - `mqtt.enabled: true`
+  - `mqtt.host: core-mosquitto`
+- Added add-on service hint `mqtt:want` in metadata.
+- Added runtime fallback: when running under Supervisor with MQTT enabled and empty host, use `core-mosquitto`.
+
 ## 0.3.3
 
 - Fixed startup behavior when no printers are configured: the add-on now runs in discovery/API-only mode instead of crashing.

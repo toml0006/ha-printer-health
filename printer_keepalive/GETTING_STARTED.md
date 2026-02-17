@@ -65,16 +65,19 @@ To expose each printer as a Home Assistant device with sensors/controls, set:
 ```yaml
 mqtt:
   enabled: true
-  host: 192.168.1.10
+  host: core-mosquitto
   port: 1883
-  username: homeassistant
-  password: your_password
+  username: ""
+  password: ""
   discovery_prefix: homeassistant
   topic_prefix: printer_keepalive
   retain: true
   tls: false
   client_id: printer_keepalive
 ```
+
+Defaults already assume Home Assistant Mosquitto (`enabled: true`, `host: core-mosquitto`).
+Set `username`/`password` if your broker requires authentication for this add-on.
 
 Then restart `Printer Keepalive`. New entities should appear automatically.
 

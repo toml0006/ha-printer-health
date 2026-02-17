@@ -32,9 +32,10 @@ import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
-APP_VERSION = "0.3.3"
+APP_VERSION = "0.3.4"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
+DEFAULT_SUPERVISOR_MQTT_HOST = "core-mosquitto"
 
 OPTIONS_PATH = Path("/data/options.json")
 STATE_PATH = Path("/data/state.json")
@@ -397,8 +398,10 @@ def parse_mqtt_config(options: dict[str, Any]) -> MqttConfig:
     mqtt_block = options.get("mqtt")
     mqtt_opts = mqtt_block if isinstance(mqtt_block, dict) else {}
 
-    enabled = option_bool(mqtt_opts, "enabled", False)
+    enabled = option_bool(mqtt_opts, "enabled", True)
     host = option_str(mqtt_opts, "host", "")
+    if enabled and not host and os.environ.get("SUPERVISOR_TOKEN", "").strip():
+        host = DEFAULT_SUPERVISOR_MQTT_HOST
     port = option_int(mqtt_opts, "port", 1883, 1, 65535)
 
     return MqttConfig(
