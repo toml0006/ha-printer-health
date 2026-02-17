@@ -52,6 +52,7 @@ Referenced material:
 ### Recommended (`printers[]`)
 
 Use `printers` for multi-printer support.
+`printer_uri` should ideally be a full IPP/IPPS URI; bare host/IP values are auto-normalized.
 
 ```yaml
 printers:

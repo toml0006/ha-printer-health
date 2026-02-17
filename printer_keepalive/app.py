@@ -32,7 +32,7 @@ import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.3.3"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 
@@ -231,12 +231,58 @@ def default_cadence_for_type(printer_type: str) -> int:
     return DEFAULT_UNKNOWN_CADENCE_HOURS
 
 
+def normalize_printer_uri(raw_uri: str) -> str:
+    value = raw_uri.strip()
+    if not value:
+        return ""
+
+    if "://" not in value:
+        value = f"ipp://{value}"
+
+    parsed = urlparse(value)
+    scheme = parsed.scheme.lower()
+    if scheme == "http":
+        scheme = "ipp"
+    elif scheme == "https":
+        scheme = "ipps"
+    elif scheme not in {"ipp", "ipps"}:
+        scheme = "ipp"
+
+    host = parsed.hostname or ""
+    if not host:
+        return value
+
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+
+    host_for_uri = f"[{host}]" if ":" in host and not host.startswith("[") else host
+    netloc = f"{host_for_uri}:{port}" if port else host_for_uri
+
+    candidate = parsed.path.strip().strip("/")
+    if not candidate:
+        path = "/ipp/print"
+    else:
+        parts = [quote(part, safe="") for part in candidate.split("/") if part]
+        path = "/" + "/".join(parts) if parts else "/ipp/print"
+
+    normalized = f"{scheme}://{netloc}{path}"
+    if parsed.query:
+        normalized = f"{normalized}?{parsed.query}"
+    return normalized
+
+
 def parse_printer_entry(entry: dict[str, Any], index: int, defaults: dict[str, Any]) -> PrinterConfig | None:
-    printer_uri = option_str(entry, "printer_uri")
-    if not printer_uri:
+    printer_name = option_str(entry, "name", f"Printer {index + 1}")
+    raw_printer_uri = option_str(entry, "printer_uri")
+    if not raw_printer_uri:
         return None
 
-    printer_name = option_str(entry, "name", f"Printer {index + 1}")
+    printer_uri = normalize_printer_uri(raw_printer_uri)
+    if raw_printer_uri.strip() != printer_uri:
+        log(f"Normalized printer URI for {printer_name}: '{raw_printer_uri}' -> '{printer_uri}'")
+
     printer_id = slugify(option_str(entry, "id", printer_name))
     printer_type = option_str(entry, "printer_type", "inkjet").lower()
     if printer_type not in SUPPORTED_PRINTER_TYPES:
@@ -297,8 +343,11 @@ def parse_printers(options: dict[str, Any]) -> list[PrinterConfig]:
 
     # Backward compatibility for previous single-printer config.
     if not printers:
-        legacy_uri = option_str(options, "printer_uri")
-        if legacy_uri:
+        legacy_uri_raw = option_str(options, "printer_uri")
+        if legacy_uri_raw:
+            legacy_uri = normalize_printer_uri(legacy_uri_raw)
+            if legacy_uri_raw.strip() != legacy_uri:
+                log(f"Normalized legacy printer URI: '{legacy_uri_raw}' -> '{legacy_uri}'")
             template = option_str(options, "default_template", "home_summary").lower()
             if template not in SUPPORTED_TEMPLATES:
                 template = "home_summary"
@@ -369,7 +418,7 @@ def parse_mqtt_config(options: dict[str, Any]) -> MqttConfig:
 OPTIONS = load_options()
 PRINTERS = parse_printers(OPTIONS)
 if not PRINTERS:
-    raise RuntimeError("No printers configured. Set printers[] or legacy printer_uri option.")
+    log("No printers configured. Running in discovery/API-only mode until printers are added.")
 PRINTERS_BY_ID = {printer.printer_id: printer for printer in PRINTERS}
 
 AUTO_PRINT_ENABLED = option_bool(OPTIONS, "auto_print_enabled", True)

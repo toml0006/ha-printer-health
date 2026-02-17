@@ -13,6 +13,7 @@ This guide covers installing and running `Printer Keepalive` in Home Assistant.
 
 1. At least one reachable IPP or IPPS printer.
 2. Printer URI (example: `ipp://192.168.1.40/ipp/print`).
+   Bare host/IP values are accepted and auto-normalized (for example `192.168.1.40` -> `ipp://192.168.1.40/ipp/print`).
 3. Optional but recommended: MQTT broker for automatic device/entity creation.
 
 ## Home Assistant OS / Supervised (Add-on Install)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3
+
+- Fixed startup behavior when no printers are configured: the add-on now runs in discovery/API-only mode instead of crashing.
+- Added URI normalization for configured printers:
+  - Bare host/IP like `10.0.20.112` is normalized to `ipp://10.0.20.112/ipp/print`.
+  - `http://` and `https://` inputs are converted to `ipp://` and `ipps://`.
+- Synced app runtime version to `0.3.3`.
+
 ## 0.3.2
 
 - Fixed options schema so `entity_ids` is optional for each entry in `printers[]`.
