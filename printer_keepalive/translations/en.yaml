@@ -1,0 +1,129 @@
+configuration:
+  printers:
+    name: Printers
+    description: Multi-printer definitions. Add one item per printer to expose as a Home Assistant device.
+    fields:
+      id:
+        name: Printer ID
+        description: Optional stable ID (slug). If omitted, one is derived from the printer name.
+      name:
+        name: Printer Name
+        description: Friendly name shown in Home Assistant.
+      printer_uri:
+        name: Printer URI
+        description: IPP URI, for example ipp://192.168.1.50/ipp/print
+      printer_type:
+        name: Printer Type
+        description: Inkjet or laser. Used to provide maintenance guidance and sensible defaults.
+      enabled:
+        name: Keepalive Enabled
+        description: Whether this printer should participate in scheduled keepalive checks.
+      cadence_hours:
+        name: Cadence (Hours)
+        description: Number of hours between required prints before keepalive is considered due.
+      template:
+        name: Template
+        description: Default keepalive template for this printer.
+      weather_entity:
+        name: Weather Entity
+        description: Optional weather entity for weather-based templates.
+      entity_ids:
+        name: Entity IDs
+        description: Optional list of entity IDs used by HA-aware templates.
+      title:
+        name: Page Title
+        description: Optional per-printer page title override.
+      footer:
+        name: Page Footer
+        description: Optional per-printer page footer override.
+  printer_uri:
+    name: Legacy Printer URI
+    description: Backward-compatible single-printer URI when printers list is not configured.
+  printer_type:
+    name: Legacy Printer Type
+    description: Backward-compatible single-printer type.
+  default_template:
+    name: Default Template
+    description: Fallback template when printer-specific template is not set.
+  auto_print_enabled:
+    name: Enable Internal Scheduler
+    description: Automatically evaluate print history and print only when a keepalive page is due.
+  auto_print_interval_hours:
+    name: Legacy Interval (Hours)
+    description: Backward-compatible interval used for single-printer mode.
+  status_poll_interval_minutes:
+    name: Status Poll Interval (Minutes)
+    description: How often to refresh IPP status from each printer.
+  failure_retry_minutes:
+    name: Failure Cooldown (Minutes)
+    description: Minimum wait time before retrying automatic keepalive after a failed attempt.
+  discovery_enabled:
+    name: Enable Printer Discovery
+    description: Use mDNS/zeroconf to discover IPP/IPPS printers on the network.
+  discovery_interval_minutes:
+    name: Discovery Interval (Minutes)
+    description: How often the add-on refreshes discovered printer candidates in the background.
+  discovery_timeout_seconds:
+    name: Discovery Timeout (Seconds)
+    description: Time spent listening for mDNS printer advertisements per scan.
+  discovery_ipp_query_timeout_seconds:
+    name: Discovery IPP Query Timeout (Seconds)
+    description: Timeout per discovered printer when fetching make/model/state attributes.
+  discovery_include_ipps:
+    name: Include IPPS Discovery
+    description: Discover secure IPPS services in addition to standard IPP services.
+  title:
+    name: Default Page Title
+    description: Default page title used when printer-level title is not set.
+  footer:
+    name: Default Page Footer
+    description: Default page footer used when printer-level footer is not set.
+  weather_entity:
+    name: Default Weather Entity
+    description: Default weather entity used when printer-level weather entity is not set.
+  entity_ids:
+    name: Default Entity IDs
+    description: Default entities used by HA-aware templates when printer-level list is empty.
+  mqtt:
+    name: MQTT Discovery
+    description: Optional MQTT bridge for Home Assistant device/entity discovery and controls.
+    fields:
+      enabled:
+        name: Enable MQTT
+        description: Publish HA discovery and state topics for all configured printers.
+      host:
+        name: MQTT Host
+        description: Broker hostname or IP address.
+      port:
+        name: MQTT Port
+        description: Broker port, usually 1883 or 8883.
+      username:
+        name: MQTT Username
+        description: Optional username for broker authentication.
+      password:
+        name: MQTT Password
+        description: Optional password for broker authentication.
+      discovery_prefix:
+        name: Discovery Prefix
+        description: Usually homeassistant.
+      topic_prefix:
+        name: Topic Prefix
+        description: Base topic where this add-on publishes printer state and listens for commands.
+      retain:
+        name: Retain MQTT Messages
+        description: Retain discovery and state payloads on the broker.
+      tls:
+        name: Use TLS
+        description: Enable TLS for the MQTT connection.
+      client_id:
+        name: MQTT Client ID
+        description: Client identifier presented to the broker.
+  ha_url:
+    name: Home Assistant URL
+    description: Optional direct HA URL for non-Supervisor installs, for example http://homeassistant:8123.
+  ha_token:
+    name: Home Assistant Token
+    description: Optional long-lived access token for non-Supervisor installs.
+  auth_token:
+    name: API Auth Token
+    description: Optional bearer token required by API callers.

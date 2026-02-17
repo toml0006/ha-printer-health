@@ -1,0 +1,16 @@
+name: printer_keepalive_dev
+
+services:
+  printer_keepalive:
+    build:
+      context: ..
+    container_name: printer-keepalive-dev
+    environment:
+      - TZ=America/Los_Angeles
+      - HA_URL=http://host.docker.internal:8123
+    ports:
+      - "18099:8099"
+    volumes:
+      - ../app.py:/app/app.py
+      - ./data:/data
+    restart: unless-stopped

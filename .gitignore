@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+printer_keepalive/dev/data/options.json
+printer_keepalive/dev/data/state.json
