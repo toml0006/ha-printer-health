@@ -1,5 +1,5 @@
 name: "Printer Keepalive"
-version: "0.3.1"
+version: "0.3.2"
 slug: "printer_keepalive"
 description: "Multi-printer IPP keepalive printing with HA device discovery and IPP health telemetry."
 url: "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
@@ -56,7 +56,7 @@ schema:
       template: list(color_bars|home_summary|weather_snapshot|entity_report|hybrid)?
       weather_entity: str?
       entity_ids:
-        - str
+        - str?
       title: str?
       footer: str?
   printer_uri: str?
@@ -75,7 +75,7 @@ schema:
   footer: str?
   weather_entity: str?
   entity_ids:
-    - str
+    - str?
   mqtt:
     enabled: bool
     host: str?

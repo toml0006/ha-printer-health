@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Fixed options schema so `entity_ids` is optional for each entry in `printers[]`.
+- Fixed options schema so top-level `entity_ids` can be omitted.
+
 ## 0.3.1
 
 - Added printer discovery support using mDNS/zeroconf for `_ipp._tcp` and optional `_ipps._tcp`.
