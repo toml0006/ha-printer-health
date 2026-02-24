@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.3.8
+
+- Added ingress-first configuration workflow:
+  - New config editor in ingress that loads/saves `/data/options.json`.
+  - New restart action button in ingress for Supervisor add-on runtime.
+  - Ingress now supports managing full add-on configuration payload in one place.
+- Added configuration/restart API endpoints:
+  - `GET /config`
+  - `POST /config`
+  - `POST /actions/restart`
+- Bumped runtime/app metadata version to `0.3.8`.
+
+## 0.3.7
+
+- Added an ingress dashboard UI served by the add-on at `/` for in-HA management.
+  - Shows service overview and discovery status.
+  - Lists configured printers with controls for:
+    - `enabled`
+    - `cadence_hours`
+    - `template`
+    - print now (due-check or forced)
+    - poll now
+  - Supports discovery rescan from the UI.
+  - Supports optional bearer token entry (stored in browser local storage) for protected POST actions.
+- Enabled Home Assistant ingress metadata in add-on config:
+  - `ingress: true`
+  - `ingress_port: 8099`
+  - panel title/icon set for sidebar launch.
+- Bumped runtime/app metadata version to `0.3.7`.
+
+## 0.3.6
+
+- Added keepalive print context rendering on generated pages:
+  - trigger/source
+  - reason for print (due cadence vs manual/forced request)
+  - cadence and timing details
+  - printer-specific Home Assistant signal lines
+- Added QR code rendering on printed pages that links to add-on/docs URL.
+- Added `addon_page_url` option to explicitly control QR destination.
+  - Falls back to `<ha_url>/hassio/addon/printer_keepalive/info` when `ha_url` is set.
+  - Falls back to docs URL when no Home Assistant URL is available.
+- Fixed API `force` body parsing so string values like `"false"` no longer force a print.
+- Bumped runtime/app metadata version to `0.3.6`.
+
 ## 0.3.5
 
 - Added Supervisor MQTT service defaults resolution at startup:

@@ -21,24 +21,12 @@ This guide covers installing and running `Printer Keepalive` in Home Assistant.
 1. Add this repository in Home Assistant:
    `Settings -> Add-ons -> Add-on Store -> Repositories`.
 2. Install `Printer Keepalive`.
-3. Configure add-on options (minimum example):
-
-```yaml
-printers:
-  - id: office_printer
-    name: Office Printer
-    printer_uri: ipp://192.168.1.40/ipp/print
-    printer_type: inkjet
-    enabled: true
-    cadence_hours: 168
-    template: home_summary
-    entity_ids: []
-auto_print_enabled: true
-```
-
-4. Start the add-on.
-5. Open logs and confirm startup is clean.
-6. Trigger one print to validate connectivity:
+3. Start the add-on.
+4. Open logs and confirm startup is clean.
+5. Open the add-on UI (sidebar ingress).
+6. Use the **Configuration** editor in ingress to add your `printers[]` entries and other settings, then save.
+7. Restart from ingress (or restart the add-on manually) to apply configuration changes.
+8. Trigger one print to validate connectivity:
    - Use your existing HA script/REST command if configured, or call API:
      `POST /print?printer_id=office_printer&force=true`.
 

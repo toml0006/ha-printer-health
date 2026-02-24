@@ -141,6 +141,23 @@ For Home Assistant Container installs, set:
 
 If running as a Supervisor add-on, `SUPERVISOR_TOKEN` is used automatically.
 
+### Printed Context + QR Code
+
+Keepalive pages now include:
+
+- Trigger/source (`scheduler`, `api`, `mqtt`)
+- Why the page printed (due-by-cadence vs manual/forced request)
+- Cadence and last/next print timing context
+- Printer-specific Home Assistant signal lines (from configured `entity_ids`, then auto-matched entities)
+- QR code to open the add-on page URL
+
+Set `addon_page_url` to control the QR destination explicitly.
+If `addon_page_url` is not set and `ha_url` is set, the add-on uses:
+
+- `<ha_url>/hassio/addon/printer_keepalive/info`
+
+Otherwise it falls back to the project docs URL.
+
 ## Local Development (Docker Sidecar)
 
 This repo includes a local dev compose stack for the add-on.
@@ -200,8 +217,30 @@ Per printer, the add-on publishes:
 
 Health sensor attributes include richer IPP data and maintenance guidance.
 
+## Ingress Dashboard
+
+When installed as a Home Assistant add-on, open `Printer Keepalive` from the sidebar
+to use the built-in ingress dashboard.
+
+The dashboard provides:
+
+- Service overview and discovery summary
+- Full configuration editor (reads/writes `/data/options.json`)
+- Per-printer runtime settings controls (`enabled`, `cadence_hours`, `template`)
+- Per-printer actions (`print if needed`, `force print`, `poll now`)
+- Discovery rescan button
+- Restart action button (Supervisor add-on runtime)
+
+If `auth_token` is configured, enter it in the dashboard session field to enable POST actions.
+
 ## API
 
+- `GET /`
+  - Returns the HTML dashboard (used by ingress and direct browser access).
+- `GET /ui`
+  - Alias for the dashboard UI.
+- `GET /config`
+  - Returns current options payload from `/data/options.json` (auth-protected when `auth_token` is set).
 - `GET /health`
   - Global service state, all printer payloads, maintenance guidance.
 - `GET /printers`
@@ -228,6 +267,12 @@ Health sensor attributes include richer IPP data and maintenance guidance.
 - `POST /printers/<printer_id>/poll`
 - `POST /discovery/rescan`
   - Force discovery scan refresh.
+- `POST /config`
+  - Save add-on options to `/data/options.json`.
+  - Accepts either full options object body or `{ "options": { ... } }`.
+  - Changes are persisted but require restart to apply.
+- `POST /actions/restart`
+  - Requests self-restart via Supervisor API (available in add-on runtime).
 
 If `auth_token` is set, send:
 

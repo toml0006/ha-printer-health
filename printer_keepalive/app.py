@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from html import escape
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -32,9 +33,15 @@ import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
-APP_VERSION = "0.3.5"
+try:
+    import qrcode
+except ImportError:
+    qrcode = None
+
+APP_VERSION = "0.3.8"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
+ADDON_SLUG = "printer_keepalive"
 DEFAULT_SUPERVISOR_MQTT_HOST = "core-mosquitto"
 SUPERVISOR_API_BASE = "http://supervisor"
 
@@ -236,6 +243,62 @@ def load_options() -> dict[str, Any]:
         return payload
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Invalid JSON in options file: {exc}") from exc
+
+
+def save_options(payload: dict[str, Any]) -> None:
+    OPTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with OPTIONS_PATH.open("w", encoding="utf-8") as fp:
+        json.dump(payload, fp, indent=2, sort_keys=True)
+        fp.write("\n")
+
+
+def validate_options_payload(payload: dict[str, Any]) -> tuple[bool, str]:
+    try:
+        json.dumps(payload)
+    except (TypeError, ValueError) as exc:
+        return False, f"Options JSON is not serializable: {exc}"
+
+    try:
+        parse_printers(payload)
+    except Exception as exc:  # noqa: BLE001
+        return False, f"Invalid printer configuration: {exc}"
+
+    try:
+        parse_mqtt_config(payload)
+    except Exception as exc:  # noqa: BLE001
+        return False, f"Invalid MQTT configuration: {exc}"
+
+    return True, ""
+
+
+def supervisor_restart_self() -> tuple[bool, str]:
+    token = supervisor_token_env()
+    if not token:
+        return False, "Supervisor token not available; restart is only supported in Home Assistant add-on runtime."
+
+    request = Request(
+        f"{SUPERVISOR_API_BASE}/addons/self/restart",
+        data=b"{}",
+        method="POST",
+    )
+    request.add_header("Authorization", f"Bearer {token}")
+    request.add_header("Content-Type", "application/json")
+
+    try:
+        with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            if 200 <= status < 300:
+                return True, "Restart request accepted by Supervisor."
+            return False, f"Supervisor restart returned status {status}."
+    except HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", errors="ignore").strip()
+        except Exception:  # noqa: BLE001
+            body = ""
+        detail = f" ({body})" if body else ""
+        return False, f"Supervisor restart failed: HTTP {exc.code}{detail}"
+    except (URLError, TimeoutError, OSError) as exc:
+        return False, f"Supervisor restart failed: {exc}"
 
 
 def supervisor_token_env() -> str:
@@ -546,16 +609,23 @@ DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
 
 MQTT_CONFIG = parse_mqtt_config(OPTIONS)
 
+SELECTED_HA_URL = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
+SELECTED_HA_TOKEN = option_str(OPTIONS, "ha_token") or os.environ.get("HA_TOKEN", "").strip()
+
 SUPERVISOR_TOKEN = supervisor_token_env()
 DEFAULT_SUPERVISOR_API_BASE = "http://supervisor/core/api"
 HASS_API_BASE = DEFAULT_SUPERVISOR_API_BASE
 HASS_AUTH_TOKEN = SUPERVISOR_TOKEN
 if not HASS_AUTH_TOKEN:
-    selected_ha_url = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
-    selected_ha_token = option_str(OPTIONS, "ha_token") or os.environ.get("HA_TOKEN", "").strip()
-    if selected_ha_url:
-        HASS_API_BASE = f"{selected_ha_url.rstrip('/')}/api"
-        HASS_AUTH_TOKEN = selected_ha_token
+    if SELECTED_HA_URL:
+        HASS_API_BASE = f"{SELECTED_HA_URL.rstrip('/')}/api"
+        HASS_AUTH_TOKEN = SELECTED_HA_TOKEN
+
+ADDON_PAGE_URL = option_str(OPTIONS, "addon_page_url")
+if not ADDON_PAGE_URL and SELECTED_HA_URL:
+    ADDON_PAGE_URL = f"{SELECTED_HA_URL.rstrip('/')}/hassio/addon/{ADDON_SLUG}/info"
+if not ADDON_PAGE_URL:
+    ADDON_PAGE_URL = APP_URL
 
 
 DEFAULT_PRINTER_STATE: dict[str, Any] = {
@@ -787,7 +857,161 @@ def format_entity_line(state: dict[str, Any]) -> str:
     return f"{friendly_name}: {raw_state}{suffix}"
 
 
-def build_base_page(printer: PrinterConfig, template_name: str) -> tuple[Image.Image, ImageDraw.ImageDraw, int]:
+def _format_time_for_page(stamp: str) -> str:
+    parsed = parse_iso(stamp)
+    if parsed is None:
+        return "n/a"
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _sanitize_qr_url(raw_url: str) -> str:
+    candidate = raw_url.strip()
+    if not candidate:
+        return ""
+    parsed = urlparse(candidate)
+    if parsed.scheme not in {"http", "https"}:
+        return ""
+    return candidate
+
+
+def _draw_qr_code(image: Image.Image, draw: ImageDraw.ImageDraw, url: str) -> None:
+    if not url:
+        return
+
+    qr_size = 320
+    qr_left = PAGE_WIDTH - qr_size - 120
+    qr_top = 70
+
+    if qrcode is None:
+        draw.text((qr_left, qr_top), "QR dependency unavailable", font=FONT_SMALL, fill=(80, 80, 80))
+        draw.text((qr_left, qr_top + 40), url, font=FONT_SMALL, fill=(80, 80, 80))
+        return
+
+    try:
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(url)
+        qr.make(fit=True)
+        qr_image = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        qr_image = qr_image.resize((qr_size, qr_size))
+        image.paste(qr_image, (qr_left, qr_top))
+
+        draw.rectangle(
+            (qr_left - 5, qr_top - 5, qr_left + qr_size + 5, qr_top + qr_size + 5),
+            outline=(35, 35, 35),
+            width=3,
+        )
+        draw.text((qr_left, qr_top + qr_size + 12), "Open add-on page", font=FONT_SMALL, fill=(60, 60, 60))
+    except Exception as exc:  # noqa: BLE001
+        log(f"Unable to render QR code: {exc}")
+
+
+def collect_printer_context_lines(printer: PrinterConfig, limit: int = 6) -> list[str]:
+    if not SUPERVISOR_TOKEN and not SELECTED_HA_URL:
+        return []
+
+    states = fetch_all_states()
+    if not states:
+        return []
+
+    indexed = states_by_entity(states)
+    lines: list[str] = []
+    seen: set[str] = set()
+
+    for entity_id in printer.entity_ids:
+        if entity_id in seen:
+            continue
+        payload = indexed.get(entity_id)
+        lines.append(format_entity_line(payload) if payload else f"{entity_id}: unavailable")
+        seen.add(entity_id)
+        if len(lines) >= limit:
+            return lines
+
+    search_tokens: set[str] = set()
+    printer_name_slug = slugify(printer.name)
+    search_tokens.add(printer.printer_id.lower())
+    search_tokens.add(printer_name_slug.lower())
+    for token in re.split(r"[^a-zA-Z0-9]+", printer.name.lower()):
+        if len(token) >= 3:
+            search_tokens.add(token)
+
+    for state in states:
+        entity_id = state.get("entity_id")
+        if not isinstance(entity_id, str) or entity_id in seen:
+            continue
+        attrs = state.get("attributes", {})
+        if not isinstance(attrs, dict):
+            attrs = {}
+        friendly = str(attrs.get("friendly_name", ""))
+        haystack = f"{entity_id} {friendly}".lower()
+        if any(token and token in haystack for token in search_tokens):
+            lines.append(format_entity_line(state))
+            seen.add(entity_id)
+            if len(lines) >= limit:
+                break
+
+    return lines
+
+
+def draw_print_context(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    print_context: dict[str, Any],
+) -> int:
+    reason = str(print_context.get("reason", "")).strip()
+    trigger = str(print_context.get("trigger", "")).strip()
+    source = str(print_context.get("source", "")).strip()
+    cadence_hours = print_context.get("cadence_hours")
+    last_print_at = str(print_context.get("last_print_at", "")).strip()
+    next_due_at = str(print_context.get("next_due_at", "")).strip()
+
+    draw.text((120, y), "Keepalive Context", font=FONT_SECTION, fill=(25, 25, 25))
+    y += line_height(FONT_SECTION) + 10
+
+    context_lines = []
+    if trigger:
+        context_lines.append(f"Trigger: {trigger}")
+    if source:
+        context_lines.append(f"Source: {source}")
+    if cadence_hours is not None:
+        context_lines.append(f"Cadence: {cadence_hours}h")
+    if reason:
+        context_lines.append(f"Reason: {reason}")
+    if last_print_at:
+        context_lines.append(f"Last print seen: {_format_time_for_page(last_print_at)}")
+    if next_due_at:
+        context_lines.append(f"Next due at: {_format_time_for_page(next_due_at)}")
+
+    for line in context_lines:
+        y = draw_wrapped_text(draw, 120, y, line, FONT_BODY, (35, 35, 35), PAGE_WIDTH - 240)
+        y += 6
+
+    printer_signals = print_context.get("printer_signals")
+    if isinstance(printer_signals, list) and printer_signals:
+        y += 8
+        draw.text((120, y), "Home Assistant Printer Signals", font=FONT_SECTION, fill=(25, 25, 25))
+        y += line_height(FONT_SECTION) + 10
+        for raw_line in printer_signals[:6]:
+            text = str(raw_line).strip()
+            if not text:
+                continue
+            y = draw_wrapped_text(draw, 120, y, text, FONT_BODY, (35, 35, 35), PAGE_WIDTH - 240)
+            y += 6
+            if y > PAGE_HEIGHT - 280:
+                break
+
+    return y + 12
+
+
+def build_base_page(
+    printer: PrinterConfig,
+    template_name: str,
+    print_context: dict[str, Any] | None = None,
+) -> tuple[Image.Image, ImageDraw.ImageDraw, int]:
     image = Image.new("RGB", (PAGE_WIDTH, PAGE_HEIGHT), color=(255, 255, 255))
     draw = ImageDraw.Draw(image)
 
@@ -795,6 +1019,11 @@ def build_base_page(printer: PrinterConfig, template_name: str) -> tuple[Image.I
     draw.text((120, 160), f"Printer: {printer.name}", font=FONT_SMALL, fill=(70, 70, 70))
     draw.text((120, 195), f"Template: {template_name}", font=FONT_SMALL, fill=(70, 70, 70))
     draw.text((120, 230), f"Generated: {datetime.now().isoformat(timespec='seconds')}", font=FONT_SMALL, fill=(70, 70, 70))
+    draw.text((120, 265), f"Add-on: {ADDON_SLUG}", font=FONT_SMALL, fill=(70, 70, 70))
+
+    if print_context and isinstance(print_context, dict):
+        qr_url = _sanitize_qr_url(str(print_context.get("addon_page_url", "")))
+        _draw_qr_code(image, draw, qr_url)
 
     swatches = [
         (0, 255, 255),
@@ -834,7 +1063,11 @@ def build_base_page(printer: PrinterConfig, template_name: str) -> tuple[Image.I
         draw.line([(x, line_top), (x, line_top + 180)], fill=(80, 80, 80), width=1)
 
     draw.line([(120, line_top + 210), (PAGE_WIDTH - 120, line_top + 210)], fill=(190, 190, 190), width=3)
-    return image, draw, line_top + 250
+
+    y = line_top + 250
+    if print_context and isinstance(print_context, dict):
+        y = draw_print_context(draw, y, print_context)
+    return image, draw, y
 
 
 def draw_footer(draw: ImageDraw.ImageDraw, footer: str) -> None:
@@ -847,8 +1080,8 @@ def get_printer_entity_ids(printer: PrinterConfig, states: list[dict[str, Any]],
     return choose_default_entities(states, limit=limit)
 
 
-def build_color_bars_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str, Any]]:
-    image, draw, y = build_base_page(printer, "color_bars")
+def build_color_bars_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    image, draw, y = build_base_page(printer, "color_bars", print_context=print_context)
     draw.text((120, y), "Nozzles are being exercised with color and fine-line patterns.", font=FONT_SECTION, fill=(25, 25, 25))
     y += line_height(FONT_SECTION) + 18
     y = draw_wrapped_text(
@@ -866,8 +1099,8 @@ def build_color_bars_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str
     return image, {"template": "color_bars"}
 
 
-def build_entity_report_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str, Any]]:
-    image, draw, y = build_base_page(printer, "entity_report")
+def build_entity_report_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    image, draw, y = build_base_page(printer, "entity_report", print_context=print_context)
     draw.text((120, y), "Home Assistant Entity Report", font=FONT_SECTION, fill=(25, 25, 25))
     y += line_height(FONT_SECTION) + 24
 
@@ -902,8 +1135,8 @@ def build_entity_report_page(printer: PrinterConfig) -> tuple[Image.Image, dict[
     return image, {"template": "entity_report", "entities_rendered": rendered}
 
 
-def build_weather_snapshot_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str, Any]]:
-    image, draw, y = build_base_page(printer, "weather_snapshot")
+def build_weather_snapshot_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    image, draw, y = build_base_page(printer, "weather_snapshot", print_context=print_context)
     draw.text((120, y), "Weather Snapshot", font=FONT_SECTION, fill=(25, 25, 25))
     y += line_height(FONT_SECTION) + 24
 
@@ -963,8 +1196,8 @@ def build_weather_snapshot_page(printer: PrinterConfig) -> tuple[Image.Image, di
     }
 
 
-def build_home_summary_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str, Any]]:
-    image, draw, y = build_base_page(printer, "home_summary")
+def build_home_summary_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    image, draw, y = build_base_page(printer, "home_summary", print_context=print_context)
     draw.text((120, y), "Home Assistant Summary", font=FONT_SECTION, fill=(25, 25, 25))
     y += line_height(FONT_SECTION) + 20
 
@@ -1012,8 +1245,8 @@ def build_home_summary_page(printer: PrinterConfig) -> tuple[Image.Image, dict[s
     }
 
 
-def build_hybrid_page(printer: PrinterConfig) -> tuple[Image.Image, dict[str, Any]]:
-    image, draw, y = build_base_page(printer, "hybrid")
+def build_hybrid_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    image, draw, y = build_base_page(printer, "hybrid", print_context=print_context)
     draw.text((120, y), "Hybrid Summary (Weather + Entities)", font=FONT_SECTION, fill=(25, 25, 25))
     y += line_height(FONT_SECTION) + 20
 
@@ -1063,9 +1296,19 @@ TEMPLATE_BUILDERS = {
 }
 
 
-def generate_template_image(printer: PrinterConfig, template_name: str) -> tuple[str, dict[str, Any]]:
+def generate_template_image(
+    printer: PrinterConfig,
+    template_name: str,
+    print_context: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
     builder = TEMPLATE_BUILDERS.get(template_name, build_color_bars_page)
-    image, metadata = builder(printer)
+    image, metadata = builder(printer, print_context=print_context)
+    if print_context:
+        metadata["print_context"] = {
+            "trigger": str(print_context.get("trigger", "")),
+            "reason": str(print_context.get("reason", "")),
+            "addon_page_url": str(print_context.get("addon_page_url", "")),
+        }
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as handle:
         image.save(handle.name, format="JPEG", quality=95, optimize=True)
         return handle.name, metadata
@@ -1611,6 +1854,66 @@ def compute_need_for_keepalive(printer: PrinterConfig, state: dict[str, Any], no
     return now >= due_at, last_print_time, due_at
 
 
+def print_trigger_label(source: str) -> str:
+    normalized = source.strip().lower()
+    if normalized == "scheduler":
+        return "Automatic scheduler"
+    if normalized == "mqtt":
+        return "Home Assistant MQTT command"
+    if normalized == "api":
+        return "API request"
+    return normalized or "unknown"
+
+
+def describe_print_reason(
+    source: str,
+    only_if_needed: bool,
+    cadence_hours: int,
+    now: datetime,
+    last_print_time: datetime | None,
+    due_at: datetime | None,
+) -> str:
+    if only_if_needed:
+        if last_print_time is None:
+            return "No previous print history; keepalive requested."
+        elapsed_hours = (now - last_print_time).total_seconds() / 3600.0
+        if due_at is not None and now > due_at:
+            overdue_hours = (now - due_at).total_seconds() / 3600.0
+            return (
+                f"Keepalive was overdue by {overdue_hours:.1f}h "
+                f"({elapsed_hours:.1f}h since last print, cadence {cadence_hours}h)."
+            )
+        return f"Keepalive was due by cadence ({elapsed_hours:.1f}h since last print, cadence {cadence_hours}h)."
+
+    if source.strip().lower() == "mqtt":
+        return "Manual keepalive requested from Home Assistant MQTT control."
+    if source.strip().lower() == "api":
+        return "Manual keepalive requested from API with force enabled."
+    return "Manual keepalive requested."
+
+
+def build_print_context(
+    printer: PrinterConfig,
+    source: str,
+    only_if_needed: bool,
+    cadence_hours: int,
+    now: datetime,
+    last_print_time: datetime | None,
+    due_at: datetime | None,
+) -> dict[str, Any]:
+    return {
+        "source": source,
+        "trigger": print_trigger_label(source),
+        "reason": describe_print_reason(source, only_if_needed, cadence_hours, now, last_print_time, due_at),
+        "cadence_hours": cadence_hours,
+        "printed_at": iso_utc(now),
+        "last_print_at": iso_utc(last_print_time) if last_print_time else "",
+        "next_due_at": iso_utc(due_at) if due_at else "",
+        "addon_page_url": ADDON_PAGE_URL,
+        "printer_signals": collect_printer_context_lines(printer),
+    }
+
+
 def build_printer_payload(printer: PrinterConfig, now: datetime | None = None) -> dict[str, Any]:
     current = now or utc_now()
     with STATE_LOCK:
@@ -1744,11 +2047,15 @@ def run_keepalive_print(
     only_if_needed: bool = False,
 ) -> dict[str, Any]:
     now = utc_now()
+    cadence_hours = printer.cadence_hours
+    last_print_time: datetime | None = None
+    due_at: datetime | None = None
 
     with STATE_LOCK:
         state = ensure_printer_state_locked(printer.printer_id)
+        cadence_hours = effective_cadence_hours(printer, state)
         if only_if_needed:
-            needed, _, due_at = compute_need_for_keepalive(printer, state, now)
+            needed, last_print_time, due_at = compute_need_for_keepalive(printer, state, now)
             if not needed:
                 return {
                     "ok": True,
@@ -1788,12 +2095,24 @@ def run_keepalive_print(
                     "reason": f"Previous failure cooldown active ({FAILURE_RETRY_MINUTES} minutes).",
                     "printer": build_printer_payload(printer, now),
                 }
+        else:
+            _, last_print_time, due_at = compute_need_for_keepalive(printer, state, now)
+
+    print_context = build_print_context(
+        printer=printer,
+        source=source,
+        only_if_needed=only_if_needed,
+        cadence_hours=cadence_hours,
+        now=now,
+        last_print_time=last_print_time,
+        due_at=due_at,
+    )
 
     with PRINT_LOCK:
         image_path = ""
         metadata: dict[str, Any] = {}
         try:
-            image_path, metadata = generate_template_image(printer, template)
+            image_path, metadata = generate_template_image(printer, template, print_context=print_context)
             ok, details = submit_print_job(printer.printer_uri, image_path)
         except Exception as exc:  # noqa: BLE001
             ok = False
@@ -1828,6 +2147,8 @@ def run_keepalive_print(
         "source": source,
         "details": details,
         "metadata": metadata,
+        "reason": print_context.get("reason", ""),
+        "trigger": print_context.get("trigger", ""),
         "timestamp": iso_utc(now),
         "printer": payload,
     }
@@ -2401,10 +2722,788 @@ def global_payload() -> dict[str, Any]:
         "discovery": discovery_summary,
         "printer_count": len(printers),
         "supported_templates": list(SUPPORTED_TEMPLATES),
+        "auth_required": bool(AUTH_TOKEN),
+        "addon_page_url": ADDON_PAGE_URL,
         "maintenance_guidance": MAINTENANCE_GUIDANCE,
         "printers": printers,
         "timestamp": iso_utc(now),
     }
+
+
+def ui_dashboard_html() -> str:
+    template = r"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>__APP_NAME__</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #172032;
+      --muted: #5b6474;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --border: #d6dbe6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    header {
+      background: linear-gradient(135deg, #dbeafe, #e9f7ef);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      line-height: 1.2;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .toolbar-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .toolbar-item {
+      display: grid;
+      gap: 4px;
+      min-width: 220px;
+    }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    input[type="text"], input[type="password"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+    }
+    button {
+      border: 1px solid #0f766e33;
+      background: #ecfdf5;
+      color: #055e59;
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #d1fae5; }
+    button.secondary {
+      border-color: #1d4ed833;
+      background: #eff6ff;
+      color: #1e40af;
+    }
+    button.neutral {
+      border-color: #33415533;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+    button.danger {
+      border-color: #dc262633;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 8px 0;
+      min-height: 20px;
+    }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--accent); }
+    .kv {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px 14px;
+      font-size: 14px;
+    }
+    .kv b { color: var(--muted); font-weight: 600; }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 720px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      padding: 8px;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    .printer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 12px;
+    }
+    .printer-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+      display: grid;
+      gap: 10px;
+    }
+    .printer-header {
+      display: grid;
+      gap: 4px;
+    }
+    .printer-header h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+    .printer-meta {
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .printer-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 5px 10px;
+      font-size: 13px;
+    }
+    .printer-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .inline-status {
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .inline-status.error { color: var(--danger); }
+    .inline-status.ok { color: var(--accent); }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    #configEditor {
+      width: 100%;
+      min-height: 320px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      line-height: 1.4;
+      background: #f8fafc;
+      color: #0f172a;
+      resize: vertical;
+    }
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .footer a {
+      color: #1e40af;
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+    @media (max-width: 720px) {
+      h1 { font-size: 22px; }
+      .printer-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>__APP_NAME__</h1>
+      <p>Ingress dashboard for configuration, printer status, manual prints, and discovery rescans. Version __APP_VERSION__.</p>
+    </header>
+
+    <section class="panel">
+      <h2>Session</h2>
+      <div class="toolbar-row">
+        <div class="toolbar-item">
+          <label for="authTokenInput">API Token (optional)</label>
+          <input id="authTokenInput" type="password" placeholder="Bearer token for POST actions">
+        </div>
+        <button id="saveTokenBtn" class="neutral" type="button">Save Token</button>
+        <button id="clearTokenBtn" class="neutral" type="button">Clear Token</button>
+        <button id="refreshBtn" class="secondary" type="button">Refresh</button>
+      </div>
+      <div id="globalStatus" class="status">Ready.</div>
+      <div class="hint">If <code>auth_token</code> is configured in add-on options, enter it above to use POST actions.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Configuration</h2>
+      <div class="hint">This editor writes the add-on config file (<code>/data/options.json</code>). Save changes, then restart to apply.</div>
+      <div class="toolbar-row" style="margin: 10px 0;">
+        <button id="loadConfigBtn" class="neutral" type="button">Load Config</button>
+        <button id="saveConfigBtn" class="secondary" type="button">Save Config</button>
+        <button id="restartAddonBtn" class="danger" type="button">Restart Add-on</button>
+      </div>
+      <textarea id="configEditor" spellcheck="false" placeholder="{ &quot;printers&quot;: [] }"></textarea>
+      <div id="configStatus" class="status">Configuration editor ready.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Overview</h2>
+      <div id="overviewGrid" class="kv"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Discovery</h2>
+      <div class="toolbar-row">
+        <button id="rescanBtn" class="secondary" type="button">Run Discovery Rescan</button>
+      </div>
+      <div id="discoveryStatus" class="status"></div>
+      <div id="discoverySummary" class="kv" style="margin-bottom:10px;"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>URI</th>
+              <th>Type Guess</th>
+              <th>Reachable</th>
+              <th>Configured</th>
+            </tr>
+          </thead>
+          <tbody id="discoveryRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Printers</h2>
+      <div id="printersGrid" class="printer-grid"></div>
+    </section>
+
+    <section class="footer">
+      API endpoints remain available at <a href="health">health</a>, <a href="printers">printers</a>, and <a href="discovery">discovery</a>. Docs: <a href="__APP_URL__" target="_blank" rel="noopener">__APP_URL__</a>.
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      authToken: window.localStorage.getItem("pk_auth_token") || "",
+      refreshInFlight: false,
+      health: null,
+      configLoaded: false
+    };
+
+    const authInput = document.getElementById("authTokenInput");
+    const globalStatus = document.getElementById("globalStatus");
+    const discoveryStatus = document.getElementById("discoveryStatus");
+    const configStatus = document.getElementById("configStatus");
+    const configEditor = document.getElementById("configEditor");
+    authInput.value = state.authToken;
+
+    function apiPath(path) {
+      let pathname = window.location.pathname;
+      if (pathname.endsWith("/index.html")) {
+        pathname = pathname.slice(0, -("index.html".length));
+      }
+      if (!pathname.endsWith("/")) {
+        pathname += "/";
+      }
+      const base = window.location.origin + pathname;
+      const clean = String(path || "").replace(/^\/+/, "");
+      return new URL(clean, base).toString();
+    }
+
+    function setStatus(text, isError = false) {
+      globalStatus.textContent = text;
+      globalStatus.className = "status " + (isError ? "error" : "ok");
+    }
+
+    function setDiscoveryStatus(text, isError = false) {
+      discoveryStatus.textContent = text;
+      discoveryStatus.className = "status " + (isError ? "error" : "ok");
+    }
+
+    function setConfigStatus(text, isError = false) {
+      configStatus.textContent = text;
+      configStatus.className = "status " + (isError ? "error" : "ok");
+    }
+
+    function displayDate(value) {
+      if (!value) return "n/a";
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return String(value);
+      return parsed.toLocaleString();
+    }
+
+    async function requestJson(path, init = {}) {
+      const headers = Object.assign({}, init.headers || {});
+      if (init.body !== undefined && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      if (state.authToken) {
+        headers["Authorization"] = "Bearer " + state.authToken;
+      }
+
+      const response = await fetch(apiPath(path), Object.assign({}, init, { headers }));
+      const raw = await response.text();
+      let payload = {};
+
+      if (raw) {
+        try {
+          payload = JSON.parse(raw);
+        } catch (err) {
+          throw new Error("Invalid JSON response for " + path + " (" + response.status + ")");
+        }
+      }
+
+      if (!response.ok || (payload && payload.ok === false)) {
+        const message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + " " + response.statusText);
+        throw new Error(message);
+      }
+      return payload;
+    }
+
+    function makeKv(container, pairs) {
+      container.replaceChildren();
+      for (const pair of pairs) {
+        const row = document.createElement("div");
+        const key = document.createElement("b");
+        key.textContent = pair[0] + ": ";
+        const value = document.createElement("span");
+        value.textContent = pair[1];
+        row.appendChild(key);
+        row.appendChild(value);
+        container.appendChild(row);
+      }
+    }
+
+    function renderOverview(health) {
+      const discovery = health.discovery || {};
+      const rows = [
+        ["Version", String(health.version || "unknown")],
+        ["Timestamp", displayDate(health.timestamp)],
+        ["Printers", String(health.printer_count || 0)],
+        ["Auto Print", health.auto_print_enabled ? "enabled" : "disabled"],
+        ["MQTT Bridge", health.mqtt_enabled ? "connected" : "offline/disabled"],
+        ["Discovery Enabled", discovery.enabled ? "yes" : "no"],
+        ["Auth Required", health.auth_required ? "yes" : "no"],
+        ["Add-on Page URL", String(health.addon_page_url || "n/a")]
+      ];
+      makeKv(document.getElementById("overviewGrid"), rows);
+    }
+
+    function renderDiscovery(payload) {
+      makeKv(document.getElementById("discoverySummary"), [
+        ["Enabled", payload.enabled ? "yes" : "no"],
+        ["Last Scan", displayDate(payload.last_scan_at)],
+        ["Scan Duration", String(payload.last_scan_duration_seconds || 0) + "s"],
+        ["Candidates", String(payload.printer_count || 0)],
+        ["Last Error", payload.last_error || "none"]
+      ]);
+
+      const tbody = document.getElementById("discoveryRows");
+      tbody.replaceChildren();
+
+      const items = Array.isArray(payload.printers) ? payload.printers : [];
+      for (const candidate of items) {
+        const tr = document.createElement("tr");
+        const cols = [
+          String(candidate.printer_name || candidate.service_name || "unknown"),
+          String(candidate.uri || ""),
+          String(candidate.printer_type_guess || "unknown"),
+          candidate.reachable ? "yes" : "no",
+          candidate.already_configured ? "yes" : "no"
+        ];
+        for (const col of cols) {
+          const td = document.createElement("td");
+          td.textContent = col;
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function inlineMessage(target, text, isError = false) {
+      target.textContent = text;
+      target.className = "inline-status " + (isError ? "error" : "ok");
+    }
+
+    function renderPrinters(health) {
+      const printers = Array.isArray(health.printers) ? health.printers : [];
+      const templates = Array.isArray(health.supported_templates) ? health.supported_templates : [];
+      const grid = document.getElementById("printersGrid");
+      grid.replaceChildren();
+
+      if (!printers.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No configured printers found. Use the Configuration editor to add printers.";
+        empty.className = "status";
+        grid.appendChild(empty);
+        return;
+      }
+
+      for (const printer of printers) {
+        const card = document.createElement("article");
+        card.className = "printer-card";
+
+        const header = document.createElement("div");
+        header.className = "printer-header";
+        const title = document.createElement("h3");
+        title.textContent = String(printer.name || printer.printer_id || "Printer");
+        const meta = document.createElement("div");
+        meta.className = "printer-meta";
+        meta.textContent = "ID: " + String(printer.printer_id || "") + " | URI: " + String(printer.printer_uri || "");
+        header.appendChild(title);
+        header.appendChild(meta);
+
+        const stats = document.createElement("div");
+        stats.className = "printer-stats";
+        const statPairs = [
+          ["Health", String(printer.health_status || "unknown")],
+          ["Printer State", String(printer.printer_state || "unknown")],
+          ["Keepalive Needed", printer.keepalive_needed ? "yes" : "no"],
+          ["Template", String(printer.template || "n/a")],
+          ["Cadence (h)", String(printer.cadence_hours || "n/a")],
+          ["Last Keepalive", displayDate(printer.last_keepalive_at)],
+          ["Last Print", displayDate(printer.last_print_at)],
+          ["Next Due", displayDate(printer.next_keepalive_due_at)]
+        ];
+        for (const pair of statPairs) {
+          const line = document.createElement("div");
+          line.textContent = pair[0] + ": " + pair[1];
+          stats.appendChild(line);
+        }
+
+        const controls = document.createElement("div");
+        controls.className = "toolbar-row";
+
+        const enabledWrap = document.createElement("div");
+        enabledWrap.className = "toolbar-item";
+        enabledWrap.style.minWidth = "120px";
+        const enabledLabel = document.createElement("label");
+        enabledLabel.textContent = "Enabled";
+        const enabledInput = document.createElement("input");
+        enabledInput.type = "checkbox";
+        enabledInput.checked = Boolean(printer.enabled);
+        enabledInput.style.width = "20px";
+        enabledInput.style.height = "20px";
+        enabledWrap.appendChild(enabledLabel);
+        enabledWrap.appendChild(enabledInput);
+
+        const cadenceWrap = document.createElement("div");
+        cadenceWrap.className = "toolbar-item";
+        cadenceWrap.style.minWidth = "140px";
+        const cadenceLabel = document.createElement("label");
+        cadenceLabel.textContent = "Cadence Hours";
+        const cadenceInput = document.createElement("input");
+        cadenceInput.type = "number";
+        cadenceInput.min = "1";
+        cadenceInput.max = "720";
+        cadenceInput.value = String(printer.cadence_hours || 168);
+        cadenceWrap.appendChild(cadenceLabel);
+        cadenceWrap.appendChild(cadenceInput);
+
+        const templateWrap = document.createElement("div");
+        templateWrap.className = "toolbar-item";
+        templateWrap.style.minWidth = "170px";
+        const templateLabel = document.createElement("label");
+        templateLabel.textContent = "Template";
+        const templateSelect = document.createElement("select");
+        for (const templateName of templates) {
+          const option = document.createElement("option");
+          option.value = templateName;
+          option.textContent = templateName;
+          if (templateName === printer.template) {
+            option.selected = true;
+          }
+          templateSelect.appendChild(option);
+        }
+        templateWrap.appendChild(templateLabel);
+        templateWrap.appendChild(templateSelect);
+
+        controls.appendChild(enabledWrap);
+        controls.appendChild(cadenceWrap);
+        controls.appendChild(templateWrap);
+
+        const actions = document.createElement("div");
+        actions.className = "printer-actions";
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "secondary";
+        saveBtn.textContent = "Save Settings";
+
+        const printIfNeededBtn = document.createElement("button");
+        printIfNeededBtn.type = "button";
+        printIfNeededBtn.textContent = "Print If Needed";
+
+        const forcePrintBtn = document.createElement("button");
+        forcePrintBtn.type = "button";
+        forcePrintBtn.className = "danger";
+        forcePrintBtn.textContent = "Force Print";
+
+        const pollBtn = document.createElement("button");
+        pollBtn.type = "button";
+        pollBtn.className = "neutral";
+        pollBtn.textContent = "Poll Now";
+
+        actions.appendChild(saveBtn);
+        actions.appendChild(printIfNeededBtn);
+        actions.appendChild(forcePrintBtn);
+        actions.appendChild(pollBtn);
+
+        const inline = document.createElement("div");
+        inline.className = "inline-status";
+
+        const printerPath = "printers/" + encodeURIComponent(String(printer.printer_id || ""));
+
+        saveBtn.addEventListener("click", async () => {
+          inlineMessage(inline, "Saving settings...");
+          try {
+            await requestJson(printerPath + "/settings", {
+              method: "POST",
+              body: JSON.stringify({
+                enabled: Boolean(enabledInput.checked),
+                cadence_hours: Number(cadenceInput.value || 0),
+                template: String(templateSelect.value || "")
+              })
+            });
+            inlineMessage(inline, "Settings updated.");
+            await refreshAll(true);
+          } catch (err) {
+            inlineMessage(inline, err.message || String(err), true);
+          }
+        });
+
+        printIfNeededBtn.addEventListener("click", async () => {
+          inlineMessage(inline, "Submitting keepalive print (due check enabled)...");
+          try {
+            const result = await requestJson(printerPath + "/print", {
+              method: "POST",
+              body: JSON.stringify({
+                template: String(templateSelect.value || ""),
+                force: false
+              })
+            });
+            const msg = result.skipped ? String(result.reason || "Skipped.") : "Print submitted.";
+            inlineMessage(inline, msg);
+            await refreshAll(true);
+          } catch (err) {
+            inlineMessage(inline, err.message || String(err), true);
+          }
+        });
+
+        forcePrintBtn.addEventListener("click", async () => {
+          inlineMessage(inline, "Submitting forced keepalive print...");
+          try {
+            await requestJson(printerPath + "/print", {
+              method: "POST",
+              body: JSON.stringify({
+                template: String(templateSelect.value || ""),
+                force: true
+              })
+            });
+            inlineMessage(inline, "Forced print submitted.");
+            await refreshAll(true);
+          } catch (err) {
+            inlineMessage(inline, err.message || String(err), true);
+          }
+        });
+
+        pollBtn.addEventListener("click", async () => {
+          inlineMessage(inline, "Polling printer...");
+          try {
+            await requestJson(printerPath + "/poll", { method: "POST", body: "{}" });
+            inlineMessage(inline, "Printer polled.");
+            await refreshAll(true);
+          } catch (err) {
+            inlineMessage(inline, err.message || String(err), true);
+          }
+        });
+
+        card.appendChild(header);
+        card.appendChild(stats);
+        card.appendChild(controls);
+        card.appendChild(actions);
+        card.appendChild(inline);
+        grid.appendChild(card);
+      }
+    }
+
+    async function loadConfigEditor(showStatus = true) {
+      if (showStatus) setConfigStatus("Loading configuration...");
+      try {
+        const payload = await requestJson("config");
+        const options = payload && payload.options && typeof payload.options === "object" ? payload.options : {};
+        configEditor.value = JSON.stringify(options, null, 2);
+        state.configLoaded = true;
+        if (showStatus) setConfigStatus("Configuration loaded.");
+      } catch (err) {
+        const message = err && err.message ? err.message : String(err);
+        setConfigStatus(message, true);
+      }
+    }
+
+    async function saveConfigEditor() {
+      setConfigStatus("Saving configuration...");
+      let parsed;
+      try {
+        parsed = JSON.parse(String(configEditor.value || "{}"));
+      } catch (err) {
+        setConfigStatus("Configuration JSON is invalid: " + (err.message || String(err)), true);
+        return;
+      }
+
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        setConfigStatus("Configuration JSON must be an object.", true);
+        return;
+      }
+
+      try {
+        const response = await requestJson("config", {
+          method: "POST",
+          body: JSON.stringify({ options: parsed })
+        });
+        const message = response && response.message ? String(response.message) : "Configuration saved.";
+        setConfigStatus(message);
+        await refreshAll(true);
+      } catch (err) {
+        setConfigStatus(err.message || String(err), true);
+      }
+    }
+
+    async function restartAddonFromUi() {
+      setConfigStatus("Requesting restart...");
+      try {
+        const response = await requestJson("actions/restart", { method: "POST", body: "{}" });
+        const message = response && response.message ? String(response.message) : "Restart requested.";
+        setConfigStatus(message);
+      } catch (err) {
+        setConfigStatus(err.message || String(err), true);
+      }
+    }
+
+    async function refreshAll(silent) {
+      if (state.refreshInFlight) return;
+      state.refreshInFlight = true;
+      if (!silent) setStatus("Refreshing...");
+
+      try {
+        const health = await requestJson("health");
+        state.health = health;
+        renderOverview(health);
+        renderPrinters(health);
+
+        const discovery = await requestJson("discovery");
+        renderDiscovery(discovery);
+
+        if (!state.configLoaded) {
+          await loadConfigEditor(false);
+        }
+
+        if (!silent) setStatus("Updated at " + new Date().toLocaleTimeString());
+        setDiscoveryStatus("Discovery data refreshed.");
+      } catch (err) {
+        const message = err && err.message ? err.message : String(err);
+        setStatus(message, true);
+        setDiscoveryStatus(message, true);
+      } finally {
+        state.refreshInFlight = false;
+      }
+    }
+
+    document.getElementById("saveTokenBtn").addEventListener("click", () => {
+      state.authToken = String(authInput.value || "").trim();
+      window.localStorage.setItem("pk_auth_token", state.authToken);
+      setStatus("Token saved in browser storage.");
+    });
+
+    document.getElementById("clearTokenBtn").addEventListener("click", () => {
+      state.authToken = "";
+      authInput.value = "";
+      window.localStorage.removeItem("pk_auth_token");
+      setStatus("Token cleared.");
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      refreshAll(false);
+    });
+
+    document.getElementById("loadConfigBtn").addEventListener("click", async () => {
+      await loadConfigEditor(true);
+    });
+
+    document.getElementById("saveConfigBtn").addEventListener("click", async () => {
+      await saveConfigEditor();
+    });
+
+    document.getElementById("restartAddonBtn").addEventListener("click", async () => {
+      await restartAddonFromUi();
+    });
+
+    document.getElementById("rescanBtn").addEventListener("click", async () => {
+      setDiscoveryStatus("Running discovery rescan...");
+      try {
+        const payload = await requestJson("discovery/rescan", {
+          method: "POST",
+          body: "{}"
+        });
+        renderDiscovery(payload);
+        setDiscoveryStatus("Discovery rescan complete at " + new Date().toLocaleTimeString());
+      } catch (err) {
+        setDiscoveryStatus(err.message || String(err), true);
+      }
+    });
+
+    refreshAll(false);
+    window.setInterval(() => refreshAll(true), 60000);
+  </script>
+</body>
+</html>
+"""
+    return (
+        template.replace("__APP_NAME__", escape(APP_NAME))
+        .replace("__APP_VERSION__", escape(APP_VERSION))
+        .replace("__APP_URL__", escape(APP_URL))
+    )
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -2415,6 +3514,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         encoded = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def _write_html(self, status: HTTPStatus, payload: str) -> None:
+        encoded = payload.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)
@@ -2452,6 +3559,47 @@ class RequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
+
+        if path in {"", "/", "/index.html"}:
+            self._write_html(HTTPStatus.OK, ui_dashboard_html())
+            return
+
+        if path == "/ui":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "./")
+            self.end_headers()
+            return
+
+        if path == "/ui/":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "../")
+            self.end_headers()
+            return
+
+        if path == "/favicon.ico":
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
+
+        if path == "/config":
+            if not self._is_authorized():
+                self._write_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "Unauthorized"})
+                return
+            try:
+                options_payload = load_options()
+            except RuntimeError as exc:
+                self._write_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(exc)})
+                return
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "options": options_payload,
+                    "restart_supported": bool(SUPERVISOR_TOKEN),
+                    "message": "Configuration changes require restart to apply.",
+                },
+            )
+            return
 
         if path == "/health":
             self._write_json(HTTPStatus.OK, global_payload())
@@ -2521,6 +3669,47 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         body = self._read_json_body()
 
+        if path == "/config":
+            candidate: dict[str, Any] | None = None
+            if isinstance(body.get("options"), dict):
+                candidate = body.get("options")
+            elif body:
+                candidate = body
+
+            if not isinstance(candidate, dict):
+                self._write_json(
+                    HTTPStatus.BAD_REQUEST,
+                    {"ok": False, "error": "Expected JSON object or {\"options\": {...}} payload."},
+                )
+                return
+
+            valid, reason = validate_options_payload(candidate)
+            if not valid:
+                self._write_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": reason})
+                return
+
+            try:
+                save_options(candidate)
+            except OSError as exc:
+                self._write_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": f"Unable to save options: {exc}"})
+                return
+
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "message": "Configuration saved to /data/options.json. Restart the add-on/service to apply changes.",
+                    "restart_supported": bool(SUPERVISOR_TOKEN),
+                },
+            )
+            return
+
+        if path == "/actions/restart":
+            ok, message = supervisor_restart_self()
+            status = HTTPStatus.OK if ok else HTTPStatus.BAD_GATEWAY
+            self._write_json(status, {"ok": ok, "message": message, "restart_supported": bool(SUPERVISOR_TOKEN)})
+            return
+
         if path == "/discovery/rescan":
             payload = get_discovery_payload(force=True)
             status = HTTPStatus.OK if payload.get("ok") else HTTPStatus.BAD_GATEWAY
@@ -2549,7 +3738,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             if isinstance(query.get("force"), list) and query["force"]:
                 force = str(query["force"][0]).strip().lower() in {"1", "true", "yes", "on"}
             elif "force" in body:
-                force = bool(body.get("force"))
+                parsed_force = bool_from_any(body.get("force"))
+                force = bool(parsed_force) if parsed_force is not None else False
 
             result = run_keepalive_print(printer, template_override=template or None, source="api", only_if_needed=not force)
             publish_printer_state_if_enabled(printer)
@@ -2574,7 +3764,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if isinstance(body.get("template"), str):
                     template = str(body.get("template")).strip().lower()
 
-                force = bool(body.get("force", False))
+                parsed_force = bool_from_any(body.get("force", False))
+                force = bool(parsed_force) if parsed_force is not None else False
                 result = run_keepalive_print(printer, template_override=template or None, source="api", only_if_needed=not force)
                 publish_printer_state_if_enabled(printer)
                 status = HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY
@@ -2619,6 +3810,7 @@ def main() -> None:
             log(f"Home Assistant API mode: direct ({HASS_API_BASE}) without token.")
     else:
         log("Home Assistant API mode: disabled (no Supervisor token or direct HA URL configured).")
+    log(f"Printed QR target URL: {ADDON_PAGE_URL}")
 
     log(f"Auto-print enabled: {AUTO_PRINT_ENABLED}")
     log(f"Status poll interval: {STATUS_POLL_INTERVAL_SECONDS} seconds")

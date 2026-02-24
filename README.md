@@ -13,6 +13,7 @@ Home Assistant add-on repository for proactive printer maintenance and health te
    `https://github.com/toml0006/ha-printer-health`
 3. Install `Printer Keepalive`.
 4. Follow:
+   - Open the add-on sidebar page and manage configuration from ingress
    - `printer_keepalive/GETTING_STARTED.md` for install/run setup
    - `printer_keepalive/DOCS.md` for full configuration and API details
 

@@ -124,6 +124,9 @@ configuration:
   ha_token:
     name: Home Assistant Token
     description: Optional long-lived access token for non-Supervisor installs.
+  addon_page_url:
+    name: Add-on Page URL
+    description: Optional URL used for the printed QR code that opens this add-on in Home Assistant (or docs page fallback).
   auth_token:
     name: API Auth Token
     description: Optional bearer token required by API callers.

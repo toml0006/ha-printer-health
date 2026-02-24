@@ -42,5 +42,6 @@
   },
   "ha_url": "http://host.docker.internal:8123",
   "ha_token": "",
+  "addon_page_url": "",
   "auth_token": ""
 }
