@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__APP_NAME__ — Neubrutalist Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --yellow: #FFE500;
+    --blue: #4361EE;
+    --coral: #FF6B6B;
+    --mint: #2EC4B6;
+    --black: #000;
+    --white: #fff;
+    --cream: #FFFDF0;
+    --border: 2.5px solid #000;
+    --shadow: 4px 4px 0px #000;
+    --shadow-hover: 7px 7px 0px #000;
+    --radius: 0px;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--black);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* CMYK top stripe */
+  .cmyk-stripe {
+    height: 6px;
+    background: linear-gradient(90deg, #00bcd4 25%, #e91e63 25%, #e91e63 50%, #ffc107 50%, #ffc107 75%, #263238 75%);
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: var(--border);
+    background: var(--white);
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .topbar-icon {
+    width: 44px; height: 44px;
+    background: var(--black);
+    border: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .topbar-icon svg { width: 26px; height: 26px; }
+
+  .topbar-title {
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .version-pill {
+    display: inline-block;
+    background: var(--yellow);
+    border: 2px solid var(--black);
+    padding: 2px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .cmyk-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .cmyk-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--black);
+  }
+
+  /* Design switcher */
+  .design-switcher {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border: var(--border);
+    box-shadow: 3px 3px 0px #000;
+    background: var(--yellow);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23000' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+  }
+
+  .design-switcher:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  /* Auth bar */
+  .auth-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 28px;
+    border-bottom: var(--border);
+    background: #f5f5e8;
+  }
+
+  .auth-bar label {
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+
+  .auth-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 8px 14px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: var(--white);
+    outline: none;
+    width: 240px;
+    max-width: 100%;
+  }
+
+  .auth-input:focus {
+    box-shadow: 3px 3px 0px #000;
+  }
+
+  .auth-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    cursor: pointer;
+    background: var(--white);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .auth-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0px #000;
+  }
+
+  .auth-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px #000;
+  }
+
+  .auth-btn-save { background: var(--yellow); }
+  .auth-btn-clear { background: var(--coral); color: var(--white); }
+
+  /* TAB NAV */
+  .tab-nav {
+    display: flex;
+    padding: 0 28px;
+    gap: 0;
+    border-bottom: var(--border);
+    background: var(--white);
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border: none;
+    border-right: var(--border);
+    background: var(--white);
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .tab-btn:first-child { border-left: var(--border); }
+  .tab-btn:hover { background: #f0f0e0; }
+
+  .tab-btn.active {
+    background: var(--yellow);
+    color: var(--black);
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    padding: 28px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* STAT CARDS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: default;
+  }
+
+  .stat-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .stat-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    opacity: 0.8;
+  }
+
+  .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 34px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+
+  /* TABLE CARD */
+  .card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    margin-bottom: 28px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .card-header {
+    padding: 18px 22px;
+    border-bottom: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-header h2 {
+    font-size: 20px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .card-body { padding: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead th {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: var(--border);
+    background: #f5f5e8;
+  }
+
+  tbody td {
+    padding: 14px 18px;
+    border-bottom: 1.5px solid #e0e0d0;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  tbody tr:nth-child(even) { background: #fafaf0; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .printer-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  /* STATUS DOTS */
+  .status-dot {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--black);
+    vertical-align: middle;
+  }
+
+  .status-dot.ok { background: var(--mint); }
+  .status-dot.warning { background: var(--yellow); }
+  .status-dot.error { background: var(--coral); }
+
+  .status-label {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+
+  /* INFO CARD */
+  .info-card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--black);
+    color: var(--white);
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .info-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0px #444;
+  }
+
+  .info-card h3 {
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    color: var(--yellow);
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px 32px;
+  }
+
+  .info-item-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+    margin-bottom: 2px;
+  }
+
+  .info-item-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+  }
+
+  /* PRINTER CARDS (Printers view) */
+  .printer-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 22px;
+  }
+
+  .printer-card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .printer-card:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .printer-card-stripe {
+    height: 8px;
+  }
+
+  .printer-card-head {
+    padding: 18px 22px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1.5px solid #e0e0d0;
+  }
+
+  .printer-card-head h3 {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .printer-card-body {
+    padding: 18px 22px;
+  }
+
+  .printer-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 20px;
+    margin-bottom: 18px;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+    margin-bottom: 2px;
+  }
+
+  .meta-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    word-break: break-all;
+  }
+
+  .printer-card-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 22px 18px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 20px;
+    border: var(--border);
+    box-shadow: 3px 3px 0px #000;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    background: var(--white);
+  }
+
+  .btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px #000;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 3px 3px 0px #000;
+  }
+
+  .btn-yellow { background: var(--yellow); }
+  .btn-blue { background: var(--blue); color: var(--white); }
+  .btn-coral { background: var(--coral); color: var(--white); }
+  .btn-mint { background: var(--mint); }
+  .btn-black { background: var(--black); color: var(--white); }
+
+  /* DISCOVERY badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 2px solid var(--black);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-green { background: var(--mint); }
+  .badge-red { background: var(--coral); color: var(--white); }
+  .badge-yellow { background: var(--yellow); }
+  .badge-blue { background: var(--blue); color: var(--white); }
+
+  /* CONFIG */
+  .config-area {
+    width: 100%;
+    min-height: 400px;
+    border: var(--border);
+    box-shadow: var(--shadow);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 20px;
+    background: var(--white);
+    resize: vertical;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  .config-area:focus {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .config-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  /* CONFIG MODE TOGGLE */
+  .config-mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+  }
+
+  .config-mode-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 14px 32px;
+    border: var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    background: var(--white);
+  }
+
+  .config-mode-btn:first-child {
+    border-right: none;
+  }
+
+  .config-mode-btn.active {
+    background: var(--yellow);
+  }
+
+  .config-mode-btn:hover:not(.active) {
+    background: #f0f0e0;
+  }
+
+  /* CONFIG FORM */
+  .config-form-view, .config-raw-view {
+    display: none;
+  }
+
+  .config-form-view.active, .config-raw-view.active {
+    display: block;
+  }
+
+  .config-section {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    margin-bottom: 24px;
+  }
+
+  .config-section-header {
+    padding: 14px 22px;
+    border-bottom: var(--border);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--black);
+  }
+
+  .config-section-body {
+    padding: 22px;
+  }
+
+  .config-field {
+    margin-bottom: 18px;
+  }
+
+  .config-field:last-child {
+    margin-bottom: 0;
+  }
+
+  .config-field-label {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .config-field-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: var(--white);
+    outline: none;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .config-field-input:focus {
+    box-shadow: 3px 3px 0px #000;
+  }
+
+  select.config-field-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23000' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 34px;
+    cursor: pointer;
+  }
+
+  textarea.config-field-input {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+  }
+
+  .config-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  @media (max-width: 600px) {
+    .config-field-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* TOGGLE SWITCH */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 56px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border: 2.5px solid var(--black);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--white);
+    border: 2px solid var(--black);
+    transition: left 0.15s;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background: var(--mint);
+  }
+
+  .toggle-switch input:checked + .toggle-slider::before {
+    left: 27px;
+  }
+
+  .toggle-label-text {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* PRINTER CONFIG CARDS */
+  .printer-config-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .printer-config-card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+  }
+
+  .printer-config-card-stripe {
+    height: 6px;
+  }
+
+  .printer-config-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 1.5px solid #e0e0d0;
+  }
+
+  .printer-config-card-head h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .printer-config-card-body {
+    padding: 22px;
+  }
+
+  .btn-remove-printer {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: var(--coral);
+    color: var(--white);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .btn-remove-printer:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0px #000;
+  }
+
+  .btn-remove-printer:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px #000;
+  }
+
+  .btn-add-printer {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 14px 28px;
+    border: 2.5px dashed var(--black);
+    background: var(--white);
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.1s;
+  }
+
+  .btn-add-printer:hover {
+    background: #f0f0e0;
+  }
+
+  /* ROTATED LABEL */
+  .rotated-label {
+    display: inline-block;
+    transform: rotate(-2deg);
+    background: var(--yellow);
+    border: var(--border);
+    padding: 4px 14px;
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Section heading */
+  .section-title {
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 2.5px;
+    background: var(--black);
+  }
+
+  /* Templates list */
+  .template-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .template-pill {
+    padding: 6px 14px;
+    border: 2px solid var(--black);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--white);
+    font-weight: 500;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 14px 22px;
+    border: var(--border);
+    box-shadow: var(--shadow);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 1000;
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 400px;
+  }
+
+  .toast-ok { background: var(--mint); color: var(--black); }
+  .toast-error { background: var(--coral); color: var(--white); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .printer-cards { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .topbar { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+    .topbar-title { font-size: 16px; }
+    .main { padding: 16px; }
+    .tab-btn { padding: 12px 16px; font-size: 13px; }
+    .stat-value { font-size: 26px; }
+    .cmyk-dots { display: none; }
+    .info-grid { grid-template-columns: 1fr; }
+    .auth-bar { flex-wrap: wrap; }
+    .auth-input { width: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cmyk-stripe"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+    </div>
+    <div>
+      <span class="topbar-title">__APP_NAME__</span>
+      <span class="version-pill">__APP_VERSION__</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <select class="design-switcher" id="design-switcher" onchange="switchDesign(this.value)">
+      <option value="v1">Bento Grid</option>
+      <option value="v2">Glassmorphism</option>
+      <option value="v3" selected>Neubrutalist</option>
+      <option value="v4">Cinematic Dark</option>
+        <option value="v5">Home Assistant</option>
+    </select>
+    <div class="cmyk-dots">
+      <div class="cmyk-dot" style="background:#00bcd4"></div>
+      <div class="cmyk-dot" style="background:#e91e63"></div>
+      <div class="cmyk-dot" style="background:#ffc107"></div>
+      <div class="cmyk-dot" style="background:#263238"></div>
+    </div>
+  </div>
+</header>
+
+<!-- AUTH BAR -->
+<div class="auth-bar">
+  <label for="auth-token">Auth Token</label>
+  <input type="password" class="auth-input" id="auth-token" placeholder="Bearer token..." value="">
+  <button class="auth-btn auth-btn-save" onclick="saveAuthToken()">Save</button>
+  <button class="auth-btn auth-btn-clear" onclick="clearAuthToken()">Clear</button>
+</div>
+
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+  <button class="tab-btn" data-tab="printers">Printers</button>
+  <button class="tab-btn" data-tab="discovery">Discovery</button>
+  <button class="tab-btn" data-tab="config">Config</button>
+</nav>
+
+<main class="main">
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <div class="view active" id="view-dashboard">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Printer Health</h2>
+        <span class="rotated-label">Live Status</span>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Printer</th>
+              <th>State</th>
+              <th>Template</th>
+              <th>Cadence</th>
+              <th>Last Print</th>
+              <th>Next Due</th>
+            </tr>
+          </thead>
+          <tbody id="health-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>System Info</h3>
+      <div class="info-grid" id="info-grid"></div>
+      <div>
+        <div class="section-title" style="color:var(--yellow);margin-top:20px;">
+          Supported Templates
+          <span style="flex:1;height:1.5px;background:rgba(255,255,255,.2);display:block;"></span>
+        </div>
+        <div class="template-pills" id="template-pills"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PRINTERS ==================== -->
+  <div class="view" id="view-printers">
+    <div class="section-title">Managed Printers</div>
+    <div class="printer-cards" id="printer-cards"></div>
+  </div>
+
+  <!-- ==================== DISCOVERY ==================== -->
+  <div class="view" id="view-discovery">
+    <div class="stats-row" id="discovery-stats"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Discovered Printers</h2>
+        <button class="btn btn-blue" id="btn-rescan" onclick="doRescan()">Scan Now</button>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Printer</th>
+              <th>URI</th>
+              <th>Type</th>
+              <th>Reachable</th>
+              <th>Configured</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="discovery-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CONFIG ==================== -->
+  <div class="view" id="view-config">
+    <div class="section-title">Add-on Configuration</div>
+
+    <!-- Mode Toggle -->
+    <div class="config-mode-toggle">
+      <button class="config-mode-btn active" data-config-mode="form" onclick="setConfigMode('form')">Form</button>
+      <button class="config-mode-btn" data-config-mode="raw" onclick="setConfigMode('raw')">Advanced (JSON)</button>
+    </div>
+
+    <!-- FORM MODE -->
+    <div class="config-form-view active" id="config-form-view">
+
+      <!-- Section 1: Printers -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: var(--yellow);">Printers</div>
+        <div class="config-section-body">
+          <div class="printer-config-cards" id="printer-config-cards"></div>
+          <button class="btn-add-printer" onclick="addPrinterCard()" style="margin-top:18px">+ Add Printer</button>
+        </div>
+      </div>
+
+      <!-- Section 2: Scheduling -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: #90CAF9;">Scheduling</div>
+        <div class="config-section-body">
+          <div class="config-field">
+            <div class="toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" data-key="auto_print_enabled">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label-text">Auto Print Enabled</span>
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Status Poll Interval (min)</label>
+              <input type="number" class="config-field-input" data-key="status_poll_interval_minutes" min="1" max="1440">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Failure Retry (min)</label>
+              <input type="number" class="config-field-input" data-key="failure_retry_minutes" min="1" max="1440">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Discovery -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: var(--coral); color: var(--white);">Discovery</div>
+        <div class="config-section-body">
+          <div class="config-field">
+            <div class="toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" data-key="discovery_enabled">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label-text">Discovery Enabled</span>
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Discovery Interval (min)</label>
+              <input type="number" class="config-field-input" data-key="discovery_interval_minutes" min="1" max="1440">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Discovery Timeout (sec)</label>
+              <input type="number" class="config-field-input" data-key="discovery_timeout_seconds" min="1" max="30">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">IPP Query Timeout (sec)</label>
+              <input type="number" class="config-field-input" data-key="discovery_ipp_query_timeout_seconds" min="1" max="30">
+            </div>
+            <div class="config-field">
+              <div class="toggle-wrap" style="margin-top:24px">
+                <label class="toggle-switch">
+                  <input type="checkbox" data-key="discovery_include_ipps">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label-text">Include IPPS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Templates & Content -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: var(--mint);">Templates &amp; Content</div>
+        <div class="config-section-body">
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Default Template</label>
+              <select class="config-field-input" data-key="default_template">
+                <option value="color_bars">color_bars</option>
+                <option value="home_summary">home_summary</option>
+                <option value="weather_snapshot">weather_snapshot</option>
+                <option value="entity_report">entity_report</option>
+                <option value="hybrid">hybrid</option>
+              </select>
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Weather Entity</label>
+              <input type="text" class="config-field-input" data-key="weather_entity" placeholder="weather.home">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Title</label>
+              <input type="text" class="config-field-input" data-key="title">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Footer</label>
+              <input type="text" class="config-field-input" data-key="footer">
+            </div>
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Entity IDs (one per line)</label>
+            <textarea class="config-field-input" data-key="entity_ids" placeholder="sensor.temperature&#10;sensor.humidity" style="max-width:100%"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: MQTT -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: #CE93D8;">MQTT</div>
+        <div class="config-section-body">
+          <div class="config-field">
+            <div class="toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" data-key="mqtt.enabled">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label-text">MQTT Enabled</span>
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Host</label>
+              <input type="text" class="config-field-input" data-key="mqtt.host" placeholder="core-mosquitto">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Port</label>
+              <input type="number" class="config-field-input" data-key="mqtt.port" placeholder="1883">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Username</label>
+              <input type="text" class="config-field-input" data-key="mqtt.username">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Password</label>
+              <input type="password" class="config-field-input" data-key="mqtt.password">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Discovery Prefix</label>
+              <input type="text" class="config-field-input" data-key="mqtt.discovery_prefix" placeholder="homeassistant">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Topic Prefix</label>
+              <input type="text" class="config-field-input" data-key="mqtt.topic_prefix" placeholder="printer_keepalive">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <div class="toggle-wrap" style="margin-top:8px">
+                <label class="toggle-switch">
+                  <input type="checkbox" data-key="mqtt.retain">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label-text">Retain</span>
+              </div>
+            </div>
+            <div class="config-field">
+              <div class="toggle-wrap" style="margin-top:8px">
+                <label class="toggle-switch">
+                  <input type="checkbox" data-key="mqtt.tls">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label-text">TLS</span>
+              </div>
+            </div>
+          </div>
+          <div class="config-field" style="margin-top:18px">
+            <label class="config-field-label">Client ID</label>
+            <input type="text" class="config-field-input" data-key="mqtt.client_id" placeholder="printer_keepalive">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 6: Integration -->
+      <div class="config-section">
+        <div class="config-section-header" style="background: #FFB74D;">Integration</div>
+        <div class="config-section-body">
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">HA URL</label>
+              <input type="text" class="config-field-input" data-key="ha_url" placeholder="http://homeassistant.local:8123">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">HA Token</label>
+              <input type="password" class="config-field-input" data-key="ha_token">
+            </div>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label class="config-field-label">Add-on Page URL</label>
+              <input type="text" class="config-field-input" data-key="addon_page_url">
+            </div>
+            <div class="config-field">
+              <label class="config-field-label">Auth Token</label>
+              <input type="password" class="config-field-input" data-key="auth_token">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAW JSON MODE -->
+    <div class="config-raw-view" id="config-raw-view">
+      <textarea class="config-area" id="config-area" spellcheck="false"></textarea>
+    </div>
+
+    <div class="config-actions">
+      <button class="btn btn-yellow" onclick="saveConfig()">Save Config</button>
+      <button class="btn btn-black" onclick="restartAddon()">Restart Add-on</button>
+      <button class="btn" onclick="reloadConfig()">Reset</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ===== API helpers ===== */
+function apiPath(path) {
+  var pathname = window.location.pathname;
+  var base = pathname.replace(/\/design\/v[1-5]\/?$/, '/');
+  if (!base.endsWith('/')) base += '/';
+  var origin = window.location.origin;
+  var clean = String(path || '').replace(/^\/+/, '');
+  return new URL(clean, origin + base).toString();
+}
+
+var state = {
+  authToken: localStorage.getItem('pk_auth_token') || '',
+  refreshInFlight: false,
+  health: null,
+  configLoaded: false
+};
+
+async function requestJson(path, init) {
+  if (!init) init = {};
+  var headers = Object.assign({}, init.headers || {});
+  if (init.body !== undefined && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (state.authToken) headers['Authorization'] = 'Bearer ' + state.authToken;
+  var response = await fetch(apiPath(path), Object.assign({}, init, { headers: headers }));
+  var raw = await response.text();
+  var payload = {};
+  if (raw) {
+    try { payload = JSON.parse(raw); }
+    catch (err) { throw new Error('Invalid JSON: ' + path + ' (' + response.status + ')'); }
+  }
+  if (!response.ok || (payload && payload.ok === false)) {
+    var message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + ' ' + response.statusText);
+    throw new Error(message);
+  }
+  return payload;
+}
+
+/* ===== Toast notifications ===== */
+function showToast(message, isError) {
+  var existing = document.querySelectorAll('.toast');
+  existing.forEach(function(el) { el.remove(); });
+  var toast = document.createElement('div');
+  toast.className = 'toast ' + (isError ? 'toast-error' : 'toast-ok');
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.style.opacity = '0'; toast.style.transform = 'translateY(10px)'; }, 3000);
+  setTimeout(function() { toast.remove(); }, 3500);
+}
+
+/* ===== Helpers ===== */
+function timeAgo(iso) {
+  if (!iso) return 'never';
+  var diff = Date.now() - new Date(iso).getTime();
+  var h = Math.floor(diff / 3600000);
+  if (h < 1) return 'just now';
+  if (h < 24) return h + 'h ago';
+  var d = Math.floor(h / 24);
+  return d + 'd ago';
+}
+
+function timeUntil(iso) {
+  if (!iso) return '-';
+  var diff = new Date(iso).getTime() - Date.now();
+  if (diff < 0) { var h = Math.floor(-diff / 3600000); return (h < 24 ? h + 'h' : Math.floor(h/24) + 'd') + ' overdue'; }
+  var h = Math.floor(diff / 3600000);
+  if (h < 24) return 'in ' + h + 'h';
+  return 'in ' + Math.floor(h / 24) + 'd';
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+/* ===== Auth ===== */
+(function() {
+  var input = document.getElementById('auth-token');
+  if (state.authToken) input.value = state.authToken;
+})();
+
+function saveAuthToken() {
+  var val = document.getElementById('auth-token').value.trim();
+  state.authToken = val;
+  localStorage.setItem('pk_auth_token', val);
+  showToast('Token saved');
+  refreshAll();
+}
+
+function clearAuthToken() {
+  state.authToken = '';
+  localStorage.removeItem('pk_auth_token');
+  document.getElementById('auth-token').value = '';
+  showToast('Token cleared');
+  refreshAll();
+}
+
+/* ===== Design switcher ===== */
+function switchDesign(version) {
+  document.cookie = 'pk_design=' + version + '; path=/; max-age=31536000; SameSite=Lax';
+  var pathname = window.location.pathname;
+  var newPath = pathname.replace(/\/design\/v[1-5]\/?$/, '/design/' + version);
+  if (newPath === pathname) newPath = pathname.replace(/\/?$/, '') + '/design/' + version;
+  window.location.href = newPath;
+}
+
+/* ===== Tab navigation ===== */
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ===== Render: Dashboard ===== */
+function renderDashboard(health) {
+  var statsRow = document.getElementById('stats-row');
+  statsRow.innerHTML = '';
+  var statsData = [
+    { label: 'Printers', value: health.printer_count, bg: 'var(--yellow)' },
+    { label: 'MQTT', value: health.mqtt_enabled ? 'Connected' : 'Off', bg: 'var(--blue)', light: true },
+    { label: 'Auto Print', value: health.auto_print_enabled ? 'Enabled' : 'Disabled', bg: 'var(--mint)' },
+    { label: 'Discovery', value: health.discovery ? health.discovery.printer_count : 0, bg: 'var(--coral)', light: true }
+  ];
+  statsData.forEach(function(s) {
+    var d = document.createElement('div');
+    d.className = 'stat-card';
+    d.style.background = s.bg;
+    if (s.light) d.style.color = 'var(--white)';
+    d.innerHTML = '<div class="stat-label">' + esc(s.label) + '</div><div class="stat-value">' + esc(String(s.value)) + '</div>';
+    statsRow.appendChild(d);
+  });
+
+  // Health table
+  var htbody = document.getElementById('health-tbody');
+  htbody.innerHTML = '';
+  (health.printers || []).forEach(function(p) {
+    var tr = document.createElement('tr');
+    var overdue = p.next_keepalive_due_at && new Date(p.next_keepalive_due_at).getTime() < Date.now();
+    tr.innerHTML =
+      '<td><span class="status-dot ' + esc(p.health_status) + '"></span><span class="status-label">' + esc(p.health_status) + '</span></td>' +
+      '<td class="printer-name">' + esc(p.name) + '</td>' +
+      '<td>' + esc(p.printer_state) + '</td>' +
+      '<td><span class="template-pill" style="padding:2px 8px">' + esc(p.template) + '</span></td>' +
+      '<td>' + esc(p.cadence_hours + 'h') + '</td>' +
+      '<td>' + esc(timeAgo(p.last_print_at)) + '</td>' +
+      '<td style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</td>';
+    htbody.appendChild(tr);
+  });
+
+  // Info card
+  var infoGrid = document.getElementById('info-grid');
+  infoGrid.innerHTML = '';
+  var disc = health.discovery || {};
+  var infoItems = [
+    ['Add-on', health.name || '__APP_NAME__'],
+    ['Version', health.version || ''],
+    ['Timestamp', health.timestamp ? new Date(health.timestamp).toLocaleString() : '-'],
+    ['Auth Required', health.auth_required ? 'Yes' : 'No'],
+    ['Discovery Scan', disc.last_scan_at ? timeAgo(disc.last_scan_at) : '-'],
+    ['Scan Duration', disc.last_scan_duration_seconds != null ? disc.last_scan_duration_seconds + 's' : '-']
+  ];
+  infoItems.forEach(function(item) {
+    var d = document.createElement('div');
+    d.innerHTML = '<div class="info-item-label">' + esc(item[0]) + '</div><div class="info-item-value">' + esc(item[1]) + '</div>';
+    infoGrid.appendChild(d);
+  });
+
+  // Template pills
+  var tpills = document.getElementById('template-pills');
+  tpills.innerHTML = '';
+  (health.supported_templates || []).forEach(function(t) {
+    var s = document.createElement('span');
+    s.className = 'template-pill';
+    s.style.background = 'rgba(255,255,255,.1)';
+    s.style.color = '#fff';
+    s.style.borderColor = 'rgba(255,255,255,.3)';
+    s.textContent = t;
+    tpills.appendChild(s);
+  });
+}
+
+/* ===== Render: Printers ===== */
+var stripeColors = ['var(--blue)', 'var(--coral)', 'var(--mint)'];
+
+function renderPrinters(health) {
+  var printerCards = document.getElementById('printer-cards');
+  printerCards.innerHTML = '';
+  (health.printers || []).forEach(function(p, i) {
+    var card = document.createElement('div');
+    card.className = 'printer-card';
+    var overdue = p.next_keepalive_due_at && new Date(p.next_keepalive_due_at).getTime() < Date.now();
+    var pid = esc(p.printer_id);
+    var pname = esc(p.name);
+    var tmpl = esc(p.template || '');
+    card.innerHTML =
+      '<div class="printer-card-stripe" style="background:' + stripeColors[i % stripeColors.length] + '"></div>' +
+      '<div class="printer-card-head">' +
+        '<h3>' + pname + '</h3>' +
+        '<span class="status-dot ' + esc(p.health_status) + '"></span>' +
+      '</div>' +
+      '<div class="printer-card-body">' +
+        '<div class="printer-meta">' +
+          '<div><div class="meta-label">Printer ID</div><div class="meta-value">' + pid + '</div></div>' +
+          '<div><div class="meta-label">State</div><div class="meta-value">' + esc(p.printer_state) + '</div></div>' +
+          '<div><div class="meta-label">URI</div><div class="meta-value">' + esc(p.printer_uri) + '</div></div>' +
+          '<div><div class="meta-label">Template</div><div class="meta-value">' + tmpl + '</div></div>' +
+          '<div><div class="meta-label">Cadence</div><div class="meta-value">' + esc(p.cadence_hours + 'h') + '</div></div>' +
+          '<div><div class="meta-label">Keepalive Needed</div><div class="meta-value" style="' + (p.keepalive_needed ? 'color:var(--coral);font-weight:700' : '') + '">' + (p.keepalive_needed ? 'YES' : 'No') + '</div></div>' +
+          '<div><div class="meta-label">Last Print</div><div class="meta-value">' + esc(timeAgo(p.last_print_at)) + '</div></div>' +
+          '<div><div class="meta-label">Next Due</div><div class="meta-value" style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="printer-card-actions">' +
+        '<button class="btn btn-yellow" onclick="doPrint(\'' + pid + '\',\'' + tmpl + '\',false)">Print Now</button>' +
+        '<button class="btn btn-coral" onclick="doPrint(\'' + pid + '\',\'' + tmpl + '\',true)">Force Print</button>' +
+        '<button class="btn btn-blue" onclick="doPoll(\'' + pid + '\')">Poll</button>' +
+        '<button class="btn btn-mint" onclick="doSaveSettings(\'' + pid + '\',' + (p.enabled ? 'true' : 'false') + ',' + p.cadence_hours + ',\'' + tmpl + '\')">Save Settings</button>' +
+      '</div>';
+    printerCards.appendChild(card);
+  });
+}
+
+/* ===== Render: Discovery ===== */
+function renderDiscovery(discovery) {
+  var discoveryStats = document.getElementById('discovery-stats');
+  discoveryStats.innerHTML = '';
+  var printers = discovery.printers || [];
+  var dStatsData = [
+    { label: 'Found', value: discovery.printer_count || printers.length, bg: 'var(--blue)', light: true },
+    { label: 'Reachable', value: printers.filter(function(p) { return p.reachable; }).length, bg: 'var(--mint)' },
+    { label: 'Configured', value: printers.filter(function(p) { return p.already_configured; }).length, bg: 'var(--yellow)' },
+    { label: 'Scan Time', value: (discovery.last_scan_duration_seconds != null ? discovery.last_scan_duration_seconds + 's' : '-'), bg: 'var(--coral)', light: true }
+  ];
+  dStatsData.forEach(function(s) {
+    var d = document.createElement('div');
+    d.className = 'stat-card';
+    d.style.background = s.bg;
+    if (s.light) d.style.color = 'var(--white)';
+    d.innerHTML = '<div class="stat-label">' + esc(s.label) + '</div><div class="stat-value">' + esc(String(s.value)) + '</div>';
+    discoveryStats.appendChild(d);
+  });
+
+  var dtbody = document.getElementById('discovery-tbody');
+  dtbody.innerHTML = '';
+  printers.forEach(function(p) {
+    var tr = document.createElement('tr');
+    var actionCell;
+    if (!p.already_configured && p.reachable) {
+      actionCell = '<button class="btn btn-mint" style="padding:6px 14px;font-size:11px" onclick="showToast(\'Use config to add this printer\')">Add</button>';
+    } else if (p.already_configured) {
+      actionCell = '<span style="opacity:.4">Managed</span>';
+    } else {
+      actionCell = '<span style="opacity:.4">Offline</span>';
+    }
+    tr.innerHTML =
+      '<td class="printer-name">' + esc(p.printer_name) + '</td>' +
+      '<td>' + esc(p.uri) + '</td>' +
+      '<td><span class="badge ' + (p.printer_type_guess === 'laser' ? 'badge-blue' : 'badge-yellow') + '">' + esc(p.printer_type_guess) + '</span></td>' +
+      '<td><span class="badge ' + (p.reachable ? 'badge-green' : 'badge-red') + '">' + (p.reachable ? 'Yes' : 'No') + '</span></td>' +
+      '<td><span class="badge ' + (p.already_configured ? 'badge-green' : '') + '">' + (p.already_configured ? 'Yes' : 'No') + '</span></td>' +
+      '<td>' + actionCell + '</td>';
+    dtbody.appendChild(tr);
+  });
+}
+
+/* ===== Printer actions ===== */
+async function doPrint(printerId, template, force) {
+  try {
+    await requestJson('printers/' + encodeURIComponent(printerId) + '/print', {
+      method: 'POST',
+      body: JSON.stringify({ template: template, force: !!force })
+    });
+    showToast((force ? 'Force print' : 'Print') + ' sent to ' + printerId);
+    setTimeout(refreshAll, 2000);
+  } catch (err) {
+    showToast('Print failed: ' + err.message, true);
+  }
+}
+
+async function doPoll(printerId) {
+  try {
+    await requestJson('printers/' + encodeURIComponent(printerId) + '/poll', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    showToast('Poll sent to ' + printerId);
+    setTimeout(refreshAll, 2000);
+  } catch (err) {
+    showToast('Poll failed: ' + err.message, true);
+  }
+}
+
+async function doSaveSettings(printerId, enabled, cadenceHours, template) {
+  try {
+    await requestJson('printers/' + encodeURIComponent(printerId) + '/settings', {
+      method: 'POST',
+      body: JSON.stringify({ enabled: enabled, cadence_hours: cadenceHours, template: template })
+    });
+    showToast('Settings saved for ' + printerId);
+    setTimeout(refreshAll, 1000);
+  } catch (err) {
+    showToast('Save failed: ' + err.message, true);
+  }
+}
+
+/* ===== Config mode toggle ===== */
+var configMode = 'form';
+
+function setConfigMode(mode) {
+  configMode = mode;
+  document.querySelectorAll('.config-mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.configMode === mode);
+  });
+  document.getElementById('config-form-view').classList.toggle('active', mode === 'form');
+  document.getElementById('config-raw-view').classList.toggle('active', mode === 'raw');
+  if (mode === 'raw') {
+    syncFormToRaw();
+  } else {
+    syncRawToForm();
+  }
+}
+
+/* ===== Printer config card management ===== */
+var printerCardIndex = 0;
+var printerStripeColors = ['var(--blue)', 'var(--coral)', 'var(--mint)', 'var(--yellow)', '#CE93D8'];
+
+function buildPrinterCard(printer, index) {
+  printer = printer || {};
+  var color = printerStripeColors[index % printerStripeColors.length];
+  var card = document.createElement('div');
+  card.className = 'printer-config-card';
+  card.dataset.printerIndex = index;
+  var enabledChecked = printer.enabled !== false ? 'checked' : '';
+  var entityIdsValue = Array.isArray(printer.entity_ids) ? printer.entity_ids.join('\n') : (printer.entity_ids || '');
+
+  card.innerHTML =
+    '<div class="printer-config-card-stripe" style="background:' + color + '"></div>' +
+    '<div class="printer-config-card-head">' +
+      '<h4>Printer #' + (index + 1) + '</h4>' +
+      '<button class="btn-remove-printer" onclick="removePrinterCard(this)">Remove</button>' +
+    '</div>' +
+    '<div class="printer-config-card-body">' +
+      '<div class="config-field-row">' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Name *</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="name" value="' + esc(printer.name || '') + '" required>' +
+        '</div>' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Printer URI *</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="printer_uri" value="' + esc(printer.printer_uri || '') + '" required placeholder="ipp://...">' +
+        '</div>' +
+      '</div>' +
+      '<div class="config-field-row">' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">ID (optional)</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="id" value="' + esc(printer.id || '') + '">' +
+        '</div>' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Printer Type</label>' +
+          '<select class="config-field-input" data-printer-key="printer_type">' +
+            '<option value="inkjet"' + (printer.printer_type === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
+            '<option value="laser"' + (printer.printer_type === 'laser' ? ' selected' : '') + '>laser</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="config-field-row">' +
+        '<div class="config-field">' +
+          '<div class="toggle-wrap" style="margin-top:8px">' +
+            '<label class="toggle-switch">' +
+              '<input type="checkbox" data-printer-key="enabled" ' + enabledChecked + '>' +
+              '<span class="toggle-slider"></span>' +
+            '</label>' +
+            '<span class="toggle-label-text">Enabled</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Cadence (hours)</label>' +
+          '<input type="number" class="config-field-input" data-printer-key="cadence_hours" value="' + esc(String(printer.cadence_hours || '')) + '" min="1" max="720">' +
+        '</div>' +
+      '</div>' +
+      '<div class="config-field-row">' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Template</label>' +
+          '<select class="config-field-input" data-printer-key="template">' +
+            '<option value="">— default —</option>' +
+            '<option value="color_bars"' + (printer.template === 'color_bars' ? ' selected' : '') + '>color_bars</option>' +
+            '<option value="home_summary"' + (printer.template === 'home_summary' ? ' selected' : '') + '>home_summary</option>' +
+            '<option value="weather_snapshot"' + (printer.template === 'weather_snapshot' ? ' selected' : '') + '>weather_snapshot</option>' +
+            '<option value="entity_report"' + (printer.template === 'entity_report' ? ' selected' : '') + '>entity_report</option>' +
+            '<option value="hybrid"' + (printer.template === 'hybrid' ? ' selected' : '') + '>hybrid</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Weather Entity</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="weather_entity" value="' + esc(printer.weather_entity || '') + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="config-field-row">' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Title</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="title" value="' + esc(printer.title || '') + '">' +
+        '</div>' +
+        '<div class="config-field">' +
+          '<label class="config-field-label">Footer</label>' +
+          '<input type="text" class="config-field-input" data-printer-key="footer" value="' + esc(printer.footer || '') + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="config-field">' +
+        '<label class="config-field-label">Entity IDs (one per line)</label>' +
+        '<textarea class="config-field-input" data-printer-key="entity_ids" style="max-width:100%" placeholder="sensor.temperature&#10;sensor.humidity">' + esc(entityIdsValue) + '</textarea>' +
+      '</div>' +
+    '</div>';
+  return card;
+}
+
+function addPrinterCard(printer) {
+  var container = document.getElementById('printer-config-cards');
+  var index = container.children.length;
+  var card = buildPrinterCard(printer || {}, index);
+  container.appendChild(card);
+}
+
+function removePrinterCard(btn) {
+  var card = btn.closest('.printer-config-card');
+  card.remove();
+  // Re-number remaining cards
+  var container = document.getElementById('printer-config-cards');
+  var cards = container.querySelectorAll('.printer-config-card');
+  cards.forEach(function(c, i) {
+    c.dataset.printerIndex = i;
+    var stripe = c.querySelector('.printer-config-card-stripe');
+    stripe.style.background = printerStripeColors[i % printerStripeColors.length];
+    var h4 = c.querySelector('h4');
+    h4.textContent = 'Printer #' + (i + 1);
+  });
+}
+
+/* ===== Form populate / serialize ===== */
+function populateForm(config) {
+  config = config || {};
+
+  // Simple top-level fields
+  document.querySelectorAll('#config-form-view [data-key]').forEach(function(el) {
+    var key = el.dataset.key;
+    var parts = key.split('.');
+    var val;
+    if (parts.length === 2) {
+      val = config[parts[0]] ? config[parts[0]][parts[1]] : undefined;
+    } else {
+      val = config[key];
+    }
+
+    if (el.type === 'checkbox') {
+      el.checked = !!val;
+    } else if (key === 'entity_ids' && Array.isArray(val)) {
+      el.value = val.join('\n');
+    } else {
+      el.value = val != null ? val : '';
+    }
+  });
+
+  // Printers
+  var container = document.getElementById('printer-config-cards');
+  container.innerHTML = '';
+  var printers = config.printers || [];
+  printers.forEach(function(p, i) {
+    var card = buildPrinterCard(p, i);
+    container.appendChild(card);
+  });
+}
+
+function serializeForm() {
+  var config = {};
+
+  // Simple top-level and nested fields
+  document.querySelectorAll('#config-form-view [data-key]').forEach(function(el) {
+    var key = el.dataset.key;
+    var val;
+    if (el.type === 'checkbox') {
+      val = el.checked;
+    } else if (el.type === 'number') {
+      val = el.value !== '' ? Number(el.value) : undefined;
+    } else if (key === 'entity_ids') {
+      val = el.value.trim() ? el.value.trim().split('\n').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    } else {
+      val = el.value;
+    }
+
+    var parts = key.split('.');
+    if (parts.length === 2) {
+      if (!config[parts[0]]) config[parts[0]] = {};
+      if (val !== undefined && val !== '') config[parts[0]][parts[1]] = val;
+      else if (typeof val === 'boolean') config[parts[0]][parts[1]] = val;
+    } else {
+      if (val !== undefined && val !== '') config[key] = val;
+      else if (typeof val === 'boolean') config[key] = val;
+    }
+  });
+
+  // Printers
+  var printerCards = document.querySelectorAll('#printer-config-cards .printer-config-card');
+  var printers = [];
+  printerCards.forEach(function(card) {
+    var p = {};
+    card.querySelectorAll('[data-printer-key]').forEach(function(el) {
+      var key = el.dataset.printerKey;
+      var val;
+      if (el.type === 'checkbox') {
+        val = el.checked;
+      } else if (el.type === 'number') {
+        val = el.value !== '' ? Number(el.value) : undefined;
+      } else if (key === 'entity_ids') {
+        val = el.value.trim() ? el.value.trim().split('\n').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      } else {
+        val = el.value;
+      }
+      if (val !== undefined && val !== '') p[key] = val;
+      else if (typeof val === 'boolean') p[key] = val;
+      else if (Array.isArray(val)) p[key] = val;
+    });
+    printers.push(p);
+  });
+  if (printers.length > 0) config.printers = printers;
+
+  return config;
+}
+
+function syncFormToRaw() {
+  var config = serializeForm();
+  document.getElementById('config-area').value = JSON.stringify(config, null, 2);
+}
+
+function syncRawToForm() {
+  var raw = document.getElementById('config-area').value.trim();
+  if (!raw) return;
+  try {
+    var config = JSON.parse(raw);
+    populateForm(config);
+  } catch (err) {
+    // Don't overwrite form if JSON is invalid
+  }
+}
+
+/* ===== Config actions ===== */
+async function reloadConfig() {
+  try {
+    var data = await requestJson('config');
+    document.getElementById('config-area').value = JSON.stringify(data, null, 2);
+    populateForm(data);
+    showToast('Config loaded');
+  } catch (err) {
+    showToast('Config load failed: ' + err.message, true);
+  }
+}
+
+async function saveConfig() {
+  var parsed;
+  if (configMode === 'form') {
+    parsed = serializeForm();
+    // Also update the raw editor
+    document.getElementById('config-area').value = JSON.stringify(parsed, null, 2);
+  } else {
+    var raw = document.getElementById('config-area').value;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      showToast('Invalid JSON: ' + err.message, true);
+      return;
+    }
+  }
+  try {
+    await requestJson('config', {
+      method: 'POST',
+      body: JSON.stringify({ options: parsed })
+    });
+    showToast('Config saved');
+  } catch (err) {
+    showToast('Save failed: ' + err.message, true);
+  }
+}
+
+async function restartAddon() {
+  try {
+    await requestJson('actions/restart', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    showToast('Restart triggered');
+  } catch (err) {
+    showToast('Restart failed: ' + err.message, true);
+  }
+}
+
+/* ===== Discovery rescan ===== */
+async function doRescan() {
+  var btn = document.getElementById('btn-rescan');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  try {
+    await requestJson('discovery/rescan', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    showToast('Rescan complete');
+    await refreshDiscovery();
+  } catch (err) {
+    showToast('Rescan failed: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Scan Now';
+  }
+}
+
+/* ===== Refresh all data ===== */
+async function refreshDiscovery() {
+  try {
+    var discovery = await requestJson('discovery');
+    renderDiscovery(discovery);
+  } catch (err) {
+    console.error('Discovery fetch error:', err);
+  }
+}
+
+async function refreshAll() {
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
+  try {
+    var health = await requestJson('health');
+    state.health = health;
+    renderDashboard(health);
+    renderPrinters(health);
+  } catch (err) {
+    console.error('Health fetch error:', err);
+    showToast('Failed to load health: ' + err.message, true);
+  }
+
+  try {
+    var discovery = await requestJson('discovery');
+    renderDiscovery(discovery);
+  } catch (err) {
+    console.error('Discovery fetch error:', err);
+  }
+
+  if (!state.configLoaded) {
+    try {
+      var config = await requestJson('config');
+      document.getElementById('config-area').value = JSON.stringify(config, null, 2);
+      populateForm(config);
+      state.configLoaded = true;
+    } catch (err) {
+      console.error('Config fetch error:', err);
+    }
+  }
+
+  state.refreshInFlight = false;
+}
+
+/* ===== Init ===== */
+refreshAll();
+setInterval(refreshAll, 60000);
+</script>
+
+</body>
+</html>

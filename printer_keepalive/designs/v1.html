@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__APP_NAME__ — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --text: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #aeaeb2;
+  --accent: #0071e3;
+  --accent-light: rgba(0,113,227,0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.04);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.06);
+  --divider: rgba(0,0,0,0.06);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --gap: 16px;
+  --pad: 24px;
+  --transition: 0.2s ease;
+}
+
+[data-theme="dark"] {
+  --bg: #1d1d1f;
+  --card: #2d2d2f;
+  --text: #f5f5f7;
+  --text-secondary: #98989d;
+  --text-tertiary: #6e6e73;
+  --accent: #2997ff;
+  --accent-light: rgba(41,151,255,0.12);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2), 0 6px 16px rgba(0,0,0,0.15);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,0.25), 0 12px 28px rgba(0,0,0,0.2);
+  --divider: rgba(255,255,255,0.08);
+}
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* CMYK stripe */
+.cmyk-stripe {
+  height: 3px;
+  background: linear-gradient(90deg, #00bcd4 25%, #e91e63 25%, #e91e63 50%, #ffc107 50%, #ffc107 75%, #263238 75%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Layout */
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3px 24px 80px;
+}
+
+/* Top Bar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--accent);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+
+.brand-title {
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+
+.brand-version {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.design-switcher {
+  padding: 6px 10px;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.design-switcher:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.auth-toggle-btn {
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+  position: relative;
+}
+
+.auth-toggle-btn.has-token { color: var(--accent); border-color: var(--accent); }
+
+.auth-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hover);
+  padding: 16px;
+  z-index: 500;
+  width: 280px;
+  border: 1px solid var(--divider);
+}
+
+.auth-dropdown.open { display: block; }
+
+.auth-dropdown label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.auth-dropdown input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.auth-dropdown input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.auth-dropdown .btn-row { justify-content: flex-end; }
+
+.auth-wrapper { position: relative; }
+
+.theme-toggle {
+  display: flex;
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.theme-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  transition: all var(--transition);
+  line-height: 1;
+}
+
+.theme-btn.active {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 32px;
+  padding-bottom: 2px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 10px 0;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--transition);
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transition: transform 0.25s ease;
+}
+
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--text); }
+.tab-btn.active::after { transform: scaleX(1); }
+
+/* Views */
+.view { display: none; }
+.view.active { display: block; }
+
+/* Bento Grid */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gap);
+}
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: var(--pad);
+  transition: background var(--transition), box-shadow var(--transition), transform 0.3s ease;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Span helpers */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.row-2 { grid-row: span 2; }
+
+/* Metric Card */
+.metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.metric-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.metric-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.metric-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--accent);
+}
+
+/* Card Title */
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 20px;
+}
+
+/* Printer Row */
+.printer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.printer-row:last-child { border-bottom: none; }
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.ok { background: #30d158; box-shadow: 0 0 8px rgba(48,209,88,0.4); }
+.status-dot.warning { background: #ffd60a; box-shadow: 0 0 8px rgba(255,214,10,0.4); }
+.status-dot.error { background: #ff453a; box-shadow: 0 0 8px rgba(255,69,58,0.4); }
+
+.printer-info { flex: 1; min-width: 0; }
+
+.printer-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.printer-state {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.printer-due {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.printer-due .due-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Key-Value list */
+.kv-list { list-style: none; }
+
+.kv-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--divider);
+  font-size: 13px;
+}
+
+.kv-item:last-child { border-bottom: none; }
+
+.kv-key {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.kv-val {
+  font-weight: 500;
+  text-align: right;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv-val.ok { color: #30d158; }
+.kv-val.warn { color: #ffd60a; }
+
+/* Buttons */
+.btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+
+.btn-secondary {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.btn-secondary:hover:not(:disabled) { background: var(--accent); color: #fff; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--divider);
+}
+
+.btn-ghost:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); border-color: transparent; }
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Quick action buttons */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.quick-actions .btn {
+  width: 100%;
+  text-align: center;
+}
+
+/* Printer Detail Cards (Printers view) */
+.printer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--gap);
+}
+
+.printer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.printer-card-header .printer-name { font-size: 16px; }
+
+.printer-card-uri {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-box {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.stat-box .stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-box .stat-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.control-row label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.control-row input[type="number"] {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.control-row select {
+  padding: 6px 10px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Discovery table */
+.disc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.disc-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.disc-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--divider);
+  vertical-align: middle;
+}
+
+.disc-table tr:last-child td { border-bottom: none; }
+
+.disc-table .mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.pill-green { background: rgba(48,209,88,0.12); color: #30d158; }
+.pill-red { background: rgba(255,69,58,0.12); color: #ff453a; }
+.pill-blue { background: var(--accent-light); color: var(--accent); }
+.pill-gray { background: var(--divider); color: var(--text-secondary); }
+
+/* Config view */
+.config-editor {
+  width: 100%;
+  min-height: 280px;
+  background: var(--bg);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  color: var(--text);
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.config-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Config mode toggle (pill segmented control) */
+.config-mode-toggle {
+  display: inline-flex;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 20px;
+  border: 1px solid var(--divider);
+}
+
+.config-mode-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: none;
+  padding: 7px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+
+.config-mode-btn.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Config form styles */
+.cfg-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.cfg-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--pad);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+}
+
+.cfg-section-header:hover {
+  background: var(--accent-light);
+}
+
+.cfg-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.cfg-section-chevron {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  transition: transform 0.25s ease;
+}
+
+.cfg-section.collapsed .cfg-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.cfg-section-body {
+  padding: 0 var(--pad) var(--pad);
+}
+
+.cfg-section.collapsed .cfg-section-body {
+  display: none;
+}
+
+/* Form field */
+.cfg-field {
+  margin-bottom: 18px;
+}
+
+.cfg-field:last-child {
+  margin-bottom: 0;
+}
+
+.cfg-field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.cfg-field-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.cfg-field input[type="text"],
+.cfg-field input[type="password"],
+.cfg-field input[type="number"],
+.cfg-field textarea,
+.cfg-field select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.cfg-field input[type="text"]:focus,
+.cfg-field input[type="password"]:focus,
+.cfg-field input[type="number"]:focus,
+.cfg-field textarea:focus,
+.cfg-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.cfg-field textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.cfg-field-suffix {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+
+.cfg-field-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cfg-field-inline input[type="number"] {
+  width: 100px;
+}
+
+/* Custom toggle switch */
+.cfg-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cfg-toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.cfg-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.cfg-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--divider);
+  border-radius: 12px;
+  transition: background 0.25s ease;
+  cursor: pointer;
+}
+
+.cfg-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.25s ease;
+}
+
+.cfg-toggle input:checked + .cfg-toggle-track {
+  background: var(--accent);
+}
+
+.cfg-toggle input:checked + .cfg-toggle-track::after {
+  transform: translateX(18px);
+}
+
+/* Printer config card */
+.cfg-printer-card {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+}
+
+.cfg-printer-card:last-of-type {
+  margin-bottom: 12px;
+}
+
+.cfg-printer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cfg-printer-header:hover {
+  background: var(--accent-light);
+}
+
+.cfg-printer-body {
+  padding: 0 16px 16px;
+}
+
+.cfg-printer-card.collapsed .cfg-printer-body {
+  display: none;
+}
+
+.cfg-printer-remove {
+  font-size: 12px;
+  color: #ff453a;
+  background: rgba(255,69,58,0.1);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+
+.cfg-printer-remove:hover {
+  background: #ff453a;
+  color: #fff;
+}
+
+/* View subtitle */
+.view-header {
+  margin-bottom: 24px;
+}
+
+.view-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.view-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hover);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 2000;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid var(--divider);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast.toast-error {
+  border-color: #ff453a;
+  color: #ff453a;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .bento {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .span-3 { grid-column: span 2; }
+}
+
+@media (max-width: 600px) {
+  .container { padding: 3px 16px 80px; }
+  .bento {
+    grid-template-columns: 1fr;
+  }
+  .span-2, .span-3 { grid-column: span 1; }
+  .row-2 { grid-row: span 1; }
+  .tabs { gap: 20px; }
+  .topbar { flex-wrap: wrap; gap: 12px; }
+  .metric-value { font-size: 26px; }
+  .printer-cards { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="cmyk-stripe"></div>
+
+<div class="container">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+      </div>
+      <span class="brand-title">__APP_NAME__</span>
+      <span class="brand-version" id="version-badge"></span>
+    </div>
+    <div class="topbar-right">
+      <select class="design-switcher" id="design-switcher">
+        <option value="v1" selected>Bento Grid</option>
+        <option value="v2">Glassmorphism</option>
+        <option value="v3">Neubrutalist</option>
+        <option value="v4">Cinematic Dark</option>
+        <option value="v5">Home Assistant</option>
+      </select>
+      <div class="auth-wrapper">
+        <button class="auth-toggle-btn" id="auth-toggle" title="Auth Token">&#9919;</button>
+        <div class="auth-dropdown" id="auth-dropdown">
+          <label for="auth-token-input">Bearer Token</label>
+          <input type="password" id="auth-token-input" placeholder="Paste token here...">
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="auth-clear">Clear</button>
+            <button class="btn btn-primary" id="auth-save">Save</button>
+          </div>
+        </div>
+      </div>
+      <div class="theme-toggle">
+        <button class="theme-btn" id="theme-light" title="Light mode">&#9788;</button>
+        <button class="theme-btn" id="theme-dark" title="Dark mode">&#9790;</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs" id="tabs"></nav>
+
+  <!-- Dashboard View -->
+  <section class="view active" id="view-dashboard">
+    <div class="bento" id="bento-dashboard"></div>
+  </section>
+
+  <!-- Printers View -->
+  <section class="view" id="view-printers">
+    <div class="view-header">
+      <h2 class="view-title">Printers</h2>
+      <p class="view-sub">Manage keepalive settings for each configured printer.</p>
+    </div>
+    <div class="printer-cards" id="printer-cards"></div>
+  </section>
+
+  <!-- Discovery View -->
+  <section class="view" id="view-discovery">
+    <div class="view-header">
+      <h2 class="view-title">Discovery</h2>
+      <p class="view-sub">Network printers found via IPP/DNS-SD scanning.</p>
+    </div>
+    <div id="discovery-content"></div>
+  </section>
+
+  <!-- Config View -->
+  <section class="view" id="view-config">
+    <div class="view-header">
+      <h2 class="view-title">Configuration</h2>
+      <p class="view-sub">Manage add-on settings using the form or edit raw JSON.</p>
+    </div>
+    <div class="config-mode-toggle">
+      <button class="config-mode-btn active" data-mode="form">Form</button>
+      <button class="config-mode-btn" data-mode="advanced">Advanced (JSON)</button>
+    </div>
+    <div id="config-form-view"></div>
+    <div id="config-raw-view" style="display:none"></div>
+    <div class="card" style="opacity:1;transform:none;margin-top:16px">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="cfg-save">Save Config</button>
+        <button class="btn btn-secondary" id="cfg-load">Load Config</button>
+        <button class="btn btn-ghost" id="cfg-restart">Restart Add-on</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── API helpers ─────────────────────────────────────────── */
+function apiPath(path) {
+  var pathname = window.location.pathname;
+  var base = pathname.replace(/\/design\/v[1-5]\/?$/, '/');
+  if (!base.endsWith('/')) base += '/';
+  var origin = window.location.origin;
+  var clean = String(path || '').replace(/^\/+/, '');
+  return new URL(clean, origin + base).toString();
+}
+
+var state = {
+  authToken: localStorage.getItem('pk_auth_token') || '',
+  refreshInFlight: false,
+  health: null,
+  discovery: null,
+  configLoaded: false
+};
+
+async function requestJson(path, init) {
+  if (!init) init = {};
+  var headers = Object.assign({}, init.headers || {});
+  if (init.body !== undefined && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (state.authToken) headers['Authorization'] = 'Bearer ' + state.authToken;
+  var response = await fetch(apiPath(path), Object.assign({}, init, { headers: headers }));
+  var raw = await response.text();
+  var payload = {};
+  if (raw) {
+    try { payload = JSON.parse(raw); }
+    catch (err) { throw new Error('Invalid JSON: ' + path + ' (' + response.status + ')'); }
+  }
+  if (!response.ok || (payload && payload.ok === false)) {
+    var message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + ' ' + response.statusText);
+    throw new Error(message);
+  }
+  return payload;
+}
+
+/* ── Toast ───────────────────────────────────────────────── */
+var toastTimer = null;
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' toast-error' : '');
+  void t.offsetWidth;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function relTime(iso) {
+  if (!iso) return '\u2014';
+  var diff = Date.now() - new Date(iso).getTime();
+  var abs = Math.abs(diff);
+  var future = diff < 0;
+  var m = Math.floor(abs / 60000);
+  var h = Math.floor(abs / 3600000);
+  var d = Math.floor(abs / 86400000);
+  var str;
+  if (d > 0) str = d + 'd';
+  else if (h > 0) str = h + 'h';
+  else str = m + 'm';
+  return future ? 'in ' + str : str + ' ago';
+}
+
+function shortDate(iso) {
+  if (!iso) return '\u2014';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function el(tag, cls, html) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+function escHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/* ── Theme ───────────────────────────────────────────────── */
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('pk-theme', t);
+  document.getElementById('theme-light').classList.toggle('active', t === 'light');
+  document.getElementById('theme-dark').classList.toggle('active', t === 'dark');
+}
+
+document.getElementById('theme-light').onclick = function() { setTheme('light'); };
+document.getElementById('theme-dark').onclick = function() { setTheme('dark'); };
+setTheme(localStorage.getItem('pk-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'));
+
+/* ── Auth dropdown ───────────────────────────────────────── */
+(function() {
+  var toggle = document.getElementById('auth-toggle');
+  var dropdown = document.getElementById('auth-dropdown');
+  var input = document.getElementById('auth-token-input');
+  var saveBtn = document.getElementById('auth-save');
+  var clearBtn = document.getElementById('auth-clear');
+
+  function syncIcon() {
+    toggle.classList.toggle('has-token', !!state.authToken);
+  }
+  syncIcon();
+
+  input.value = state.authToken;
+
+  toggle.onclick = function(e) {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+    if (dropdown.classList.contains('open')) input.focus();
+  };
+
+  saveBtn.onclick = function() {
+    state.authToken = input.value.trim();
+    localStorage.setItem('pk_auth_token', state.authToken);
+    syncIcon();
+    dropdown.classList.remove('open');
+    showToast('Auth token saved');
+  };
+
+  clearBtn.onclick = function() {
+    state.authToken = '';
+    input.value = '';
+    localStorage.removeItem('pk_auth_token');
+    syncIcon();
+    dropdown.classList.remove('open');
+    showToast('Auth token cleared');
+  };
+
+  document.addEventListener('click', function(e) {
+    if (!dropdown.contains(e.target) && e.target !== toggle) {
+      dropdown.classList.remove('open');
+    }
+  });
+})();
+
+/* ── Design switcher ─────────────────────────────────────── */
+(function() {
+  var sel = document.getElementById('design-switcher');
+  sel.value = 'v1';
+
+  sel.onchange = function() {
+    var v = sel.value;
+    document.cookie = 'pk_design=' + v + '; path=/; max-age=31536000; SameSite=Lax';
+    var pathname = window.location.pathname;
+    var newPath = pathname.replace(/\/v[1-5]\/?$/, '/' + v + '/');
+    if (newPath === pathname) {
+      newPath = pathname.replace(/\/$/, '') + '/../' + v + '/';
+    }
+    window.location.href = newPath;
+  };
+})();
+
+/* ── Version ─────────────────────────────────────────────── */
+document.getElementById('version-badge').textContent = 'v__APP_VERSION__';
+
+/* ── Tabs ────────────────────────────────────────────────── */
+var TAB_NAMES = ['Dashboard', 'Printers', 'Discovery', 'Config'];
+var tabsEl = document.getElementById('tabs');
+TAB_NAMES.forEach(function(name, i) {
+  var btn = el('button', 'tab-btn' + (i === 0 ? ' active' : ''), name);
+  btn.dataset.view = name.toLowerCase();
+  btn.onclick = function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    animateCards();
+  };
+  tabsEl.appendChild(btn);
+});
+
+/* ── SVG icons ───────────────────────────────────────────── */
+var ICONS = {
+  printer: '<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>',
+  search: '<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>'
+};
+
+/* ── Dashboard Bento ─────────────────────────────────────── */
+function buildDashboard() {
+  var grid = document.getElementById('bento-dashboard');
+  grid.innerHTML = '';
+  var h = state.health;
+  if (!h) {
+    grid.innerHTML = '<div class="card span-2" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">Loading...</p></div>';
+    return;
+  }
+
+  var metrics = [
+    { label: 'Printers', value: h.printer_count, sub: 'Configured', icon: 'printer' },
+    { label: 'MQTT', value: h.mqtt_enabled ? 'On' : 'Off', sub: h.mqtt_enabled ? 'Connected & publishing' : 'Disabled', icon: 'wifi' },
+    { label: 'Auto Print', value: h.auto_print_enabled ? 'On' : 'Off', sub: h.auto_print_enabled ? 'Scheduler active' : 'Disabled', icon: 'clock' },
+    { label: 'Discovery', value: h.discovery.printer_count, sub: 'Found on network', icon: 'search' },
+  ];
+
+  metrics.forEach(function(m) {
+    var c = el('div', 'card');
+    c.innerHTML =
+      '<div class="metric-icon">' + ICONS[m.icon] + '</div>' +
+      '<div class="metric-label">' + escHtml(m.label) + '</div>' +
+      '<div class="metric-value">' + escHtml(String(m.value)) + '</div>' +
+      '<div class="metric-sub">' + escHtml(m.sub) + '</div>';
+    grid.appendChild(c);
+  });
+
+  // Printer Health - span 3
+  var healthCard = el('div', 'card span-3');
+  var rows = '';
+  h.printers.forEach(function(p) {
+    var due = new Date(p.next_keepalive_due_at);
+    var overdue = due < new Date();
+    rows +=
+      '<div class="printer-row">' +
+        '<div class="status-dot ' + escHtml(p.health_status) + '"></div>' +
+        '<div class="printer-info">' +
+          '<div class="printer-name">' + escHtml(p.name) + '</div>' +
+          '<div class="printer-state">' + escHtml(p.printer_state) + ' &middot; ' + escHtml(p.template) + '</div>' +
+        '</div>' +
+        '<div class="printer-due">' +
+          '<div class="due-label">Next due</div>' +
+          '<div style="color:' + (overdue ? '#ff453a' : 'inherit') + ';font-weight:' + (overdue ? '600' : '400') + '">' + escHtml(relTime(p.next_keepalive_due_at)) + '</div>' +
+        '</div>' +
+      '</div>';
+  });
+  healthCard.innerHTML = '<div class="card-title">Printer Health</div>' + rows;
+  grid.appendChild(healthCard);
+
+  // System Info
+  var sysCard = el('div', 'card');
+  sysCard.innerHTML =
+    '<div class="card-title">System Info</div>' +
+    '<ul class="kv-list">' +
+      '<li class="kv-item"><span class="kv-key">Version</span><span class="kv-val">' + escHtml(h.version) + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Auth</span><span class="kv-val">' + (h.auth_required ? 'Required' : 'Open') + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Updated</span><span class="kv-val">' + escHtml(relTime(h.timestamp)) + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Templates</span><span class="kv-val">' + h.supported_templates.length + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Add-on</span><span class="kv-val" title="' + escHtml(h.addon_page_url || '') + '">HA Supervisor</span></li>' +
+    '</ul>';
+  grid.appendChild(sysCard);
+
+  // Discovery Summary (span 2) + Quick Actions
+  var discCard = el('div', 'card span-2');
+  var d = h.discovery;
+  discCard.innerHTML =
+    '<div class="card-title">Discovery Summary</div>' +
+    '<ul class="kv-list">' +
+      '<li class="kv-item"><span class="kv-key">Status</span><span class="kv-val ' + (d.enabled ? 'ok' : '') + '">' + (d.enabled ? 'Enabled' : 'Disabled') + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Last Scan</span><span class="kv-val">' + escHtml(relTime(d.last_scan_at)) + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Duration</span><span class="kv-val">' + d.last_scan_duration_seconds + 's</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Candidates</span><span class="kv-val">' + d.printer_count + ' printers</span></li>' +
+    '</ul>';
+  grid.appendChild(discCard);
+
+  var actCard = el('div', 'card');
+  actCard.innerHTML =
+    '<div class="card-title">Quick Actions</div>' +
+    '<div class="quick-actions">' +
+      '<button class="btn btn-primary" id="qa-refresh">Refresh Health</button>' +
+      '<button class="btn btn-secondary" id="qa-rescan">Rescan Network</button>' +
+      '<button class="btn btn-ghost" id="qa-open-ha">Open in HA</button>' +
+    '</div>';
+  grid.appendChild(actCard);
+
+  // Bind quick actions
+  document.getElementById('qa-refresh').onclick = function() { refreshAll(); };
+  document.getElementById('qa-rescan').onclick = async function() {
+    try {
+      var resp = await requestJson('discovery/rescan', { method: 'POST', body: '{}' });
+      state.discovery = resp;
+      buildDiscovery();
+      showToast('Rescan complete');
+    } catch (e) { showToast('Rescan failed: ' + e.message, true); }
+  };
+  document.getElementById('qa-open-ha').onclick = function() {
+    if (state.health && state.health.addon_page_url) {
+      window.open(state.health.addon_page_url, '_blank');
+    } else {
+      showToast('Add-on URL not available', true);
+    }
+  };
+
+  // About card
+  var tipCard = el('div', 'card span-2');
+  tipCard.innerHTML =
+    '<div class="card-title">About Keepalive</div>' +
+    '<p style="font-size:14px;color:var(--text-secondary);line-height:1.6">' +
+      '__APP_NAME__ periodically sends small print jobs to prevent inkjet nozzles from drying out. ' +
+      'Configure cadence per-printer and choose from multiple page templates.' +
+    '</p>';
+  grid.appendChild(tipCard);
+}
+
+/* ── Printers View ───────────────────────────────────────── */
+function buildPrinters() {
+  var container = document.getElementById('printer-cards');
+  container.innerHTML = '';
+  if (!state.health) {
+    container.innerHTML = '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">Loading...</p></div>';
+    return;
+  }
+  state.health.printers.forEach(function(p) {
+    var card = el('div', 'card');
+    var opts = (state.health.supported_templates || []).map(function(t) {
+      return '<option value="' + escHtml(t) + '"' + (t === p.template ? ' selected' : '') + '>' + escHtml(t.replace(/_/g, ' ')) + '</option>';
+    }).join('');
+
+    card.innerHTML =
+      '<div class="printer-card-header">' +
+        '<div class="status-dot ' + escHtml(p.health_status) + '"></div>' +
+        '<div>' +
+          '<div class="printer-name">' + escHtml(p.name) + '</div>' +
+          '<div class="printer-card-uri">' + escHtml(p.printer_uri) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stats-grid">' +
+        '<div class="stat-box"><div class="stat-label">Status</div><div class="stat-value">' + (p.health_status === 'ok' ? 'Healthy' : 'Needs attention') + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">State</div><div class="stat-value" style="text-transform:capitalize">' + escHtml(p.printer_state) + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Last Print</div><div class="stat-value">' + escHtml(relTime(p.last_print_at)) + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Next Due</div><div class="stat-value">' + escHtml(relTime(p.next_keepalive_due_at)) + '</div></div>' +
+      '</div>' +
+      '<div class="control-row">' +
+        '<label><input type="checkbox" class="p-enabled"' + (p.enabled ? ' checked' : '') + '> Enabled</label>' +
+        '<label>Cadence <input type="number" class="p-cadence" value="' + p.cadence_hours + '" min="1">h</label>' +
+        '<select class="p-template">' + opts + '</select>' +
+      '</div>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-primary btn-save">Save</button>' +
+        '<button class="btn btn-secondary btn-print-now">Print Now</button>' +
+        '<button class="btn btn-ghost btn-force">Force</button>' +
+        '<button class="btn btn-ghost btn-poll">Poll</button>' +
+      '</div>';
+
+    var pid = p.printer_id;
+
+    card.querySelector('.btn-save').onclick = async function() {
+      var enabled = card.querySelector('.p-enabled').checked;
+      var cadence = parseInt(card.querySelector('.p-cadence').value, 10) || p.cadence_hours;
+      var template = card.querySelector('.p-template').value;
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/settings', {
+          method: 'POST',
+          body: JSON.stringify({ enabled: enabled, cadence_hours: cadence, template: template })
+        });
+        showToast('Settings saved for ' + p.name);
+        refreshAll();
+      } catch (e) { showToast('Save failed: ' + e.message, true); }
+    };
+
+    card.querySelector('.btn-print-now').onclick = async function() {
+      var template = card.querySelector('.p-template').value;
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+          method: 'POST',
+          body: JSON.stringify({ template: template, force: false })
+        });
+        showToast('Print sent to ' + p.name);
+        refreshAll();
+      } catch (e) { showToast('Print failed: ' + e.message, true); }
+    };
+
+    card.querySelector('.btn-force').onclick = async function() {
+      var template = card.querySelector('.p-template').value;
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+          method: 'POST',
+          body: JSON.stringify({ template: template, force: true })
+        });
+        showToast('Force print sent to ' + p.name);
+        refreshAll();
+      } catch (e) { showToast('Force print failed: ' + e.message, true); }
+    };
+
+    card.querySelector('.btn-poll').onclick = async function() {
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/poll', {
+          method: 'POST',
+          body: '{}'
+        });
+        showToast('Poll sent to ' + p.name);
+        refreshAll();
+      } catch (e) { showToast('Poll failed: ' + e.message, true); }
+    };
+
+    container.appendChild(card);
+  });
+}
+
+/* ── Discovery View ──────────────────────────────────────── */
+function buildDiscovery() {
+  var container = document.getElementById('discovery-content');
+  container.innerHTML = '';
+  var d = state.discovery;
+  if (!d) {
+    container.innerHTML = '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">Loading...</p></div>';
+    return;
+  }
+
+  var statsCard = el('div', 'card',
+    '<div class="card-title">Scan Summary</div>' +
+    '<ul class="kv-list">' +
+      '<li class="kv-item"><span class="kv-key">Status</span><span class="kv-val ' + (d.enabled ? 'ok' : '') + '">' + (d.enabled ? 'Enabled' : 'Disabled') + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Last Scan</span><span class="kv-val">' + escHtml(shortDate(d.last_scan_at)) + '</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Duration</span><span class="kv-val">' + d.last_scan_duration_seconds + 's</span></li>' +
+      '<li class="kv-item"><span class="kv-key">Found</span><span class="kv-val">' + d.printer_count + ' printers</span></li>' +
+    '</ul>' +
+    '<div style="margin-top:16px"><button class="btn btn-secondary" id="disc-rescan-btn">Rescan Now</button></div>'
+  );
+  statsCard.style.marginBottom = '16px';
+  container.appendChild(statsCard);
+
+  document.getElementById('disc-rescan-btn').onclick = async function() {
+    try {
+      var resp = await requestJson('discovery/rescan', { method: 'POST', body: '{}' });
+      state.discovery = resp;
+      buildDiscovery();
+      showToast('Rescan complete');
+      animateCards();
+    } catch (e) { showToast('Rescan failed: ' + e.message, true); }
+  };
+
+  var tableRows = (d.printers || []).map(function(p) {
+    return '<tr>' +
+      '<td style="font-weight:500">' + escHtml(p.printer_name) + '</td>' +
+      '<td class="mono">' + escHtml(p.uri) + '</td>' +
+      '<td>' + escHtml(p.printer_type_guess) + '</td>' +
+      '<td>' + (p.reachable ? '<span class="pill pill-green">Online</span>' : '<span class="pill pill-red">Offline</span>') + '</td>' +
+      '<td>' + (p.already_configured ? '<span class="pill pill-blue">Configured</span>' : '<span class="pill pill-gray">New</span>') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var tableCard = el('div', 'card',
+    '<div class="card-title">Discovered Printers</div>' +
+    '<div style="overflow-x:auto">' +
+      '<table class="disc-table">' +
+        '<thead><tr><th>Name</th><th>URI</th><th>Type</th><th>Status</th><th>Config</th></tr></thead>' +
+        '<tbody>' + tableRows + '</tbody>' +
+      '</table>' +
+    '</div>'
+  );
+  container.appendChild(tableCard);
+}
+
+/* ── Config View ─────────────────────────────────────────── */
+var configCurrentMode = 'form';
+var configRawObj = {};
+
+var TEMPLATE_OPTIONS = ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid'];
+var PRINTER_TYPE_OPTIONS = ['inkjet', 'laser'];
+
+function makeToggleField(key, label, desc) {
+  return '<div class="cfg-field">' +
+    '<div class="cfg-toggle-wrap">' +
+      '<label class="cfg-toggle"><input type="checkbox" data-key="' + escHtml(key) + '"><span class="cfg-toggle-track"></span></label>' +
+      '<span class="cfg-field-label" style="margin-bottom:0">' + escHtml(label) + '</span>' +
+    '</div>' +
+    (desc ? '<div class="cfg-field-desc">' + escHtml(desc) + '</div>' : '') +
+  '</div>';
+}
+
+function makeTextField(key, label, desc, type) {
+  type = type || 'text';
+  return '<div class="cfg-field">' +
+    '<label class="cfg-field-label">' + escHtml(label) + '</label>' +
+    '<input type="' + type + '" data-key="' + escHtml(key) + '">' +
+    (desc ? '<div class="cfg-field-desc">' + escHtml(desc) + '</div>' : '') +
+  '</div>';
+}
+
+function makeNumberField(key, label, desc, min, max, suffix) {
+  return '<div class="cfg-field">' +
+    '<label class="cfg-field-label">' + escHtml(label) + '</label>' +
+    '<div class="cfg-field-inline">' +
+      '<input type="number" data-key="' + escHtml(key) + '"' +
+        (min !== undefined ? ' min="' + min + '"' : '') +
+        (max !== undefined ? ' max="' + max + '"' : '') + '>' +
+      (suffix ? '<span class="cfg-field-suffix">' + escHtml(suffix) + '</span>' : '') +
+    '</div>' +
+    (desc ? '<div class="cfg-field-desc">' + escHtml(desc) + '</div>' : '') +
+  '</div>';
+}
+
+function makeSelectField(key, label, desc, options) {
+  var opts = options.map(function(o) {
+    return '<option value="' + escHtml(o) + '">' + escHtml(o.replace(/_/g, ' ')) + '</option>';
+  }).join('');
+  return '<div class="cfg-field">' +
+    '<label class="cfg-field-label">' + escHtml(label) + '</label>' +
+    '<select data-key="' + escHtml(key) + '">' + opts + '</select>' +
+    (desc ? '<div class="cfg-field-desc">' + escHtml(desc) + '</div>' : '') +
+  '</div>';
+}
+
+function makeTextareaField(key, label, desc) {
+  return '<div class="cfg-field">' +
+    '<label class="cfg-field-label">' + escHtml(label) + '</label>' +
+    '<textarea data-key="' + escHtml(key) + '"></textarea>' +
+    (desc ? '<div class="cfg-field-desc">' + escHtml(desc) + '</div>' : '') +
+  '</div>';
+}
+
+function makeSection(id, title, bodyHtml, collapsed) {
+  return '<div class="cfg-section' + (collapsed ? ' collapsed' : '') + '" id="cfg-sec-' + id + '">' +
+    '<div class="cfg-section-header">' +
+      '<span class="cfg-section-title">' + escHtml(title) + '</span>' +
+      '<span class="cfg-section-chevron">&#9660;</span>' +
+    '</div>' +
+    '<div class="cfg-section-body">' + bodyHtml + '</div>' +
+  '</div>';
+}
+
+function buildPrinterCard(index, collapsed) {
+  var prefix = 'printer-' + index;
+  return '<div class="cfg-printer-card' + (collapsed ? ' collapsed' : '') + '" data-printer-index="' + index + '">' +
+    '<div class="cfg-printer-header">' +
+      '<span class="cfg-printer-name">Printer ' + (index + 1) + '</span>' +
+      '<button class="cfg-printer-remove" data-printer-remove="' + index + '">Remove</button>' +
+    '</div>' +
+    '<div class="cfg-printer-body">' +
+      makeTextField(prefix + '.name', 'Name', 'Friendly name shown in Home Assistant') +
+      makeTextField(prefix + '.printer_uri', 'Printer URI', 'e.g. ipp://192.168.1.50/ipp/print') +
+      makeTextField(prefix + '.id', 'ID', 'Optional stable ID (slug)') +
+      makeSelectField(prefix + '.printer_type', 'Type', 'Used for maintenance guidance', PRINTER_TYPE_OPTIONS) +
+      makeToggleField(prefix + '.enabled', 'Enabled', 'Participate in scheduled keepalive') +
+      makeNumberField(prefix + '.cadence_hours', 'Cadence Hours', 'Hours between keepalive prints', 1, 720, 'hours') +
+      makeSelectField(prefix + '.template', 'Template', '', TEMPLATE_OPTIONS) +
+      makeTextField(prefix + '.weather_entity', 'Weather Entity', '') +
+      makeTextareaField(prefix + '.entity_ids', 'Entity IDs', 'One entity ID per line') +
+      makeTextField(prefix + '.title', 'Page Title', '') +
+      makeTextField(prefix + '.footer', 'Page Footer', '') +
+    '</div>' +
+  '</div>';
+}
+
+function buildConfigForm() {
+  var formView = document.getElementById('config-form-view');
+
+  // Section 1: Printers
+  var printersBody = '<div id="cfg-printers-list"></div>' +
+    '<button class="btn btn-secondary" id="cfg-add-printer" style="margin-top:8px">Add Printer</button>';
+
+  // Section 2: Scheduling
+  var schedBody =
+    makeToggleField('auto_print_enabled', 'Enable Internal Scheduler', '') +
+    makeNumberField('status_poll_interval_minutes', 'Status Poll Interval', '', 1, 1440, 'min') +
+    makeNumberField('failure_retry_minutes', 'Failure Cooldown', '', 1, 1440, 'min');
+
+  // Section 3: Discovery
+  var discBody =
+    makeToggleField('discovery_enabled', 'Enable Discovery', '') +
+    makeNumberField('discovery_interval_minutes', 'Scan Interval', '', 1, 1440, 'min') +
+    makeNumberField('discovery_timeout_seconds', 'Scan Timeout', '', 1, 30, 'sec') +
+    makeNumberField('discovery_ipp_query_timeout_seconds', 'IPP Query Timeout', '', 1, 30, 'sec') +
+    makeToggleField('discovery_include_ipps', 'Include IPPS', '');
+
+  // Section 4: Templates & Content
+  var tplBody =
+    makeSelectField('default_template', 'Default Template', '', TEMPLATE_OPTIONS) +
+    makeTextField('title', 'Default Page Title', '') +
+    makeTextField('footer', 'Default Page Footer', '') +
+    makeTextField('weather_entity', 'Default Weather Entity', '') +
+    makeTextareaField('entity_ids', 'Default Entity IDs', 'One entity ID per line');
+
+  // Section 5: MQTT
+  var mqttBody =
+    makeToggleField('mqtt.enabled', 'Enable MQTT', '') +
+    makeTextField('mqtt.host', 'Host', 'Defaults to core-mosquitto') +
+    makeNumberField('mqtt.port', 'Port', '', 1, 65535, '') +
+    makeTextField('mqtt.username', 'Username', '') +
+    makeTextField('mqtt.password', 'Password', '', 'password') +
+    makeTextField('mqtt.discovery_prefix', 'Discovery Prefix', '') +
+    makeTextField('mqtt.topic_prefix', 'Topic Prefix', '') +
+    makeToggleField('mqtt.retain', 'Retain Messages', '') +
+    makeToggleField('mqtt.tls', 'Use TLS', '') +
+    makeTextField('mqtt.client_id', 'Client ID', '');
+
+  // Section 6: Integration
+  var intBody =
+    makeTextField('ha_url', 'Home Assistant URL', 'For non-Supervisor installs') +
+    makeTextField('ha_token', 'Home Assistant Token', '', 'password') +
+    makeTextField('addon_page_url', 'Add-on Page URL', 'URL for printed QR code') +
+    makeTextField('auth_token', 'API Auth Token', 'Bearer token for API callers', 'password');
+
+  formView.innerHTML =
+    makeSection('printers', 'Printers', printersBody, false) +
+    makeSection('scheduling', 'Scheduling', schedBody, true) +
+    makeSection('discovery', 'Discovery', discBody, true) +
+    makeSection('templates', 'Templates & Content', tplBody, true) +
+    makeSection('mqtt', 'MQTT', mqttBody, true) +
+    makeSection('integration', 'Integration', intBody, true);
+
+  // Bind section toggles
+  formView.querySelectorAll('.cfg-section-header').forEach(function(hdr) {
+    hdr.addEventListener('click', function() {
+      hdr.parentElement.classList.toggle('collapsed');
+    });
+  });
+
+  // Bind add printer
+  document.getElementById('cfg-add-printer').addEventListener('click', function() {
+    addPrinterCard({});
+  });
+}
+
+function addPrinterCard(printerData, collapsed) {
+  var list = document.getElementById('cfg-printers-list');
+  var index = list.querySelectorAll('.cfg-printer-card').length;
+  var tmp = document.createElement('div');
+  tmp.innerHTML = buildPrinterCard(index, collapsed);
+  var card = tmp.firstChild;
+  list.appendChild(card);
+
+  // Populate card fields
+  var prefix = 'printer-' + index;
+  setFieldValue(card, prefix + '.name', printerData.name || '');
+  setFieldValue(card, prefix + '.printer_uri', printerData.printer_uri || '');
+  setFieldValue(card, prefix + '.id', printerData.id || '');
+  setFieldValue(card, prefix + '.printer_type', printerData.printer_type || 'inkjet');
+  setFieldValue(card, prefix + '.enabled', printerData.enabled !== false);
+  setFieldValue(card, prefix + '.cadence_hours', printerData.cadence_hours || 72);
+  setFieldValue(card, prefix + '.template', printerData.template || 'color_bars');
+  setFieldValue(card, prefix + '.weather_entity', printerData.weather_entity || '');
+  setFieldValue(card, prefix + '.entity_ids', printerData.entity_ids || []);
+  setFieldValue(card, prefix + '.title', printerData.title || '');
+  setFieldValue(card, prefix + '.footer', printerData.footer || '');
+
+  // Update the name label
+  var nameLabel = card.querySelector('.cfg-printer-name');
+  nameLabel.textContent = printerData.name || ('Printer ' + (index + 1));
+
+  // Bind header toggle
+  card.querySelector('.cfg-printer-header').addEventListener('click', function(e) {
+    if (e.target.classList.contains('cfg-printer-remove')) return;
+    card.classList.toggle('collapsed');
+  });
+
+  // Bind remove
+  card.querySelector('.cfg-printer-remove').addEventListener('click', function(e) {
+    e.stopPropagation();
+    card.remove();
+    reindexPrinterCards();
+  });
+
+  // Update name label on name change
+  var nameInput = card.querySelector('[data-key="' + prefix + '.name"]');
+  if (nameInput) {
+    nameInput.addEventListener('input', function() {
+      nameLabel.textContent = nameInput.value || ('Printer ' + (index + 1));
+    });
+  }
+}
+
+function reindexPrinterCards() {
+  var list = document.getElementById('cfg-printers-list');
+  var cards = list.querySelectorAll('.cfg-printer-card');
+  cards.forEach(function(card, i) {
+    var oldIndex = parseInt(card.getAttribute('data-printer-index'), 10);
+    card.setAttribute('data-printer-index', i);
+    card.querySelectorAll('[data-key]').forEach(function(field) {
+      var key = field.getAttribute('data-key');
+      field.setAttribute('data-key', key.replace('printer-' + oldIndex + '.', 'printer-' + i + '.'));
+    });
+    card.querySelector('.cfg-printer-remove').setAttribute('data-printer-remove', i);
+  });
+}
+
+function setFieldValue(scope, key, value) {
+  var field = scope.querySelector('[data-key="' + key + '"]');
+  if (!field) return;
+  if (field.type === 'checkbox') {
+    field.checked = !!value;
+  } else if (field.tagName === 'TEXTAREA') {
+    field.value = Array.isArray(value) ? value.join('\n') : (value || '');
+  } else if (field.type === 'number') {
+    field.value = (value !== undefined && value !== null) ? Number(value) : '';
+  } else {
+    field.value = value || '';
+  }
+}
+
+function getFieldValue(scope, key) {
+  var field = scope.querySelector('[data-key="' + key + '"]');
+  if (!field) return undefined;
+  if (field.type === 'checkbox') return field.checked;
+  if (field.type === 'number') return field.value !== '' ? Number(field.value) : undefined;
+  if (field.tagName === 'TEXTAREA') {
+    return field.value.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+  }
+  return field.value;
+}
+
+function populateForm(config) {
+  var formView = document.getElementById('config-form-view');
+
+  // Printers
+  var list = document.getElementById('cfg-printers-list');
+  list.innerHTML = '';
+  var printers = config.printers || [];
+  printers.forEach(function(p, i) {
+    addPrinterCard(p, i > 0);
+  });
+
+  // Scheduling
+  setFieldValue(formView, 'auto_print_enabled', config.auto_print_enabled);
+  setFieldValue(formView, 'status_poll_interval_minutes', config.status_poll_interval_minutes);
+  setFieldValue(formView, 'failure_retry_minutes', config.failure_retry_minutes);
+
+  // Discovery
+  setFieldValue(formView, 'discovery_enabled', config.discovery_enabled);
+  setFieldValue(formView, 'discovery_interval_minutes', config.discovery_interval_minutes);
+  setFieldValue(formView, 'discovery_timeout_seconds', config.discovery_timeout_seconds);
+  setFieldValue(formView, 'discovery_ipp_query_timeout_seconds', config.discovery_ipp_query_timeout_seconds);
+  setFieldValue(formView, 'discovery_include_ipps', config.discovery_include_ipps);
+
+  // Templates
+  setFieldValue(formView, 'default_template', config.default_template);
+  setFieldValue(formView, 'title', config.title);
+  setFieldValue(formView, 'footer', config.footer);
+  setFieldValue(formView, 'weather_entity', config.weather_entity);
+  setFieldValue(formView, 'entity_ids', config.entity_ids);
+
+  // MQTT
+  var mqtt = config.mqtt || {};
+  setFieldValue(formView, 'mqtt.enabled', mqtt.enabled);
+  setFieldValue(formView, 'mqtt.host', mqtt.host);
+  setFieldValue(formView, 'mqtt.port', mqtt.port);
+  setFieldValue(formView, 'mqtt.username', mqtt.username);
+  setFieldValue(formView, 'mqtt.password', mqtt.password);
+  setFieldValue(formView, 'mqtt.discovery_prefix', mqtt.discovery_prefix);
+  setFieldValue(formView, 'mqtt.topic_prefix', mqtt.topic_prefix);
+  setFieldValue(formView, 'mqtt.retain', mqtt.retain);
+  setFieldValue(formView, 'mqtt.tls', mqtt.tls);
+  setFieldValue(formView, 'mqtt.client_id', mqtt.client_id);
+
+  // Integration
+  setFieldValue(formView, 'ha_url', config.ha_url);
+  setFieldValue(formView, 'ha_token', config.ha_token);
+  setFieldValue(formView, 'addon_page_url', config.addon_page_url);
+  setFieldValue(formView, 'auth_token', config.auth_token);
+}
+
+function serializeForm() {
+  var formView = document.getElementById('config-form-view');
+  var config = {};
+
+  // Printers
+  var printerCards = document.querySelectorAll('#cfg-printers-list .cfg-printer-card');
+  config.printers = [];
+  printerCards.forEach(function(card, i) {
+    var prefix = 'printer-' + i;
+    var p = {};
+    p.name = getFieldValue(card, prefix + '.name');
+    p.printer_uri = getFieldValue(card, prefix + '.printer_uri');
+    var id = getFieldValue(card, prefix + '.id');
+    if (id) p.id = id;
+    p.printer_type = getFieldValue(card, prefix + '.printer_type');
+    p.enabled = getFieldValue(card, prefix + '.enabled');
+    p.cadence_hours = getFieldValue(card, prefix + '.cadence_hours');
+    p.template = getFieldValue(card, prefix + '.template');
+    var we = getFieldValue(card, prefix + '.weather_entity');
+    if (we) p.weather_entity = we;
+    var eids = getFieldValue(card, prefix + '.entity_ids');
+    if (eids && eids.length) p.entity_ids = eids;
+    var title = getFieldValue(card, prefix + '.title');
+    if (title) p.title = title;
+    var footer = getFieldValue(card, prefix + '.footer');
+    if (footer) p.footer = footer;
+    config.printers.push(p);
+  });
+
+  // Scheduling
+  config.auto_print_enabled = getFieldValue(formView, 'auto_print_enabled');
+  var spim = getFieldValue(formView, 'status_poll_interval_minutes');
+  if (spim !== undefined) config.status_poll_interval_minutes = spim;
+  var frm = getFieldValue(formView, 'failure_retry_minutes');
+  if (frm !== undefined) config.failure_retry_minutes = frm;
+
+  // Discovery
+  config.discovery_enabled = getFieldValue(formView, 'discovery_enabled');
+  var dim = getFieldValue(formView, 'discovery_interval_minutes');
+  if (dim !== undefined) config.discovery_interval_minutes = dim;
+  var dts = getFieldValue(formView, 'discovery_timeout_seconds');
+  if (dts !== undefined) config.discovery_timeout_seconds = dts;
+  var diqt = getFieldValue(formView, 'discovery_ipp_query_timeout_seconds');
+  if (diqt !== undefined) config.discovery_ipp_query_timeout_seconds = diqt;
+  config.discovery_include_ipps = getFieldValue(formView, 'discovery_include_ipps');
+
+  // Templates
+  config.default_template = getFieldValue(formView, 'default_template');
+  var title = getFieldValue(formView, 'title');
+  if (title) config.title = title;
+  var footer = getFieldValue(formView, 'footer');
+  if (footer) config.footer = footer;
+  var we = getFieldValue(formView, 'weather_entity');
+  if (we) config.weather_entity = we;
+  var eids = getFieldValue(formView, 'entity_ids');
+  if (eids && eids.length) config.entity_ids = eids;
+
+  // MQTT
+  config.mqtt = {};
+  config.mqtt.enabled = getFieldValue(formView, 'mqtt.enabled');
+  var mh = getFieldValue(formView, 'mqtt.host');
+  if (mh) config.mqtt.host = mh;
+  var mp = getFieldValue(formView, 'mqtt.port');
+  if (mp !== undefined) config.mqtt.port = mp;
+  var mu = getFieldValue(formView, 'mqtt.username');
+  if (mu) config.mqtt.username = mu;
+  var mpw = getFieldValue(formView, 'mqtt.password');
+  if (mpw) config.mqtt.password = mpw;
+  var mdp = getFieldValue(formView, 'mqtt.discovery_prefix');
+  if (mdp) config.mqtt.discovery_prefix = mdp;
+  var mtp = getFieldValue(formView, 'mqtt.topic_prefix');
+  if (mtp) config.mqtt.topic_prefix = mtp;
+  config.mqtt.retain = getFieldValue(formView, 'mqtt.retain');
+  config.mqtt.tls = getFieldValue(formView, 'mqtt.tls');
+  var mci = getFieldValue(formView, 'mqtt.client_id');
+  if (mci) config.mqtt.client_id = mci;
+
+  // Integration
+  var haUrl = getFieldValue(formView, 'ha_url');
+  if (haUrl) config.ha_url = haUrl;
+  var haToken = getFieldValue(formView, 'ha_token');
+  if (haToken) config.ha_token = haToken;
+  var apUrl = getFieldValue(formView, 'addon_page_url');
+  if (apUrl) config.addon_page_url = apUrl;
+  var at = getFieldValue(formView, 'auth_token');
+  if (at) config.auth_token = at;
+
+  return config;
+}
+
+function syncFormToRaw() {
+  var config = serializeForm();
+  var textarea = document.getElementById('config-textarea');
+  if (textarea) textarea.value = JSON.stringify(config, null, 2);
+}
+
+function syncRawToForm() {
+  var textarea = document.getElementById('config-textarea');
+  if (!textarea || !textarea.value.trim()) return;
+  try {
+    var config = JSON.parse(textarea.value);
+    populateForm(config);
+  } catch (e) {
+    showToast('Invalid JSON in editor: ' + e.message, true);
+  }
+}
+
+function buildConfig() {
+  // Build raw view
+  var rawView = document.getElementById('config-raw-view');
+  rawView.innerHTML =
+    '<div class="card" style="opacity:1;transform:none">' +
+      '<div class="card-title">Raw JSON Configuration</div>' +
+      '<textarea class="config-editor" id="config-textarea" placeholder="Click Load Config to fetch current configuration..."></textarea>' +
+    '</div>';
+
+  // Build form view
+  buildConfigForm();
+
+  // Mode toggle
+  document.querySelectorAll('.config-mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var mode = btn.getAttribute('data-mode');
+      document.querySelectorAll('.config-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var formView = document.getElementById('config-form-view');
+      var rawViewEl = document.getElementById('config-raw-view');
+      if (mode === 'form') {
+        syncRawToForm();
+        formView.style.display = '';
+        rawViewEl.style.display = 'none';
+        configCurrentMode = 'form';
+      } else {
+        syncFormToRaw();
+        formView.style.display = 'none';
+        rawViewEl.style.display = '';
+        configCurrentMode = 'advanced';
+      }
+    });
+  });
+
+  // Load button
+  document.getElementById('cfg-load').onclick = async function() {
+    try {
+      var resp = await requestJson('config');
+      configRawObj = resp.options || {};
+      document.getElementById('config-textarea').value = JSON.stringify(configRawObj, null, 2);
+      populateForm(configRawObj);
+      showToast('Config loaded');
+    } catch (e) { showToast('Load failed: ' + e.message, true); }
+  };
+
+  // Save button
+  document.getElementById('cfg-save').onclick = async function() {
+    var parsed;
+    if (configCurrentMode === 'form') {
+      parsed = serializeForm();
+    } else {
+      var textarea = document.getElementById('config-textarea');
+      try {
+        parsed = JSON.parse(textarea.value);
+      } catch (e) {
+        showToast('Invalid JSON: ' + e.message, true);
+        return;
+      }
+    }
+    try {
+      await requestJson('config', {
+        method: 'POST',
+        body: JSON.stringify({ options: parsed })
+      });
+      showToast('Config saved');
+    } catch (e) { showToast('Save failed: ' + e.message, true); }
+  };
+
+  // Restart button
+  document.getElementById('cfg-restart').onclick = async function() {
+    try {
+      await requestJson('actions/restart', { method: 'POST', body: '{}' });
+      showToast('Restart requested');
+    } catch (e) { showToast('Restart failed: ' + e.message, true); }
+  };
+}
+
+/* ── Animation ───────────────────────────────────────────── */
+function animateCards() {
+  document.querySelectorAll('.view.active .card').forEach(function(c, i) {
+    c.classList.remove('visible');
+    setTimeout(function() { c.classList.add('visible'); }, 60 * i);
+  });
+}
+
+/* ── Refresh all data ────────────────────────────────────── */
+async function refreshAll() {
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
+  try {
+    var results = await Promise.allSettled([
+      requestJson('health'),
+      requestJson('discovery')
+    ]);
+
+    if (results[0].status === 'fulfilled') {
+      state.health = results[0].value;
+    } else {
+      console.error('Health fetch failed:', results[0].reason);
+    }
+
+    if (results[1].status === 'fulfilled') {
+      state.discovery = results[1].value;
+    } else {
+      console.error('Discovery fetch failed:', results[1].reason);
+    }
+
+    if (state.health) {
+      document.getElementById('version-badge').textContent = 'v' + state.health.version;
+    }
+
+    buildDashboard();
+    buildPrinters();
+    buildDiscovery();
+
+    if (!state.configLoaded) {
+      state.configLoaded = true;
+      buildConfig();
+      // Auto-load config on first run
+      try {
+        var cfgResp = await requestJson('config');
+        configRawObj = cfgResp.options || {};
+        var textarea = document.getElementById('config-textarea');
+        if (textarea) textarea.value = JSON.stringify(configRawObj, null, 2);
+        populateForm(configRawObj);
+      } catch (e) { /* config load is optional */ }
+    }
+
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { animateCards(); });
+    });
+  } catch (e) {
+    showToast('Refresh failed: ' + e.message, true);
+  } finally {
+    state.refreshInFlight = false;
+  }
+}
+
+/* ── Init ────────────────────────────────────────────────── */
+buildDashboard();
+buildPrinters();
+buildDiscovery();
+buildConfig();
+refreshAll();
+setInterval(refreshAll, 60000);
+</script>
+</body>
+</html>

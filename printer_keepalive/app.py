@@ -2737,629 +2737,1497 @@ def ui_dashboard_html() -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>__APP_NAME__</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f4f6fb;
+      --font-sans: 'Sora', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      --bg: #f0f2f7;
+      --bg-secondary: #e8ebf0;
       --card: #ffffff;
-      --text: #172032;
-      --muted: #5b6474;
-      --accent: #0f766e;
-      --danger: #b42318;
-      --border: #d6dbe6;
+      --card-elevated: #ffffff;
+      --text: #0f1729;
+      --text-secondary: #475569;
+      --muted: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-subtle: #eff6ff;
+      --accent-border: rgba(59,130,246,0.2);
+      --success: #10b981;
+      --success-subtle: #ecfdf5;
+      --success-border: rgba(16,185,129,0.2);
+      --danger: #ef4444;
+      --danger-subtle: #fef2f2;
+      --danger-border: rgba(239,68,68,0.2);
+      --warning: #f59e0b;
+      --warning-subtle: #fffbeb;
+      --border: #e2e8f0;
+      --border-subtle: #f1f5f9;
+      --input-bg: #f8fafc;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      color-scheme: light;
     }
-    * { box-sizing: border-box; }
+    [data-theme="dark"] {
+      --bg: #0c0f1a;
+      --bg-secondary: #080b14;
+      --card: #161b2e;
+      --card-elevated: #1c2238;
+      --text: #e8edf5;
+      --text-secondary: #94a3b8;
+      --muted: #64748b;
+      --accent: #60a5fa;
+      --accent-hover: #93bbfd;
+      --accent-subtle: rgba(96,165,250,0.1);
+      --accent-border: rgba(96,165,250,0.2);
+      --success: #34d399;
+      --success-subtle: rgba(52,211,153,0.1);
+      --success-border: rgba(52,211,153,0.2);
+      --danger: #f87171;
+      --danger-subtle: rgba(248,113,113,0.1);
+      --danger-border: rgba(248,113,113,0.2);
+      --warning: #fbbf24;
+      --warning-subtle: rgba(251,191,36,0.08);
+      --border: #1e293b;
+      --border-subtle: #1a2236;
+      --input-bg: #111827;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      [data-theme="system"] {
+        --bg: #0c0f1a;
+        --bg-secondary: #080b14;
+        --card: #161b2e;
+        --card-elevated: #1c2238;
+        --text: #e8edf5;
+        --text-secondary: #94a3b8;
+        --muted: #64748b;
+        --accent: #60a5fa;
+        --accent-hover: #93bbfd;
+        --accent-subtle: rgba(96,165,250,0.1);
+        --accent-border: rgba(96,165,250,0.2);
+        --success: #34d399;
+        --success-subtle: rgba(52,211,153,0.1);
+        --success-border: rgba(52,211,153,0.2);
+        --danger: #f87171;
+        --danger-subtle: rgba(248,113,113,0.1);
+        --danger-border: rgba(248,113,113,0.2);
+        --warning: #fbbf24;
+        --warning-subtle: rgba(251,191,36,0.08);
+        --border: #1e293b;
+        --border-subtle: #1a2236;
+        --input-bg: #111827;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+        --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+        --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+        color-scheme: dark;
+      }
+    }
+
+    /* === BASE === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      transition: background var(--transition), color var(--transition);
+      overflow-x: hidden;
     }
-    main {
-      max-width: 1160px;
-      margin: 0 auto;
-      padding: 16px;
-      display: grid;
-      gap: 14px;
+
+    /* === CMYK STRIPE === */
+    .cmyk-stripe {
+      height: 3px;
+      background: linear-gradient(90deg, #00bcd4 25%, #e91e63 25%, #e91e63 50%, #ffc107 50%, #ffc107 75%, #263238 75%);
+      flex-shrink: 0;
     }
-    header {
-      background: linear-gradient(135deg, #dbeafe, #e9f7ef);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
+
+    /* === APP SHELL === */
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    h1 {
-      margin: 0 0 6px;
-      font-size: 26px;
+
+    /* === TOPBAR === */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    }
+    .brand-mark svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
       line-height: 1.2;
     }
-    h2 {
-      margin: 0 0 10px;
-      font-size: 18px;
-    }
-    p {
-      margin: 0;
+    .brand-text .version {
+      font-size: 11px;
+      font-weight: 500;
       color: var(--muted);
+      letter-spacing: 0.02em;
     }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .topbar-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      position: relative;
+      padding: 0;
+      font-weight: 400;
+    }
+    .topbar-btn:hover { color: var(--text); background: var(--bg-secondary); border-color: var(--text-secondary); transform: none; filter: none; }
+    .topbar-btn.active { color: var(--accent); border-color: var(--accent-border); background: var(--accent-subtle); }
+    .topbar-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .auth-indicator {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      border: 1.5px solid var(--input-bg);
+      transition: background var(--transition);
+    }
+    .auth-indicator.has-token { background: var(--success); }
+
+    /* === AUTH POPOVER === */
+    .auth-wrap { position: relative; }
+    .auth-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 300px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      display: none;
+      animation: popoverIn 0.15s ease;
+    }
+    .auth-popover.open { display: block; }
+    @keyframes popoverIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .auth-popover-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .auth-popover label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .auth-popover input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      background: var(--input-bg);
+      color: var(--text);
+    }
+    .auth-popover-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .auth-popover-actions button {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 12px;
+    }
+    .auth-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* === THEME SWITCHER === */
+    .theme-group {
+      display: flex;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+    }
+    .theme-btn {
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      padding: 0;
+      font-weight: 400;
+    }
+    .theme-btn:hover { color: var(--text); transform: none; filter: none; }
+    .theme-btn.active { background: var(--card); color: var(--accent); box-shadow: var(--shadow-sm); }
+    .theme-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* === TAB NAV === */
+    .tab-bar {
+      display: flex;
+      gap: 1px;
+      padding: 0 24px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 16px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition);
+      white-space: nowrap;
+      position: relative;
+    }
+    .tab::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--tab-color, var(--muted));
+      opacity: 0.35;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .tab:hover { color: var(--text); background: var(--bg); transform: none; filter: none; }
+    .tab:hover::before { opacity: 0.6; }
+    .tab.active {
+      color: var(--text);
+      border-bottom-color: var(--tab-color, var(--accent));
+    }
+    .tab.active::before { opacity: 1; width: 7px; height: 7px; }
+    .tab[data-view="dashboard"] { --tab-color: #00bcd4; }
+    .tab[data-view="printers"] { --tab-color: #e91e63; }
+    .tab[data-view="discovery"] { --tab-color: #f59e0b; }
+    .tab[data-view="config"] { --tab-color: #64748b; }
+    .tab svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: none;
+    }
+
+    /* === CONTENT === */
+    .content {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 24px;
+    }
+    .view { display: none; }
+    .view.active {
+      display: block;
+      animation: viewIn 0.25s ease;
+    }
+    @keyframes viewIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === SECTION HEADER === */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-head h2 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .section-head .section-link {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+    .section-head .section-link:hover { color: var(--accent-hover); }
+    .view-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    .view-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    /* === METRIC CARDS === */
+    .metric-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      border-left: 3px solid var(--metric-color, var(--border));
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition), border-color var(--transition);
+      animation: cardIn 0.35s ease both;
+    }
+    .metric-card:hover { box-shadow: var(--shadow-md); }
+    .metric-card:nth-child(1) { animation-delay: 0.03s; }
+    .metric-card:nth-child(2) { animation-delay: 0.06s; }
+    .metric-card:nth-child(3) { animation-delay: 0.09s; }
+    .metric-card:nth-child(4) { animation-delay: 0.12s; }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .metric-card[data-color="cyan"] { --metric-color: #00bcd4; }
+    .metric-card[data-color="magenta"] { --metric-color: #e91e63; }
+    .metric-card[data-color="yellow"] { --metric-color: #f59e0b; }
+    .metric-card[data-color="key"] { --metric-color: var(--muted); }
+    .metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .metric-value {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    /* === PANELS === */
     .panel {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+      overflow: hidden;
     }
-    .toolbar-row {
+    .panel-body {
+      padding: 18px 20px;
+    }
+
+    /* === DASHBOARD PRINTER LIST === */
+    .printer-list-head {
+      display: grid;
+      grid-template-columns: 10px 1fr 120px 140px;
+      gap: 12px;
+      padding: 10px 18px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--input-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .printer-row {
+      display: grid;
+      grid-template-columns: 10px 1fr 120px 140px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 13px;
+      transition: background var(--transition);
+    }
+    .printer-row:last-child { border-bottom: none; }
+    .printer-row:hover { background: var(--input-bg); }
+    .health-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .health-dot[data-status="ok"],
+    .health-dot[data-status="healthy"] { background: var(--success); box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+    .health-dot[data-status="idle"] { background: var(--success); box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+    .health-dot[data-status="warning"] { background: var(--warning); box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+    .health-dot[data-status="error"],
+    .health-dot[data-status="critical"],
+    .health-dot[data-status="stopped"] { background: var(--danger); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+    .printer-name-cell {
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .printer-state-cell { color: var(--text-secondary); }
+    .printer-due-cell {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+    .printer-due-cell.overdue { color: var(--danger); font-weight: 600; }
+    .dash-empty {
+      padding: 32px 18px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* === OVERVIEW KV === */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .kv-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .kv-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .kv-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* === PRINTER CARDS (full view) === */
+    .printer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 16px;
+    }
+    .printer-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: grid;
+      gap: 0;
+      transition: box-shadow var(--transition), border-color var(--transition);
+    }
+    .printer-card:hover { box-shadow: var(--shadow-md); }
+    .printer-card-head {
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .printer-card-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+      background: var(--muted);
+    }
+    .printer-card-dot[data-status="ok"],
+    .printer-card-dot[data-status="healthy"],
+    .printer-card-dot[data-status="idle"] { background: var(--success); box-shadow: 0 0 8px rgba(16,185,129,0.4); }
+    .printer-card-dot[data-status="warning"] { background: var(--warning); box-shadow: 0 0 8px rgba(245,158,11,0.4); }
+    .printer-card-dot[data-status="error"],
+    .printer-card-dot[data-status="critical"],
+    .printer-card-dot[data-status="stopped"] { background: var(--danger); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    .printer-card-info h3 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 2px;
+    }
+    .printer-card-meta {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .printer-card-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 16px;
+      padding: 14px 18px;
+      background: var(--input-bg);
+      font-size: 13px;
+    }
+    .printer-card-stats .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .printer-card-stats .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .printer-card-stats .stat-value {
+      font-weight: 500;
+      color: var(--text);
+    }
+    .printer-card-controls {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border-subtle);
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: end;
     }
-    .toolbar-item {
-      display: grid;
+    .control-group {
+      display: flex;
+      flex-direction: column;
       gap: 4px;
-      min-width: 220px;
     }
-    label {
-      font-size: 13px;
-      color: var(--muted);
-    }
-    input[type="text"], input[type="password"], input[type="number"], select {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 14px;
-      background: #fff;
-      color: var(--text);
-    }
-    button {
-      border: 1px solid #0f766e33;
-      background: #ecfdf5;
-      color: #055e59;
-      border-radius: 8px;
-      padding: 8px 11px;
-      font-size: 14px;
+    .control-group label {
+      font-size: 10px;
       font-weight: 600;
-      cursor: pointer;
-    }
-    button:hover { background: #d1fae5; }
-    button.secondary {
-      border-color: #1d4ed833;
-      background: #eff6ff;
-      color: #1e40af;
-    }
-    button.neutral {
-      border-color: #33415533;
-      background: #f8fafc;
-      color: #1e293b;
-    }
-    button.danger {
-      border-color: #dc262633;
-      background: #fef2f2;
-      color: #b91c1c;
-    }
-    .status {
-      font-size: 13px;
       color: var(--muted);
-      padding: 8px 0;
-      min-height: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .status.error { color: var(--danger); }
-    .status.ok { color: var(--accent); }
-    .kv {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 8px 14px;
-      font-size: 14px;
+    .control-group input[type="number"] {
+      width: 90px;
     }
-    .kv b { color: var(--muted); font-weight: 600; }
+    .control-group select {
+      min-width: 130px;
+    }
+    .printer-card-actions {
+      padding: 0 18px 14px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .printer-card-status {
+      padding: 0 18px 14px;
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .printer-card-status.error { color: var(--danger); }
+    .printer-card-status.ok { color: var(--success); }
+    .printers-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+    .printers-empty-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* === TABLE === */
     .table-wrap {
       overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 10px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      min-width: 720px;
+      min-width: 640px;
     }
     th, td {
-      border-bottom: 1px solid var(--border);
       text-align: left;
-      padding: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
       vertical-align: top;
     }
     th {
-      background: #f8fafc;
-      color: #334155;
-      font-weight: 600;
-    }
-    tr:last-child td { border-bottom: none; }
-    .printer-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 12px;
-    }
-    .printer-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      background: #fff;
-      display: grid;
-      gap: 10px;
-    }
-    .printer-header {
-      display: grid;
-      gap: 4px;
-    }
-    .printer-header h3 {
-      margin: 0;
-      font-size: 17px;
-    }
-    .printer-meta {
+      background: var(--input-bg);
       color: var(--muted);
-      font-size: 12px;
-      word-break: break-all;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom-color: var(--border);
     }
-    .printer-stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 5px 10px;
+    td { color: var(--text-secondary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--input-bg); }
+
+    /* === FORMS === */
+    label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"], input[type="password"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 8px 10px;
       font-size: 13px;
+      font-family: var(--font-sans);
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color var(--transition), box-shadow var(--transition);
     }
-    .printer-actions {
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-border);
+    }
+    .config-editor {
+      width: 100%;
+      min-height: 400px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      background: var(--input-bg);
+      color: var(--text);
+      resize: vertical;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    /* === BUTTONS === */
+    button {
+      border: 1px solid var(--success-border);
+      background: var(--success-subtle);
+      color: var(--success);
+      border-radius: var(--radius-xs);
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    button:hover { filter: brightness(0.95); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    button:active { transform: translateY(0); }
+    button.secondary {
+      border-color: var(--accent-border);
+      background: var(--accent-subtle);
+      color: var(--accent);
+    }
+    button.neutral {
+      border-color: var(--border);
+      background: var(--input-bg);
+      color: var(--text-secondary);
+    }
+    button.danger {
+      border-color: var(--danger-border);
+      background: var(--danger-subtle);
+      color: var(--danger);
+    }
+    .btn-row {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
     }
-    .inline-status {
-      min-height: 18px;
+
+    /* === STATUS === */
+    .status {
       font-size: 12px;
       color: var(--muted);
+      padding: 8px 0;
+      min-height: 20px;
     }
-    .inline-status.error { color: var(--danger); }
-    .inline-status.ok { color: var(--accent); }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--success); }
     .hint {
       font-size: 12px;
       color: var(--muted);
-      margin-top: 4px;
+      line-height: 1.5;
     }
-    #configEditor {
-      width: 100%;
-      min-height: 320px;
+    .hint code {
+      background: var(--input-bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-      font-size: 13px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      line-height: 1.4;
-      background: #f8fafc;
-      color: #0f172a;
-      resize: vertical;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: var(--font-mono);
     }
-    .footer {
+
+    /* === FOOTER === */
+    .app-footer {
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 12px;
       color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .app-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .app-footer a:hover { text-decoration: underline; }
+
+    /* === LAST UPDATED === */
+    .last-updated {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      padding: 4px 0;
+    }
+
+    /* === DISCOVERY SUMMARY === */
+    .disc-summary {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
       font-size: 13px;
     }
-    .footer a {
-      color: #1e40af;
-      text-decoration: none;
+    .disc-summary .disc-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
-    .footer a:hover { text-decoration: underline; }
-    @media (max-width: 720px) {
-      h1 { font-size: 22px; }
-      .printer-stats { grid-template-columns: 1fr; }
+    .disc-summary .disc-stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .disc-summary .disc-stat-value {
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .topbar { padding: 10px 16px; }
+      .tab-bar { padding: 0 16px; }
+      .content { padding: 16px; }
+      .brand-text h1 { font-size: 15px; }
+      .metric-cards { grid-template-columns: repeat(2, 1fr); }
+      .metric-value { font-size: 22px; }
+      .printer-grid { grid-template-columns: 1fr; }
+      .printer-list-head { display: none; }
+      .printer-row {
+        grid-template-columns: 10px 1fr;
+        grid-template-rows: auto auto;
+      }
+      .printer-state-cell, .printer-due-cell {
+        grid-column: 2;
+        font-size: 11px;
+      }
+      .printer-card-stats { grid-template-columns: 1fr; }
+      .view-title { font-size: 18px; }
+    }
+    @media (max-width: 480px) {
+      .metric-cards { grid-template-columns: 1fr; }
+      .topbar-actions .theme-group { display: none; }
     }
   </style>
+  <script>
+    (function(){var s=localStorage.getItem("pk_theme")||"system";document.documentElement.setAttribute("data-theme",s)})();
+  </script>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>__APP_NAME__</h1>
-      <p>Ingress dashboard for configuration, printer status, manual prints, and discovery rescans. Version __APP_VERSION__.</p>
+  <div class="app-shell">
+    <div class="cmyk-stripe"></div>
+
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+        </div>
+        <div class="brand-text">
+          <h1>__APP_NAME__</h1>
+          <span class="version">v__APP_VERSION__</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-group">
+          <button type="button" class="theme-btn" data-theme-value="light" title="Light">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+          <button type="button" class="theme-btn" data-theme-value="dark" title="Dark">
+            <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button type="button" class="theme-btn" data-theme-value="system" title="System">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </button>
+        </div>
+        <button type="button" id="refreshBtn" class="topbar-btn" title="Refresh data">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <div class="auth-wrap">
+          <button type="button" id="authToggle" class="topbar-btn" title="API Authentication">
+            <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            <span class="auth-indicator" id="authIndicator"></span>
+          </button>
+          <div class="auth-popover" id="authPopover">
+            <div class="auth-popover-title">API Authentication</div>
+            <label for="authTokenInput">Bearer Token</label>
+            <input id="authTokenInput" type="password" placeholder="Enter token...">
+            <div class="auth-popover-actions">
+              <button id="saveTokenBtn" class="secondary" type="button">Save</button>
+              <button id="clearTokenBtn" class="neutral" type="button">Clear</button>
+            </div>
+            <div class="auth-hint">Required for POST actions when <code>auth_token</code> is set in config.</div>
+          </div>
+        </div>
+      </div>
     </header>
 
-    <section class="panel">
-      <h2>Session</h2>
-      <div class="toolbar-row">
-        <div class="toolbar-item">
-          <label for="authTokenInput">API Token (optional)</label>
-          <input id="authTokenInput" type="password" placeholder="Bearer token for POST actions">
+    <nav class="tab-bar">
+      <button type="button" class="tab active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Dashboard
+      </button>
+      <button type="button" class="tab" data-view="printers">
+        <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+        Printers
+      </button>
+      <button type="button" class="tab" data-view="discovery">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Discovery
+      </button>
+      <button type="button" class="tab" data-view="config">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Config
+      </button>
+    </nav>
+
+    <main class="content">
+      <!-- ===== DASHBOARD ===== -->
+      <section id="view-dashboard" class="view active">
+        <div id="dashboardMetrics" class="metric-cards"></div>
+
+        <div class="section-head">
+          <h2>Printer Health</h2>
+          <span class="section-link" data-nav="printers">Manage printers &rarr;</span>
         </div>
-        <button id="saveTokenBtn" class="neutral" type="button">Save Token</button>
-        <button id="clearTokenBtn" class="neutral" type="button">Clear Token</button>
-        <button id="refreshBtn" class="secondary" type="button">Refresh</button>
-      </div>
-      <div id="globalStatus" class="status">Ready.</div>
-      <div class="hint">If <code>auth_token</code> is configured in add-on options, enter it above to use POST actions.</div>
-    </section>
+        <div class="panel" style="margin-bottom:24px;">
+          <div class="printer-list-head">
+            <span></span><span>Printer</span><span>State</span><span>Next Due</span>
+          </div>
+          <div id="dashboardPrinters"></div>
+        </div>
 
-    <section class="panel">
-      <h2>Configuration</h2>
-      <div class="hint">This editor writes the add-on config file (<code>/data/options.json</code>). Save changes, then restart to apply.</div>
-      <div class="toolbar-row" style="margin: 10px 0;">
-        <button id="loadConfigBtn" class="neutral" type="button">Load Config</button>
-        <button id="saveConfigBtn" class="secondary" type="button">Save Config</button>
-        <button id="restartAddonBtn" class="danger" type="button">Restart Add-on</button>
-      </div>
-      <textarea id="configEditor" spellcheck="false" placeholder="{ &quot;printers&quot;: [] }"></textarea>
-      <div id="configStatus" class="status">Configuration editor ready.</div>
-    </section>
+        <div class="section-head">
+          <h2>Network Discovery</h2>
+          <span class="section-link" data-nav="discovery">View details &rarr;</span>
+        </div>
+        <div class="panel">
+          <div id="dashboardDiscovery" class="disc-summary"></div>
+        </div>
 
-    <section class="panel">
-      <h2>Overview</h2>
-      <div id="overviewGrid" class="kv"></div>
-    </section>
+        <div id="lastUpdated" class="last-updated"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Discovery</h2>
-      <div class="toolbar-row">
-        <button id="rescanBtn" class="secondary" type="button">Run Discovery Rescan</button>
-      </div>
-      <div id="discoveryStatus" class="status"></div>
-      <div id="discoverySummary" class="kv" style="margin-bottom:10px;"></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>URI</th>
-              <th>Type Guess</th>
-              <th>Reachable</th>
-              <th>Configured</th>
-            </tr>
-          </thead>
-          <tbody id="discoveryRows"></tbody>
-        </table>
-      </div>
-    </section>
+      <!-- ===== PRINTERS ===== -->
+      <section id="view-printers" class="view">
+        <div class="view-title">Printers</div>
+        <div class="view-subtitle">Manage individual printer settings, run keepalive prints, and poll status.</div>
+        <div id="printersGrid" class="printer-grid"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Printers</h2>
-      <div id="printersGrid" class="printer-grid"></div>
-    </section>
+      <!-- ===== DISCOVERY ===== -->
+      <section id="view-discovery" class="view">
+        <div class="view-title">Discovery</div>
+        <div class="view-subtitle">Network printer discovery via mDNS/Zeroconf.</div>
+        <div class="btn-row" style="margin-bottom:14px;">
+          <button id="rescanBtn" class="secondary" type="button">Run Discovery Rescan</button>
+        </div>
+        <div id="discoveryStatus" class="status"></div>
+        <div class="panel">
+          <div id="discoverySummary" class="disc-summary"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>URI</th>
+                  <th>Type Guess</th>
+                  <th>Reachable</th>
+                  <th>Configured</th>
+                </tr>
+              </thead>
+              <tbody id="discoveryRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-    <section class="footer">
-      API endpoints remain available at <a href="health">health</a>, <a href="printers">printers</a>, and <a href="discovery">discovery</a>. Docs: <a href="__APP_URL__" target="_blank" rel="noopener">__APP_URL__</a>.
-    </section>
-  </main>
+      <!-- ===== CONFIG ===== -->
+      <section id="view-config" class="view">
+        <div class="view-title">Configuration</div>
+        <div class="view-subtitle">Edit the add-on configuration file. Save changes, then restart to apply.</div>
+        <div class="btn-row" style="margin-bottom:14px;">
+          <button id="loadConfigBtn" class="neutral" type="button">Load Config</button>
+          <button id="saveConfigBtn" class="secondary" type="button">Save Config</button>
+          <button id="restartAddonBtn" class="danger" type="button">Restart Add-on</button>
+        </div>
+        <textarea id="configEditor" class="config-editor" spellcheck="false" placeholder='{ "printers": [] }'></textarea>
+        <div id="configStatus" class="status">Ready.</div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      API: <a href="health">health</a> &middot; <a href="printers">printers</a> &middot; <a href="discovery">discovery</a> &middot; <a href="__APP_URL__" target="_blank" rel="noopener">docs</a>
+    </footer>
+  </div>
 
   <script>
-    const state = {
+    /* ===== THEME ===== */
+    (function initTheme() {
+      var saved = localStorage.getItem("pk_theme") || "system";
+      document.documentElement.setAttribute("data-theme", saved);
+      document.querySelectorAll(".theme-btn").forEach(function(btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-theme-value") === saved);
+        btn.addEventListener("click", function() {
+          var v = btn.getAttribute("data-theme-value");
+          localStorage.setItem("pk_theme", v);
+          document.documentElement.setAttribute("data-theme", v);
+          document.querySelectorAll(".theme-btn").forEach(function(b) {
+            b.classList.toggle("active", b.getAttribute("data-theme-value") === v);
+          });
+        });
+      });
+    })();
+
+    /* ===== NAVIGATION ===== */
+    var currentView = "dashboard";
+    function switchView(name) {
+      if (!document.getElementById("view-" + name)) return;
+      currentView = name;
+      document.querySelectorAll(".view").forEach(function(v) { v.classList.remove("active"); });
+      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+      document.getElementById("view-" + name).classList.add("active");
+      var tab = document.querySelector('.tab[data-view="' + name + '"]');
+      if (tab) tab.classList.add("active");
+      window.location.hash = name;
+    }
+    document.querySelectorAll(".tab").forEach(function(tab) {
+      tab.addEventListener("click", function() { switchView(tab.getAttribute("data-view")); });
+    });
+    document.querySelectorAll(".section-link[data-nav]").forEach(function(link) {
+      link.addEventListener("click", function() { switchView(link.getAttribute("data-nav")); });
+    });
+    window.addEventListener("hashchange", function() {
+      var h = window.location.hash.replace("#", "");
+      if (h && h !== currentView) switchView(h);
+    });
+    (function initNav() {
+      var h = window.location.hash.replace("#", "");
+      if (h && document.getElementById("view-" + h)) switchView(h);
+    })();
+
+    /* ===== AUTH POPOVER ===== */
+    var authPopover = document.getElementById("authPopover");
+    document.getElementById("authToggle").addEventListener("click", function(e) {
+      e.stopPropagation();
+      authPopover.classList.toggle("open");
+    });
+    authPopover.addEventListener("click", function(e) { e.stopPropagation(); });
+    document.addEventListener("click", function() { authPopover.classList.remove("open"); });
+
+    /* ===== STATE ===== */
+    var state = {
       authToken: window.localStorage.getItem("pk_auth_token") || "",
       refreshInFlight: false,
       health: null,
       configLoaded: false
     };
 
-    const authInput = document.getElementById("authTokenInput");
-    const globalStatus = document.getElementById("globalStatus");
-    const discoveryStatus = document.getElementById("discoveryStatus");
-    const configStatus = document.getElementById("configStatus");
-    const configEditor = document.getElementById("configEditor");
-    authInput.value = state.authToken;
+    var authInput = document.getElementById("authTokenInput");
+    var discoveryStatus = document.getElementById("discoveryStatus");
+    var configStatus = document.getElementById("configStatus");
+    var configEditor = document.getElementById("configEditor");
+    var authIndicator = document.getElementById("authIndicator");
 
+    authInput.value = state.authToken;
+    if (state.authToken) authIndicator.classList.add("has-token");
+
+    /* ===== API ===== */
     function apiPath(path) {
-      let pathname = window.location.pathname;
-      if (pathname.endsWith("/index.html")) {
-        pathname = pathname.slice(0, -("index.html".length));
-      }
-      if (!pathname.endsWith("/")) {
-        pathname += "/";
-      }
-      const base = window.location.origin + pathname;
-      const clean = String(path || "").replace(/^\/+/, "");
+      var pathname = window.location.pathname;
+      if (pathname.endsWith("/index.html")) pathname = pathname.slice(0, -("index.html".length));
+      if (!pathname.endsWith("/")) pathname += "/";
+      var base = window.location.origin + pathname;
+      var clean = String(path || "").replace(/^\/+/, "");
       return new URL(clean, base).toString();
     }
 
-    function setStatus(text, isError = false) {
-      globalStatus.textContent = text;
-      globalStatus.className = "status " + (isError ? "error" : "ok");
-    }
-
-    function setDiscoveryStatus(text, isError = false) {
+    function setDiscoveryStatus(text, isError) {
       discoveryStatus.textContent = text;
       discoveryStatus.className = "status " + (isError ? "error" : "ok");
     }
 
-    function setConfigStatus(text, isError = false) {
+    function setConfigStatus(text, isError) {
       configStatus.textContent = text;
       configStatus.className = "status " + (isError ? "error" : "ok");
     }
 
     function displayDate(value) {
       if (!value) return "n/a";
-      const parsed = new Date(value);
+      var parsed = new Date(value);
       if (Number.isNaN(parsed.getTime())) return String(value);
       return parsed.toLocaleString();
     }
 
-    async function requestJson(path, init = {}) {
-      const headers = Object.assign({}, init.headers || {});
-      if (init.body !== undefined && !headers["Content-Type"]) {
-        headers["Content-Type"] = "application/json";
-      }
-      if (state.authToken) {
-        headers["Authorization"] = "Bearer " + state.authToken;
-      }
+    function relativeTime(value) {
+      if (!value) return "n/a";
+      var d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      var now = Date.now();
+      var diff = d.getTime() - now;
+      var abs = Math.abs(diff);
+      if (abs < 60000) return diff < 0 ? "just now" : "now";
+      if (abs < 3600000) { var m = Math.round(abs / 60000); return diff < 0 ? m + "m ago" : "in " + m + "m"; }
+      if (abs < 86400000) { var h = Math.round(abs / 3600000); return diff < 0 ? h + "h ago" : "in " + h + "h"; }
+      var dy = Math.round(abs / 86400000);
+      return diff < 0 ? dy + "d ago" : "in " + dy + "d";
+    }
 
-      const response = await fetch(apiPath(path), Object.assign({}, init, { headers }));
-      const raw = await response.text();
-      let payload = {};
-
+    async function requestJson(path, init) {
+      if (!init) init = {};
+      var headers = Object.assign({}, init.headers || {});
+      if (init.body !== undefined && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+      if (state.authToken) headers["Authorization"] = "Bearer " + state.authToken;
+      var response = await fetch(apiPath(path), Object.assign({}, init, { headers: headers }));
+      var raw = await response.text();
+      var payload = {};
       if (raw) {
-        try {
-          payload = JSON.parse(raw);
-        } catch (err) {
-          throw new Error("Invalid JSON response for " + path + " (" + response.status + ")");
-        }
+        try { payload = JSON.parse(raw); }
+        catch (err) { throw new Error("Invalid JSON response for " + path + " (" + response.status + ")"); }
       }
-
       if (!response.ok || (payload && payload.ok === false)) {
-        const message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + " " + response.statusText);
+        var message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + " " + response.statusText);
         throw new Error(message);
       }
       return payload;
     }
 
-    function makeKv(container, pairs) {
-      container.replaceChildren();
-      for (const pair of pairs) {
-        const row = document.createElement("div");
-        const key = document.createElement("b");
-        key.textContent = pair[0] + ": ";
-        const value = document.createElement("span");
-        value.textContent = pair[1];
-        row.appendChild(key);
-        row.appendChild(value);
-        container.appendChild(row);
-      }
-    }
+    /* ===== DASHBOARD RENDERING ===== */
+    function renderDashboard(health) {
+      var disc = health.discovery || {};
+      var printers = Array.isArray(health.printers) ? health.printers : [];
 
-    function renderOverview(health) {
-      const discovery = health.discovery || {};
-      const rows = [
-        ["Version", String(health.version || "unknown")],
-        ["Timestamp", displayDate(health.timestamp)],
-        ["Printers", String(health.printer_count || 0)],
-        ["Auto Print", health.auto_print_enabled ? "enabled" : "disabled"],
-        ["MQTT Bridge", health.mqtt_enabled ? "connected" : "offline/disabled"],
-        ["Discovery Enabled", discovery.enabled ? "yes" : "no"],
-        ["Auth Required", health.auth_required ? "yes" : "no"],
-        ["Add-on Page URL", String(health.addon_page_url || "n/a")]
+      /* Metric cards */
+      var metricsEl = document.getElementById("dashboardMetrics");
+      metricsEl.replaceChildren();
+      var metrics = [
+        { label: "Printers", value: String(health.printer_count || 0), sub: "configured", color: "cyan" },
+        { label: "MQTT Bridge", value: health.mqtt_enabled ? "Connected" : "Offline", sub: health.mqtt_enabled ? "publishing" : "disabled", color: "magenta" },
+        { label: "Auto Print", value: health.auto_print_enabled ? "Enabled" : "Disabled", sub: health.auto_print_enabled ? "scheduler active" : "manual only", color: "yellow" },
+        { label: "Discovery", value: String(disc.printer_count || 0), sub: "found on network", color: "key" }
       ];
-      makeKv(document.getElementById("overviewGrid"), rows);
-    }
-
-    function renderDiscovery(payload) {
-      makeKv(document.getElementById("discoverySummary"), [
-        ["Enabled", payload.enabled ? "yes" : "no"],
-        ["Last Scan", displayDate(payload.last_scan_at)],
-        ["Scan Duration", String(payload.last_scan_duration_seconds || 0) + "s"],
-        ["Candidates", String(payload.printer_count || 0)],
-        ["Last Error", payload.last_error || "none"]
-      ]);
-
-      const tbody = document.getElementById("discoveryRows");
-      tbody.replaceChildren();
-
-      const items = Array.isArray(payload.printers) ? payload.printers : [];
-      for (const candidate of items) {
-        const tr = document.createElement("tr");
-        const cols = [
-          String(candidate.printer_name || candidate.service_name || "unknown"),
-          String(candidate.uri || ""),
-          String(candidate.printer_type_guess || "unknown"),
-          candidate.reachable ? "yes" : "no",
-          candidate.already_configured ? "yes" : "no"
-        ];
-        for (const col of cols) {
-          const td = document.createElement("td");
-          td.textContent = col;
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
+      for (var i = 0; i < metrics.length; i++) {
+        var m = metrics[i];
+        var card = document.createElement("div");
+        card.className = "metric-card";
+        card.setAttribute("data-color", m.color);
+        var lbl = document.createElement("div");
+        lbl.className = "metric-label";
+        lbl.textContent = m.label;
+        var val = document.createElement("div");
+        val.className = "metric-value";
+        val.textContent = m.value;
+        var sub = document.createElement("div");
+        sub.className = "metric-sub";
+        sub.textContent = m.sub;
+        card.appendChild(lbl);
+        card.appendChild(val);
+        card.appendChild(sub);
+        metricsEl.appendChild(card);
       }
+
+      /* Compact printer list */
+      var listEl = document.getElementById("dashboardPrinters");
+      listEl.replaceChildren();
+      if (!printers.length) {
+        var empty = document.createElement("div");
+        empty.className = "dash-empty";
+        empty.textContent = "No printers configured. Add printers in Configuration.";
+        listEl.appendChild(empty);
+      } else {
+        for (var j = 0; j < printers.length; j++) {
+          var p = printers[j];
+          var row = document.createElement("div");
+          row.className = "printer-row";
+          var dot = document.createElement("div");
+          dot.className = "health-dot";
+          dot.setAttribute("data-status", String(p.health_status || p.printer_state || "unknown"));
+          var name = document.createElement("span");
+          name.className = "printer-name-cell";
+          name.textContent = String(p.name || p.printer_id || "Printer");
+          var st = document.createElement("span");
+          st.className = "printer-state-cell";
+          st.textContent = String(p.printer_state || "unknown");
+          var due = document.createElement("span");
+          due.className = "printer-due-cell";
+          if (p.keepalive_needed) {
+            due.textContent = "Keepalive due";
+            due.classList.add("overdue");
+          } else {
+            due.textContent = relativeTime(p.next_keepalive_due_at);
+          }
+          row.appendChild(dot);
+          row.appendChild(name);
+          row.appendChild(st);
+          row.appendChild(due);
+          listEl.appendChild(row);
+        }
+      }
+
+      /* Dashboard discovery summary */
+      var ddEl = document.getElementById("dashboardDiscovery");
+      ddEl.replaceChildren();
+      var dStats = [
+        ["Status", disc.enabled ? "Active" : "Disabled"],
+        ["Last Scan", relativeTime(disc.last_scan_at)],
+        ["Candidates", String(disc.printer_count || 0)]
+      ];
+      for (var k = 0; k < dStats.length; k++) {
+        var ds = document.createElement("div");
+        ds.className = "disc-stat";
+        var dsl = document.createElement("span");
+        dsl.className = "disc-stat-label";
+        dsl.textContent = dStats[k][0];
+        var dsv = document.createElement("span");
+        dsv.className = "disc-stat-value";
+        dsv.textContent = dStats[k][1];
+        ds.appendChild(dsl);
+        ds.appendChild(dsv);
+        ddEl.appendChild(ds);
+      }
+
+      /* Last updated */
+      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
     }
 
-    function inlineMessage(target, text, isError = false) {
-      target.textContent = text;
-      target.className = "inline-status " + (isError ? "error" : "ok");
-    }
-
+    /* ===== FULL PRINTER CARDS ===== */
     function renderPrinters(health) {
-      const printers = Array.isArray(health.printers) ? health.printers : [];
-      const templates = Array.isArray(health.supported_templates) ? health.supported_templates : [];
-      const grid = document.getElementById("printersGrid");
+      var printers = Array.isArray(health.printers) ? health.printers : [];
+      var templates = Array.isArray(health.supported_templates) ? health.supported_templates : [];
+      var grid = document.getElementById("printersGrid");
       grid.replaceChildren();
 
       if (!printers.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No configured printers found. Use the Configuration editor to add printers.";
-        empty.className = "status";
+        var empty = document.createElement("div");
+        empty.className = "printers-empty";
+        var emptyIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        emptyIcon.setAttribute("class", "printers-empty-icon");
+        emptyIcon.setAttribute("viewBox", "0 0 24 24");
+        var p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        p1.setAttribute("d", "M6 9V2h12v7");
+        var p2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        p2.setAttribute("d", "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2");
+        var p3 = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        p3.setAttribute("x","6"); p3.setAttribute("y","14"); p3.setAttribute("width","12"); p3.setAttribute("height","8"); p3.setAttribute("rx","1");
+        emptyIcon.appendChild(p1); emptyIcon.appendChild(p2); emptyIcon.appendChild(p3);
+        empty.appendChild(emptyIcon);
+        var emptyText = document.createElement("div");
+        emptyText.textContent = "No printers configured yet.";
+        var emptyHint = document.createElement("div");
+        emptyHint.className = "hint";
+        emptyHint.style.marginTop = "4px";
+        emptyHint.textContent = "Add printers in Configuration, or enable Discovery to find them automatically.";
+        empty.appendChild(emptyText);
+        empty.appendChild(emptyHint);
         grid.appendChild(empty);
         return;
       }
 
-      for (const printer of printers) {
-        const card = document.createElement("article");
+      for (var i = 0; i < printers.length; i++) {
+        var printer = printers[i];
+        var card = document.createElement("article");
         card.className = "printer-card";
 
-        const header = document.createElement("div");
-        header.className = "printer-header";
-        const title = document.createElement("h3");
-        title.textContent = String(printer.name || printer.printer_id || "Printer");
-        const meta = document.createElement("div");
-        meta.className = "printer-meta";
-        meta.textContent = "ID: " + String(printer.printer_id || "") + " | URI: " + String(printer.printer_uri || "");
-        header.appendChild(title);
-        header.appendChild(meta);
+        /* Header */
+        var head = document.createElement("div");
+        head.className = "printer-card-head";
+        var hdot = document.createElement("div");
+        hdot.className = "printer-card-dot";
+        hdot.setAttribute("data-status", String(printer.health_status || printer.printer_state || "unknown"));
+        var hinfo = document.createElement("div");
+        hinfo.className = "printer-card-info";
+        var h3 = document.createElement("h3");
+        h3.textContent = String(printer.name || printer.printer_id || "Printer");
+        var hmeta = document.createElement("div");
+        hmeta.className = "printer-card-meta";
+        hmeta.textContent = String(printer.printer_id || "") + " \u2022 " + String(printer.printer_uri || "");
+        hinfo.appendChild(h3);
+        hinfo.appendChild(hmeta);
+        head.appendChild(hdot);
+        head.appendChild(hinfo);
 
-        const stats = document.createElement("div");
-        stats.className = "printer-stats";
-        const statPairs = [
+        /* Stats */
+        var stats = document.createElement("div");
+        stats.className = "printer-card-stats";
+        var statPairs = [
           ["Health", String(printer.health_status || "unknown")],
-          ["Printer State", String(printer.printer_state || "unknown")],
-          ["Keepalive Needed", printer.keepalive_needed ? "yes" : "no"],
+          ["State", String(printer.printer_state || "unknown")],
+          ["Keepalive", printer.keepalive_needed ? "needed" : "not due"],
           ["Template", String(printer.template || "n/a")],
-          ["Cadence (h)", String(printer.cadence_hours || "n/a")],
-          ["Last Keepalive", displayDate(printer.last_keepalive_at)],
-          ["Last Print", displayDate(printer.last_print_at)],
-          ["Next Due", displayDate(printer.next_keepalive_due_at)]
+          ["Cadence", String(printer.cadence_hours || "n/a") + "h"],
+          ["Last Keepalive", relativeTime(printer.last_keepalive_at)],
+          ["Last Print", relativeTime(printer.last_print_at)],
+          ["Next Due", relativeTime(printer.next_keepalive_due_at)]
         ];
-        for (const pair of statPairs) {
-          const line = document.createElement("div");
-          line.textContent = pair[0] + ": " + pair[1];
-          stats.appendChild(line);
+        for (var s = 0; s < statPairs.length; s++) {
+          var stat = document.createElement("div");
+          stat.className = "stat";
+          var sl = document.createElement("span");
+          sl.className = "stat-label";
+          sl.textContent = statPairs[s][0];
+          var sv = document.createElement("span");
+          sv.className = "stat-value";
+          sv.textContent = statPairs[s][1];
+          stat.appendChild(sl);
+          stat.appendChild(sv);
+          stats.appendChild(stat);
         }
 
-        const controls = document.createElement("div");
-        controls.className = "toolbar-row";
+        /* Controls */
+        var controls = document.createElement("div");
+        controls.className = "printer-card-controls";
 
-        const enabledWrap = document.createElement("div");
-        enabledWrap.className = "toolbar-item";
-        enabledWrap.style.minWidth = "120px";
-        const enabledLabel = document.createElement("label");
+        var enabledGroup = document.createElement("div");
+        enabledGroup.className = "control-group";
+        var enabledLabel = document.createElement("label");
         enabledLabel.textContent = "Enabled";
-        const enabledInput = document.createElement("input");
+        var enabledInput = document.createElement("input");
         enabledInput.type = "checkbox";
         enabledInput.checked = Boolean(printer.enabled);
-        enabledInput.style.width = "20px";
-        enabledInput.style.height = "20px";
-        enabledWrap.appendChild(enabledLabel);
-        enabledWrap.appendChild(enabledInput);
+        enabledInput.style.cssText = "width:18px;height:18px;margin-top:2px;";
+        enabledGroup.appendChild(enabledLabel);
+        enabledGroup.appendChild(enabledInput);
 
-        const cadenceWrap = document.createElement("div");
-        cadenceWrap.className = "toolbar-item";
-        cadenceWrap.style.minWidth = "140px";
-        const cadenceLabel = document.createElement("label");
-        cadenceLabel.textContent = "Cadence Hours";
-        const cadenceInput = document.createElement("input");
+        var cadenceGroup = document.createElement("div");
+        cadenceGroup.className = "control-group";
+        var cadenceLabel = document.createElement("label");
+        cadenceLabel.textContent = "Cadence (h)";
+        var cadenceInput = document.createElement("input");
         cadenceInput.type = "number";
         cadenceInput.min = "1";
         cadenceInput.max = "720";
         cadenceInput.value = String(printer.cadence_hours || 168);
-        cadenceWrap.appendChild(cadenceLabel);
-        cadenceWrap.appendChild(cadenceInput);
+        cadenceGroup.appendChild(cadenceLabel);
+        cadenceGroup.appendChild(cadenceInput);
 
-        const templateWrap = document.createElement("div");
-        templateWrap.className = "toolbar-item";
-        templateWrap.style.minWidth = "170px";
-        const templateLabel = document.createElement("label");
+        var templateGroup = document.createElement("div");
+        templateGroup.className = "control-group";
+        var templateLabel = document.createElement("label");
         templateLabel.textContent = "Template";
-        const templateSelect = document.createElement("select");
-        for (const templateName of templates) {
-          const option = document.createElement("option");
-          option.value = templateName;
-          option.textContent = templateName;
-          if (templateName === printer.template) {
-            option.selected = true;
-          }
-          templateSelect.appendChild(option);
+        var templateSelect = document.createElement("select");
+        for (var t = 0; t < templates.length; t++) {
+          var opt = document.createElement("option");
+          opt.value = templates[t];
+          opt.textContent = templates[t];
+          if (templates[t] === printer.template) opt.selected = true;
+          templateSelect.appendChild(opt);
         }
-        templateWrap.appendChild(templateLabel);
-        templateWrap.appendChild(templateSelect);
+        templateGroup.appendChild(templateLabel);
+        templateGroup.appendChild(templateSelect);
 
-        controls.appendChild(enabledWrap);
-        controls.appendChild(cadenceWrap);
-        controls.appendChild(templateWrap);
+        controls.appendChild(enabledGroup);
+        controls.appendChild(cadenceGroup);
+        controls.appendChild(templateGroup);
 
-        const actions = document.createElement("div");
-        actions.className = "printer-actions";
+        /* Actions */
+        var actions = document.createElement("div");
+        actions.className = "printer-card-actions";
 
-        const saveBtn = document.createElement("button");
+        var saveBtn = document.createElement("button");
         saveBtn.type = "button";
         saveBtn.className = "secondary";
         saveBtn.textContent = "Save Settings";
 
-        const printIfNeededBtn = document.createElement("button");
-        printIfNeededBtn.type = "button";
-        printIfNeededBtn.textContent = "Print If Needed";
+        var printBtn = document.createElement("button");
+        printBtn.type = "button";
+        printBtn.textContent = "Print If Needed";
 
-        const forcePrintBtn = document.createElement("button");
-        forcePrintBtn.type = "button";
-        forcePrintBtn.className = "danger";
-        forcePrintBtn.textContent = "Force Print";
+        var forceBtn = document.createElement("button");
+        forceBtn.type = "button";
+        forceBtn.className = "danger";
+        forceBtn.textContent = "Force Print";
 
-        const pollBtn = document.createElement("button");
+        var pollBtn = document.createElement("button");
         pollBtn.type = "button";
         pollBtn.className = "neutral";
         pollBtn.textContent = "Poll Now";
 
         actions.appendChild(saveBtn);
-        actions.appendChild(printIfNeededBtn);
-        actions.appendChild(forcePrintBtn);
+        actions.appendChild(printBtn);
+        actions.appendChild(forceBtn);
         actions.appendChild(pollBtn);
 
-        const inline = document.createElement("div");
-        inline.className = "inline-status";
+        /* Inline status */
+        var inline = document.createElement("div");
+        inline.className = "printer-card-status";
 
-        const printerPath = "printers/" + encodeURIComponent(String(printer.printer_id || ""));
+        /* Wire events */
+        var printerPath = "printers/" + encodeURIComponent(String(printer.printer_id || ""));
+        (function(path, inl, enI, caI, tmS) {
+          saveBtn.addEventListener("click", async function() {
+            inl.textContent = "Saving..."; inl.className = "printer-card-status";
+            try {
+              await requestJson(path + "/settings", { method: "POST", body: JSON.stringify({ enabled: Boolean(enI.checked), cadence_hours: Number(caI.value || 0), template: String(tmS.value || "") }) });
+              inl.textContent = "Settings saved."; inl.className = "printer-card-status ok";
+              await refreshAll(true);
+            } catch (err) { inl.textContent = err.message || String(err); inl.className = "printer-card-status error"; }
+          });
+          printBtn.addEventListener("click", async function() {
+            inl.textContent = "Submitting..."; inl.className = "printer-card-status";
+            try {
+              var res = await requestJson(path + "/print", { method: "POST", body: JSON.stringify({ template: String(tmS.value || ""), force: false }) });
+              inl.textContent = res.skipped ? String(res.reason || "Skipped.") : "Print submitted.";
+              inl.className = "printer-card-status ok";
+              await refreshAll(true);
+            } catch (err) { inl.textContent = err.message || String(err); inl.className = "printer-card-status error"; }
+          });
+          forceBtn.addEventListener("click", async function() {
+            inl.textContent = "Force printing..."; inl.className = "printer-card-status";
+            try {
+              await requestJson(path + "/print", { method: "POST", body: JSON.stringify({ template: String(tmS.value || ""), force: true }) });
+              inl.textContent = "Force print submitted."; inl.className = "printer-card-status ok";
+              await refreshAll(true);
+            } catch (err) { inl.textContent = err.message || String(err); inl.className = "printer-card-status error"; }
+          });
+          pollBtn.addEventListener("click", async function() {
+            inl.textContent = "Polling..."; inl.className = "printer-card-status";
+            try {
+              await requestJson(path + "/poll", { method: "POST", body: "{}" });
+              inl.textContent = "Polled."; inl.className = "printer-card-status ok";
+              await refreshAll(true);
+            } catch (err) { inl.textContent = err.message || String(err); inl.className = "printer-card-status error"; }
+          });
+        })(printerPath, inline, enabledInput, cadenceInput, templateSelect);
 
-        saveBtn.addEventListener("click", async () => {
-          inlineMessage(inline, "Saving settings...");
-          try {
-            await requestJson(printerPath + "/settings", {
-              method: "POST",
-              body: JSON.stringify({
-                enabled: Boolean(enabledInput.checked),
-                cadence_hours: Number(cadenceInput.value || 0),
-                template: String(templateSelect.value || "")
-              })
-            });
-            inlineMessage(inline, "Settings updated.");
-            await refreshAll(true);
-          } catch (err) {
-            inlineMessage(inline, err.message || String(err), true);
-          }
-        });
-
-        printIfNeededBtn.addEventListener("click", async () => {
-          inlineMessage(inline, "Submitting keepalive print (due check enabled)...");
-          try {
-            const result = await requestJson(printerPath + "/print", {
-              method: "POST",
-              body: JSON.stringify({
-                template: String(templateSelect.value || ""),
-                force: false
-              })
-            });
-            const msg = result.skipped ? String(result.reason || "Skipped.") : "Print submitted.";
-            inlineMessage(inline, msg);
-            await refreshAll(true);
-          } catch (err) {
-            inlineMessage(inline, err.message || String(err), true);
-          }
-        });
-
-        forcePrintBtn.addEventListener("click", async () => {
-          inlineMessage(inline, "Submitting forced keepalive print...");
-          try {
-            await requestJson(printerPath + "/print", {
-              method: "POST",
-              body: JSON.stringify({
-                template: String(templateSelect.value || ""),
-                force: true
-              })
-            });
-            inlineMessage(inline, "Forced print submitted.");
-            await refreshAll(true);
-          } catch (err) {
-            inlineMessage(inline, err.message || String(err), true);
-          }
-        });
-
-        pollBtn.addEventListener("click", async () => {
-          inlineMessage(inline, "Polling printer...");
-          try {
-            await requestJson(printerPath + "/poll", { method: "POST", body: "{}" });
-            inlineMessage(inline, "Printer polled.");
-            await refreshAll(true);
-          } catch (err) {
-            inlineMessage(inline, err.message || String(err), true);
-          }
-        });
-
-        card.appendChild(header);
+        card.appendChild(head);
         card.appendChild(stats);
         card.appendChild(controls);
         card.appendChild(actions);
@@ -3368,142 +4236,176 @@ def ui_dashboard_html() -> str:
       }
     }
 
-    async function loadConfigEditor(showStatus = true) {
-      if (showStatus) setConfigStatus("Loading configuration...");
+    /* ===== DISCOVERY ===== */
+    function renderDiscovery(payload) {
+      /* Summary */
+      var summaryEl = document.getElementById("discoverySummary");
+      summaryEl.replaceChildren();
+      var sData = [
+        ["Enabled", payload.enabled ? "Yes" : "No"],
+        ["Last Scan", displayDate(payload.last_scan_at)],
+        ["Duration", String(payload.last_scan_duration_seconds || 0) + "s"],
+        ["Candidates", String(payload.printer_count || 0)],
+        ["Last Error", payload.last_error || "None"]
+      ];
+      for (var i = 0; i < sData.length; i++) {
+        var ds = document.createElement("div");
+        ds.className = "disc-stat";
+        var dsl = document.createElement("span");
+        dsl.className = "disc-stat-label";
+        dsl.textContent = sData[i][0];
+        var dsv = document.createElement("span");
+        dsv.className = "disc-stat-value";
+        dsv.textContent = sData[i][1];
+        ds.appendChild(dsl);
+        ds.appendChild(dsv);
+        summaryEl.appendChild(ds);
+      }
+
+      /* Table rows */
+      var tbody = document.getElementById("discoveryRows");
+      tbody.replaceChildren();
+      var items = Array.isArray(payload.printers) ? payload.printers : [];
+      for (var j = 0; j < items.length; j++) {
+        var c = items[j];
+        var tr = document.createElement("tr");
+        var cols = [
+          String(c.printer_name || c.service_name || "unknown"),
+          String(c.uri || ""),
+          String(c.printer_type_guess || "unknown"),
+          c.reachable ? "yes" : "no",
+          c.already_configured ? "yes" : "no"
+        ];
+        for (var k = 0; k < cols.length; k++) {
+          var td = document.createElement("td");
+          td.textContent = cols[k];
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    /* ===== CONFIG ===== */
+    async function loadConfigEditor(showStatus) {
+      if (showStatus) setConfigStatus("Loading...");
       try {
-        const payload = await requestJson("config");
-        const options = payload && payload.options && typeof payload.options === "object" ? payload.options : {};
+        var payload = await requestJson("config");
+        var options = payload && payload.options && typeof payload.options === "object" ? payload.options : {};
         configEditor.value = JSON.stringify(options, null, 2);
         state.configLoaded = true;
         if (showStatus) setConfigStatus("Configuration loaded.");
       } catch (err) {
-        const message = err && err.message ? err.message : String(err);
-        setConfigStatus(message, true);
+        setConfigStatus(err && err.message ? err.message : String(err), true);
       }
     }
 
     async function saveConfigEditor() {
-      setConfigStatus("Saving configuration...");
-      let parsed;
-      try {
-        parsed = JSON.parse(String(configEditor.value || "{}"));
-      } catch (err) {
-        setConfigStatus("Configuration JSON is invalid: " + (err.message || String(err)), true);
-        return;
-      }
-
+      setConfigStatus("Saving...");
+      var parsed;
+      try { parsed = JSON.parse(String(configEditor.value || "{}")); }
+      catch (err) { setConfigStatus("Invalid JSON: " + (err.message || String(err)), true); return; }
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        setConfigStatus("Configuration JSON must be an object.", true);
+        setConfigStatus("Configuration must be a JSON object.", true);
         return;
       }
-
       try {
-        const response = await requestJson("config", {
-          method: "POST",
-          body: JSON.stringify({ options: parsed })
-        });
-        const message = response && response.message ? String(response.message) : "Configuration saved.";
-        setConfigStatus(message);
+        var res = await requestJson("config", { method: "POST", body: JSON.stringify({ options: parsed }) });
+        setConfigStatus(res && res.message ? String(res.message) : "Saved.");
         await refreshAll(true);
-      } catch (err) {
-        setConfigStatus(err.message || String(err), true);
-      }
+      } catch (err) { setConfigStatus(err.message || String(err), true); }
     }
 
-    async function restartAddonFromUi() {
+    async function restartAddon() {
       setConfigStatus("Requesting restart...");
       try {
-        const response = await requestJson("actions/restart", { method: "POST", body: "{}" });
-        const message = response && response.message ? String(response.message) : "Restart requested.";
-        setConfigStatus(message);
-      } catch (err) {
-        setConfigStatus(err.message || String(err), true);
-      }
+        var res = await requestJson("actions/restart", { method: "POST", body: "{}" });
+        setConfigStatus(res && res.message ? String(res.message) : "Restart requested.");
+      } catch (err) { setConfigStatus(err.message || String(err), true); }
     }
 
+    /* ===== REFRESH ALL ===== */
     async function refreshAll(silent) {
       if (state.refreshInFlight) return;
       state.refreshInFlight = true;
-      if (!silent) setStatus("Refreshing...");
-
       try {
-        const health = await requestJson("health");
+        var health = await requestJson("health");
         state.health = health;
-        renderOverview(health);
+        renderDashboard(health);
         renderPrinters(health);
 
-        const discovery = await requestJson("discovery");
+        var discovery = await requestJson("discovery");
         renderDiscovery(discovery);
 
-        if (!state.configLoaded) {
-          await loadConfigEditor(false);
-        }
-
-        if (!silent) setStatus("Updated at " + new Date().toLocaleTimeString());
-        setDiscoveryStatus("Discovery data refreshed.");
+        if (!state.configLoaded) await loadConfigEditor(false);
       } catch (err) {
-        const message = err && err.message ? err.message : String(err);
-        setStatus(message, true);
-        setDiscoveryStatus(message, true);
+        var msg = err && err.message ? err.message : String(err);
+        if (!silent) {
+          document.getElementById("lastUpdated").textContent = "Error: " + msg;
+        }
       } finally {
         state.refreshInFlight = false;
       }
     }
 
-    document.getElementById("saveTokenBtn").addEventListener("click", () => {
+    /* ===== EVENT LISTENERS ===== */
+    document.getElementById("saveTokenBtn").addEventListener("click", function() {
       state.authToken = String(authInput.value || "").trim();
       window.localStorage.setItem("pk_auth_token", state.authToken);
-      setStatus("Token saved in browser storage.");
+      authIndicator.classList.toggle("has-token", Boolean(state.authToken));
     });
 
-    document.getElementById("clearTokenBtn").addEventListener("click", () => {
+    document.getElementById("clearTokenBtn").addEventListener("click", function() {
       state.authToken = "";
       authInput.value = "";
       window.localStorage.removeItem("pk_auth_token");
-      setStatus("Token cleared.");
+      authIndicator.classList.remove("has-token");
     });
 
-    document.getElementById("refreshBtn").addEventListener("click", () => {
-      refreshAll(false);
-    });
+    document.getElementById("refreshBtn").addEventListener("click", function() { refreshAll(false); });
 
-    document.getElementById("loadConfigBtn").addEventListener("click", async () => {
-      await loadConfigEditor(true);
-    });
+    document.getElementById("loadConfigBtn").addEventListener("click", function() { loadConfigEditor(true); });
+    document.getElementById("saveConfigBtn").addEventListener("click", function() { saveConfigEditor(); });
+    document.getElementById("restartAddonBtn").addEventListener("click", function() { restartAddon(); });
 
-    document.getElementById("saveConfigBtn").addEventListener("click", async () => {
-      await saveConfigEditor();
-    });
-
-    document.getElementById("restartAddonBtn").addEventListener("click", async () => {
-      await restartAddonFromUi();
-    });
-
-    document.getElementById("rescanBtn").addEventListener("click", async () => {
+    document.getElementById("rescanBtn").addEventListener("click", async function() {
       setDiscoveryStatus("Running discovery rescan...");
       try {
-        const payload = await requestJson("discovery/rescan", {
-          method: "POST",
-          body: "{}"
-        });
+        var payload = await requestJson("discovery/rescan", { method: "POST", body: "{}" });
         renderDiscovery(payload);
-        setDiscoveryStatus("Discovery rescan complete at " + new Date().toLocaleTimeString());
-      } catch (err) {
-        setDiscoveryStatus(err.message || String(err), true);
-      }
+        setDiscoveryStatus("Rescan complete at " + new Date().toLocaleTimeString());
+      } catch (err) { setDiscoveryStatus(err.message || String(err), true); }
     });
 
+    /* ===== INIT ===== */
     refreshAll(false);
-    window.setInterval(() => refreshAll(true), 60000);
+    window.setInterval(function() { refreshAll(true); }, 60000);
   </script>
 </body>
 </html>
+
 """
     return (
         template.replace("__APP_NAME__", escape(APP_NAME))
         .replace("__APP_VERSION__", escape(APP_VERSION))
         .replace("__APP_URL__", escape(APP_URL))
     )
+
+
+def _load_design_file(variant: str) -> str | None:
+    """Load a design HTML file and perform template substitutions."""
+    candidates = [
+        Path(__file__).parent / "designs" / f"{variant}.html",
+        Path("/app/designs") / f"{variant}.html",
+    ]
+    for filepath in candidates:
+        if filepath.is_file():
+            html = filepath.read_text(encoding="utf-8")
+            return (
+                html.replace("__APP_NAME__", escape(APP_NAME))
+                .replace("__APP_VERSION__", escape(APP_VERSION))
+                .replace("__APP_URL__", escape(APP_URL))
+            )
+    return None
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -3561,6 +4463,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if path in {"", "/", "/index.html"}:
+            # Check cookie for design preference and serve that design
+            cookie_header = self.headers.get("Cookie", "")
+            design_choice = ""
+            for part in cookie_header.split(";"):
+                part = part.strip()
+                if part.startswith("pk_design="):
+                    design_choice = part.split("=", 1)[1].strip()
+                    break
+            if design_choice in {"v1", "v2", "v3", "v4", "v5"}:
+                design_html = _load_design_file(design_choice)
+                if design_html is not None:
+                    self._write_html(HTTPStatus.OK, design_html)
+                    return
             self._write_html(HTTPStatus.OK, ui_dashboard_html())
             return
 
@@ -3579,6 +4494,20 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == "/favicon.ico":
             self.send_response(HTTPStatus.NO_CONTENT)
             self.end_headers()
+            return
+
+        if path.startswith("/design/"):
+            variant = path.split("/design/", 1)[1].rstrip("/")
+            if variant in {"v1", "v2", "v3", "v4", "v5"}:
+                design_html = _load_design_file(variant)
+                if design_html is not None:
+                    self._write_html(HTTPStatus.OK, design_html)
+                else:
+                    self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": f"Design file {variant} not found"})
+            else:
+                designs = {"v1": "Bento Grid", "v2": "Glassmorphism", "v3": "Neubrutalist", "v4": "Cinematic Dark", "v5": "Home Assistant"}
+                items = "".join(f'<li style="margin:8px 0"><a href="/design/{k}" style="font-size:18px">{k} &mdash; {v}</a></li>' for k, v in designs.items())
+                self._write_html(HTTPStatus.OK, f'<html><head><title>Design Picker</title></head><body style="font-family:system-ui;max-width:600px;margin:40px auto;padding:20px"><h2>Choose a Design</h2><ul style="list-style:none;padding:0">{items}</ul><p style="color:#888;font-size:14px;margin-top:24px">Your choice is saved automatically. Switch anytime from the dropdown in the top bar.</p></body></html>')
             return
 
         if path == "/config":

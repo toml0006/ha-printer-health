@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__APP_NAME__</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+/* ── Light Mode (default) ── */
+:root{
+  --primary-color:#03a9f4;
+  --primary-color-light:rgba(3,169,244,0.08);
+  --accent-color:#ff9800;
+  --primary-background-color:#fafafa;
+  --card-background-color:#ffffff;
+  --primary-text-color:#212121;
+  --secondary-text-color:#727272;
+  --divider-color:rgba(0,0,0,0.12);
+  --error-color:#db4437;
+  --warning-color:#ffa600;
+  --success-color:#43a047;
+  --info-color:#039be5;
+  --shadow-color:rgba(0,0,0,0.16);
+  --sidebar-background-color:#ffffff;
+  --card-shadow:0 2px 2px 0 rgba(0,0,0,0.14), 0 1px 5px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.2);
+  --disabled-text-color:#bdbdbd;
+  --toolbar-text-color:#ffffff;
+  --code-bg:rgba(0,0,0,0.04);
+  --hover-bg:rgba(0,0,0,0.04);
+  --popover-bg:#ffffff;
+  --popover-shadow:0 4px 16px rgba(0,0,0,0.12);
+  --scrollbar-thumb:rgba(0,0,0,0.2);
+}
+
+/* ── Dark Mode ── */
+html.dark{
+  --primary-background-color:#111111;
+  --card-background-color:#1c1c1c;
+  --primary-text-color:#e1e1e1;
+  --secondary-text-color:#9b9b9b;
+  --divider-color:rgba(255,255,255,0.12);
+  --shadow-color:rgba(0,0,0,0.4);
+  --sidebar-background-color:#1c1c1c;
+  --card-shadow:0 2px 2px 0 rgba(0,0,0,0.28), 0 1px 5px 0 rgba(0,0,0,0.24), 0 3px 1px -2px rgba(0,0,0,0.4);
+  --disabled-text-color:#555555;
+  --code-bg:rgba(255,255,255,0.06);
+  --hover-bg:rgba(255,255,255,0.06);
+  --popover-bg:#2c2c2c;
+  --popover-shadow:0 4px 16px rgba(0,0,0,0.4);
+  --scrollbar-thumb:rgba(255,255,255,0.2);
+  --primary-color-light:rgba(3,169,244,0.12);
+}
+
+html{font-size:14px}
+body{
+  font-family:'Roboto',sans-serif;
+  background:var(--primary-background-color);
+  color:var(--primary-text-color);
+  min-height:100vh;
+  line-height:20px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* CMYK top stripe */
+.cmyk{height:3px;background:linear-gradient(90deg,#00ffff 25%,#ff00ff 25%,#ff00ff 50%,#ffff00 50%,#ffff00 75%,#000000 75%);flex-shrink:0;position:relative;z-index:200;}
+
+/* ── Toolbar (HA-style) ── */
+.toolbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;background:var(--primary-color);color:var(--toolbar-text-color);
+  position:sticky;top:0;z-index:100;
+}
+.toolbar-left{display:flex;align-items:center;gap:12px;}
+.toolbar-title{font-size:20px;font-weight:500;white-space:nowrap;}
+.toolbar-version{font-size:12px;opacity:0.7;}
+.toolbar-right{display:flex;align-items:center;gap:4px;}
+.toolbar-btn{
+  width:40px;height:40px;border:none;background:transparent;color:var(--toolbar-text-color);
+  border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;font-size:18px;
+}
+.toolbar-btn:hover{background:rgba(255,255,255,0.15);}
+.toolbar-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.toolbar-btn svg{width:22px;height:22px;fill:currentColor;}
+.toolbar-select{
+  font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;
+  background:rgba(255,255,255,0.15);border:none;color:#fff;
+  padding:6px 10px;border-radius:4px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='white'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;
+  padding-right:24px;
+}
+.toolbar-select option{background:#333;color:#fff;}
+
+/* ── Tab Bar ── */
+.tab-bar{
+  display:flex;align-items:center;background:var(--primary-color);
+  padding:0 16px;overflow-x:auto;
+  box-shadow:0 2px 4px rgba(0,0,0,0.15);
+}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{
+  padding:14px 20px;font-size:14px;font-weight:500;letter-spacing:0.03em;
+  color:rgba(255,255,255,0.7);cursor:pointer;border:none;background:none;
+  font-family:'Roboto',sans-serif;position:relative;transition:color .2s;
+  text-transform:uppercase;white-space:nowrap;
+}
+.tab:hover{color:rgba(255,255,255,0.9);}
+.tab.active{color:#fff;}
+.tab.active::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:#fff;
+}
+.tab:focus-visible{outline:2px solid #fff;outline-offset:-2px;border-radius:2px;}
+
+/* ── Main Layout ── */
+.main{padding:24px;max-width:1200px;margin:0 auto;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ── Cards (HA-style) ── */
+.card{
+  background:var(--card-background-color);
+  border-radius:12px;
+  box-shadow:var(--card-shadow);
+  padding:20px;
+  margin-bottom:20px;
+}
+.card-header{
+  font-size:16px;font-weight:500;color:var(--secondary-text-color);
+  margin-bottom:16px;
+}
+
+/* ── Summary Cards Row ── */
+.summary-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;
+}
+.summary-card{
+  background:var(--card-background-color);
+  border-radius:12px;box-shadow:var(--card-shadow);
+  padding:20px;display:flex;align-items:center;gap:16px;
+}
+.summary-icon{
+  width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.summary-icon svg{width:24px;height:24px;fill:#fff;}
+.summary-icon.blue{background:var(--primary-color);}
+.summary-icon.green{background:var(--success-color);}
+.summary-icon.orange{background:var(--accent-color);}
+.summary-icon.gray{background:var(--secondary-text-color);}
+.summary-value{font-size:24px;font-weight:500;line-height:1.2;}
+.summary-label{font-size:12px;color:var(--secondary-text-color);margin-top:2px;}
+
+/* ── Status Dot ── */
+.dot{
+  width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;
+}
+.dot.ok{background:var(--success-color);}
+.dot.warn{background:var(--warning-color);}
+.dot.err{background:var(--error-color);}
+.dot.idle{background:var(--secondary-text-color);}
+
+/* ── Status Chip (HA-style entity badge) ── */
+.chip{
+  display:inline-flex;align-items:center;padding:2px 10px;border-radius:12px;
+  font-size:12px;font-weight:500;line-height:20px;
+}
+.chip.ok{background:rgba(67,160,71,0.12);color:var(--success-color);}
+.chip.warn{background:rgba(255,166,0,0.12);color:var(--warning-color);}
+.chip.err{background:rgba(219,68,55,0.12);color:var(--error-color);}
+.chip.info{background:rgba(3,155,229,0.12);color:var(--info-color);}
+.chip.idle{background:var(--hover-bg);color:var(--secondary-text-color);}
+
+/* ── Printer Health List ── */
+.health-row{
+  display:flex;align-items:center;padding:12px 0;gap:12px;
+  border-bottom:1px solid var(--divider-color);
+}
+.health-row:last-child{border-bottom:none;}
+.health-name{font-weight:500;min-width:140px;flex-shrink:0;}
+.health-state{flex-shrink:0;}
+.health-due{margin-left:auto;font-size:12px;color:var(--secondary-text-color);white-space:nowrap;}
+.health-due.overdue{color:var(--error-color);font-weight:500;}
+
+/* ── System Info Grid ── */
+.info-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;
+}
+.info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--divider-color);
+}
+.info-row:last-child{border-bottom:none;}
+.info-label{font-size:12px;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;font-weight:500;}
+.info-value{font-weight:500;font-size:14px;}
+
+/* ── Printer Cards (Printers view) ── */
+.printer-card{
+  background:var(--card-background-color);
+  border-radius:12px;box-shadow:var(--card-shadow);
+  padding:20px;margin-bottom:16px;
+}
+.printer-card-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
+}
+.printer-card-name{font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px;}
+.printer-card-uri{font-size:12px;color:var(--secondary-text-color);font-family:'Roboto Mono',monospace;margin-top:2px;}
+.printer-stats{
+  display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-bottom:16px;
+}
+.stat-row{
+  display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid var(--divider-color);font-size:13px;
+}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{color:var(--secondary-text-color);}
+.stat-value{font-weight:500;}
+
+/* ── Printer Controls ── */
+.controls-section{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:12px 0;border-top:1px solid var(--divider-color);margin-top:4px;margin-bottom:8px;
+}
+.control-group{display:flex;align-items:center;gap:6px;}
+.control-label{font-size:12px;color:var(--secondary-text-color);font-weight:500;}
+.control-input{
+  font-family:'Roboto',sans-serif;font-size:13px;
+  background:var(--primary-background-color);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:6px 10px;border-radius:8px;
+}
+.control-input:focus{outline:none;border-color:var(--primary-color);}
+.control-select{
+  font-family:'Roboto',sans-serif;font-size:13px;
+  background:var(--primary-background-color);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:6px 10px;border-radius:8px;cursor:pointer;
+}
+.control-select:focus{outline:none;border-color:var(--primary-color);}
+
+/* Toggle switch (HA-style) */
+.toggle{
+  position:relative;display:inline-block;width:36px;height:20px;
+}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{
+  position:absolute;cursor:pointer;inset:0;background:var(--disabled-text-color);
+  border-radius:20px;transition:background .2s;
+}
+.toggle-slider::before{
+  content:'';position:absolute;height:16px;width:16px;left:2px;bottom:2px;
+  background:#fff;border-radius:50%;transition:transform .2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle input:checked + .toggle-slider{background:var(--primary-color);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(16px);}
+
+/* ── HA-style Flat Buttons ── */
+.ha-btn{
+  font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;
+  letter-spacing:0.03em;text-transform:uppercase;
+  padding:8px 16px;border:none;background:none;
+  color:var(--primary-color);cursor:pointer;border-radius:4px;
+  transition:background .15s;
+}
+.ha-btn:hover{background:var(--primary-color-light);}
+.ha-btn:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;}
+.ha-btn:disabled{color:var(--disabled-text-color);cursor:not-allowed;}
+.ha-btn.danger{color:var(--error-color);}
+.ha-btn.danger:hover{background:rgba(219,68,55,0.08);}
+.ha-btn.warn{color:var(--warning-color);}
+.ha-btn.warn:hover{background:rgba(255,166,0,0.08);}
+.ha-btn.success{color:var(--success-color);}
+.ha-btn.success:hover{background:rgba(67,160,71,0.08);}
+
+.btn-row{display:flex;gap:4px;flex-wrap:wrap;}
+
+/* ── Discovery Table ── */
+.disc-table{width:100%;border-collapse:collapse;font-size:13px;}
+.disc-table th{
+  text-align:left;padding:10px 12px;color:var(--secondary-text-color);font-weight:500;
+  border-bottom:2px solid var(--divider-color);font-size:12px;
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.disc-table td{
+  padding:10px 12px;border-bottom:1px solid var(--divider-color);
+}
+.disc-table tr:last-child td{border-bottom:none;}
+.disc-table .uri{color:var(--secondary-text-color);font-size:12px;font-family:'Roboto Mono',monospace;}
+
+/* ── Config Editor ── */
+.config-toolbar{
+  display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;
+}
+.config-editor{
+  width:100%;min-height:350px;
+  background:var(--code-bg);border:1px solid var(--divider-color);
+  border-radius:8px;padding:16px;
+  font-family:'Roboto Mono',monospace;font-size:13px;
+  color:var(--primary-text-color);line-height:1.6;resize:vertical;
+}
+.config-editor:focus{outline:none;border-color:var(--primary-color);}
+.config-status{font-size:12px;color:var(--secondary-text-color);margin-top:8px;}
+
+/* ── Config Mode Toggle (HA-style tab pair) ── */
+.config-mode-tabs{
+  display:flex;margin-bottom:20px;border-bottom:1px solid var(--divider-color);
+}
+.config-mode-tab{
+  font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;
+  letter-spacing:0.03em;text-transform:uppercase;
+  padding:12px 24px;border:none;background:none;cursor:pointer;
+  color:var(--secondary-text-color);position:relative;transition:color .2s;
+}
+.config-mode-tab:hover{color:var(--primary-text-color);}
+.config-mode-tab.active{color:var(--primary-color);}
+.config-mode-tab.active::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;
+  background:var(--primary-color);
+}
+
+/* ── Config Form Sections ── */
+.cfg-section{
+  background:var(--card-background-color);border-radius:12px;
+  box-shadow:var(--card-shadow);margin-bottom:16px;overflow:hidden;
+}
+.cfg-section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;cursor:pointer;user-select:none;
+}
+.cfg-section-header:hover{background:var(--hover-bg);}
+.cfg-section-title{font-size:16px;font-weight:500;color:var(--primary-text-color);}
+.cfg-section-chevron{
+  width:24px;height:24px;color:var(--secondary-text-color);
+  transition:transform .2s;flex-shrink:0;
+}
+.cfg-section.collapsed .cfg-section-chevron{transform:rotate(-90deg);}
+.cfg-section.collapsed .cfg-section-body{display:none;}
+.cfg-section-body{padding:0 20px 20px;}
+
+/* ── Config Form Fields ── */
+.cfg-field{
+  margin-bottom:16px;
+}
+.cfg-field:last-child{margin-bottom:0;}
+.cfg-field-label{
+  display:block;font-size:12px;font-weight:500;
+  color:var(--secondary-text-color);text-transform:uppercase;
+  letter-spacing:0.05em;margin-bottom:6px;
+}
+.cfg-field-desc{
+  font-size:12px;color:var(--secondary-text-color);margin-top:4px;
+  line-height:1.4;
+}
+.cfg-input{
+  font-family:'Roboto',sans-serif;font-size:14px;
+  background:var(--code-bg);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:10px 12px;border-radius:8px;
+  width:100%;transition:border-color .15s;
+}
+.cfg-input:focus{outline:none;border-color:var(--primary-color);}
+.cfg-input::placeholder{color:var(--disabled-text-color);}
+.cfg-select{
+  font-family:'Roboto',sans-serif;font-size:14px;
+  background:var(--code-bg);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:10px 12px;border-radius:8px;
+  width:100%;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23727272'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:32px;
+}
+.cfg-select:focus{outline:none;border-color:var(--primary-color);}
+.cfg-textarea{
+  font-family:'Roboto',sans-serif;font-size:14px;
+  background:var(--code-bg);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:10px 12px;border-radius:8px;
+  width:100%;min-height:80px;resize:vertical;line-height:1.5;
+}
+.cfg-textarea:focus{outline:none;border-color:var(--primary-color);}
+.cfg-number{width:120px;}
+
+/* ── Config Form Toggle (HA pill) ── */
+.cfg-toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;
+}
+.cfg-toggle-label{font-size:14px;font-weight:400;color:var(--primary-text-color);}
+.cfg-toggle-desc{font-size:12px;color:var(--secondary-text-color);margin-top:2px;}
+
+/* ── Dynamic Printer Cards in Form ── */
+.cfg-printer-card{
+  background:var(--primary-background-color);border-radius:8px;
+  padding:16px;margin-bottom:12px;position:relative;
+  border:1px solid var(--divider-color);
+}
+.cfg-printer-card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.cfg-printer-card-title{font-size:14px;font-weight:500;}
+.cfg-printer-remove{
+  font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;
+  text-transform:uppercase;color:var(--error-color);background:none;
+  border:none;cursor:pointer;padding:4px 8px;border-radius:4px;
+}
+.cfg-printer-remove:hover{background:rgba(219,68,55,0.08);}
+.cfg-field-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+@media(max-width:600px){
+  .cfg-field-row{grid-template-columns:1fr;}
+  .cfg-number{width:100%;}
+}
+
+/* ── Auth Popover ── */
+.auth-popover{
+  position:absolute;top:64px;right:16px;z-index:200;
+  background:var(--popover-bg);border-radius:12px;
+  box-shadow:var(--popover-shadow);padding:16px;width:280px;
+  display:none;
+}
+.auth-popover.open{display:block;}
+.auth-popover-title{font-size:14px;font-weight:500;margin-bottom:12px;}
+.auth-input{
+  font-family:'Roboto',sans-serif;font-size:13px;
+  background:var(--primary-background-color);border:1px solid var(--divider-color);
+  color:var(--primary-text-color);padding:8px 12px;border-radius:8px;
+  width:100%;margin-bottom:12px;
+}
+.auth-input:focus{outline:none;border-color:var(--primary-color);}
+.auth-input::placeholder{color:var(--disabled-text-color);}
+.auth-btns{display:flex;gap:4px;justify-content:flex-end;}
+
+/* Popover backdrop */
+.popover-backdrop{
+  position:fixed;inset:0;z-index:150;display:none;
+}
+.popover-backdrop.open{display:block;}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--card-background-color);
+  border-radius:8px;padding:12px 24px;font-size:14px;font-weight:500;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  z-index:10000;opacity:0;transition:all .3s ease;pointer-events:none;
+  color:var(--primary-text-color);
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.toast-err{color:var(--error-color);}
+.toast.toast-ok{color:var(--success-color);}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .summary-grid{grid-template-columns:repeat(2,1fr);}
+  .info-grid{grid-template-columns:1fr;}
+  .printer-stats{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .toolbar{height:56px;padding:0 12px;}
+  .toolbar-title{font-size:16px;}
+  .tab{padding:12px 14px;font-size:12px;}
+  .main{padding:16px;}
+  .summary-grid{grid-template-columns:1fr 1fr;}
+  .summary-card{padding:14px;gap:12px;}
+  .summary-value{font-size:20px;}
+  .summary-icon{width:40px;height:40px;}
+  .summary-icon svg{width:20px;height:20px;}
+  .health-row{flex-wrap:wrap;}
+  .health-due{margin-left:0;flex-basis:100%;padding-left:22px;}
+  .controls-section{gap:10px;}
+  .auth-popover{right:8px;left:8px;width:auto;}
+}
+@media(max-width:400px){
+  .summary-grid{grid-template-columns:1fr;}
+  .tab{padding:10px 10px;font-size:11px;letter-spacing:0;}
+}
+</style>
+</head>
+<body>
+
+<div class="cmyk"></div>
+
+<header class="toolbar">
+  <div class="toolbar-left">
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="9" width="18" height="9" rx="2"/>
+      <path d="M6 9V5a1 1 0 011-1h10a1 1 0 011 1v4"/>
+      <path d="M6 14h12"/>
+      <rect x="7" y="18" width="10" height="3" rx="1"/>
+      <circle cx="18" cy="12" r="1" fill="#fff"/>
+    </svg>
+    <span class="toolbar-title">__APP_NAME__</span>
+    <span class="toolbar-version" id="appVersion">__APP_VERSION__</span>
+  </div>
+  <div class="toolbar-right">
+    <select class="toolbar-select" id="designSwitcher" title="Switch design">
+      <option value="v1">Bento Grid</option>
+      <option value="v2">Glassmorphism</option>
+      <option value="v3">Neubrutalist</option>
+      <option value="v4">Cinematic Dark</option>
+      <option value="v5" selected>Home Assistant</option>
+    </select>
+    <button class="toolbar-btn" id="themeToggle" title="Toggle theme">
+      <svg id="themeIconSun" viewBox="0 0 24 24" style="display:none"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg id="themeIconMoon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="toolbar-btn" id="authToggle" title="Auth token">
+      <svg viewBox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="toolbar-btn" id="btnRefresh" title="Refresh">
+      <svg viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L4 7m16 10l-1.64 1.36A9 9 0 013.51 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="tab-bar" id="tabBar"></nav>
+
+<!-- Auth Popover -->
+<div class="popover-backdrop" id="authBackdrop"></div>
+<div class="auth-popover" id="authPopover">
+  <div class="auth-popover-title">Authentication</div>
+  <input type="password" class="auth-input" id="authInput" placeholder="Bearer token..." autocomplete="off">
+  <div class="auth-btns">
+    <button class="ha-btn danger" id="btnAuthClear">CLEAR</button>
+    <button class="ha-btn" id="btnAuthSave">SAVE</button>
+  </div>
+</div>
+
+<main class="main">
+  <!-- DASHBOARD -->
+  <section class="view active" id="view-dashboard">
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="card">
+      <div class="card-header">Printer Health</div>
+      <div id="healthRows"></div>
+    </div>
+    <div class="card">
+      <div class="card-header">System Info</div>
+      <div class="info-grid" id="sysInfo"></div>
+    </div>
+  </section>
+
+  <!-- PRINTERS -->
+  <section class="view" id="view-printers">
+    <div id="printerCards"></div>
+  </section>
+
+  <!-- DISCOVERY -->
+  <section class="view" id="view-discovery">
+    <div class="summary-grid" id="discSummary" style="grid-template-columns:repeat(3,1fr);"></div>
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Discovery Results</span>
+        <button class="ha-btn" id="btnRescan">RESCAN</button>
+      </div>
+      <table class="disc-table" id="discTable">
+        <thead><tr><th>Printer</th><th>URI</th><th>Type</th><th>Status</th><th>Configured</th></tr></thead>
+        <tbody id="discBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CONFIG -->
+  <section class="view" id="view-config">
+    <div class="config-toolbar">
+      <button class="ha-btn" id="btnConfigLoad">LOAD CONFIG</button>
+      <button class="ha-btn success" id="btnConfigSave">SAVE CONFIG</button>
+      <button class="ha-btn danger" id="btnConfigRestart">RESTART</button>
+    </div>
+    <div class="config-mode-tabs">
+      <button class="config-mode-tab active" data-mode="form">Form</button>
+      <button class="config-mode-tab" data-mode="advanced">Advanced</button>
+    </div>
+
+    <!-- FORM MODE -->
+    <div id="configFormMode">
+      <!-- Section 1: Printers -->
+      <div class="cfg-section" id="cfgSectionPrinters">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">Printers</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div id="cfgPrinterList"></div>
+          <button class="ha-btn" id="btnAddPrinter" type="button">ADD PRINTER</button>
+        </div>
+      </div>
+
+      <!-- Section 2: Scheduling -->
+      <div class="cfg-section" id="cfgSectionScheduling">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">Scheduling</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Auto Print Enabled</div>
+              <div class="cfg-toggle-desc">Automatically print keepalive pages on schedule</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="cfgAutoPrintEnabled"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="cfg-field-row" style="margin-top:12px;">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Status Poll Interval (minutes)</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgStatusPollInterval" min="1" max="1440" placeholder="60">
+              <div class="cfg-field-desc">How often to poll printer status (1-1440)</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Failure Retry (minutes)</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgFailureRetryMinutes" min="1" max="1440" placeholder="30">
+              <div class="cfg-field-desc">Retry interval after a failed print (1-1440)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Discovery -->
+      <div class="cfg-section" id="cfgSectionDiscovery">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">Discovery</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">Discovery Enabled</div>
+              <div class="cfg-toggle-desc">Automatically discover printers on the network</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="cfgDiscoveryEnabled"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="cfg-field-row" style="margin-top:12px;">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Discovery Interval (minutes)</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgDiscoveryInterval" min="1" max="1440" placeholder="60">
+              <div class="cfg-field-desc">How often to scan for printers (1-1440)</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Discovery Timeout (seconds)</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgDiscoveryTimeout" min="1" max="30" placeholder="10">
+              <div class="cfg-field-desc">Timeout for discovery scan (1-30)</div>
+            </div>
+          </div>
+          <div class="cfg-field-row">
+            <div class="cfg-field">
+              <label class="cfg-field-label">IPP Query Timeout (seconds)</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgDiscoveryIppTimeout" min="1" max="30" placeholder="5">
+              <div class="cfg-field-desc">Timeout for individual IPP queries (1-30)</div>
+            </div>
+            <div class="cfg-field">
+              <div class="cfg-toggle-row">
+                <div>
+                  <div class="cfg-toggle-label">Include IPPS</div>
+                  <div class="cfg-toggle-desc">Include IPPS (TLS) printers in discovery</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfgDiscoveryIncludeIpps"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Templates & Content -->
+      <div class="cfg-section" id="cfgSectionTemplates">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">Templates &amp; Content</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div class="cfg-field">
+            <label class="cfg-field-label">Default Template</label>
+            <select class="cfg-select" id="cfgDefaultTemplate">
+              <option value="color_bars">color_bars</option>
+              <option value="home_summary">home_summary</option>
+              <option value="weather_snapshot">weather_snapshot</option>
+              <option value="entity_report">entity_report</option>
+              <option value="hybrid">hybrid</option>
+            </select>
+            <div class="cfg-field-desc">Default print template for new printers</div>
+          </div>
+          <div class="cfg-field-row">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Title</label>
+              <input type="text" class="cfg-input" id="cfgTitle" placeholder="Page title">
+              <div class="cfg-field-desc">Title shown on printed pages</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Footer</label>
+              <input type="text" class="cfg-input" id="cfgFooter" placeholder="Page footer">
+              <div class="cfg-field-desc">Footer shown on printed pages</div>
+            </div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Weather Entity</label>
+            <input type="text" class="cfg-input" id="cfgWeatherEntity" placeholder="weather.home">
+            <div class="cfg-field-desc">Home Assistant weather entity ID</div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Entity IDs</label>
+            <textarea class="cfg-textarea" id="cfgEntityIds" placeholder="sensor.temperature&#10;sensor.humidity&#10;(one per line)"></textarea>
+            <div class="cfg-field-desc">Entity IDs to include in reports (one per line)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: MQTT -->
+      <div class="cfg-section" id="cfgSectionMqtt">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">MQTT</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div class="cfg-toggle-row">
+            <div>
+              <div class="cfg-toggle-label">MQTT Enabled</div>
+              <div class="cfg-toggle-desc">Enable MQTT integration for Home Assistant discovery</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="cfgMqttEnabled"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="cfg-field-row" style="margin-top:12px;">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Host</label>
+              <input type="text" class="cfg-input" id="cfgMqttHost" placeholder="core-mosquitto">
+              <div class="cfg-field-desc">MQTT broker hostname</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Port</label>
+              <input type="number" class="cfg-input cfg-number" id="cfgMqttPort" placeholder="1883">
+              <div class="cfg-field-desc">MQTT broker port</div>
+            </div>
+          </div>
+          <div class="cfg-field-row">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Username</label>
+              <input type="text" class="cfg-input" id="cfgMqttUsername" placeholder="mqtt_user">
+              <div class="cfg-field-desc">MQTT authentication username</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Password</label>
+              <input type="password" class="cfg-input" id="cfgMqttPassword" placeholder="mqtt_password">
+              <div class="cfg-field-desc">MQTT authentication password</div>
+            </div>
+          </div>
+          <div class="cfg-field-row">
+            <div class="cfg-field">
+              <label class="cfg-field-label">Discovery Prefix</label>
+              <input type="text" class="cfg-input" id="cfgMqttDiscoveryPrefix" placeholder="homeassistant">
+              <div class="cfg-field-desc">MQTT discovery topic prefix</div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-field-label">Topic Prefix</label>
+              <input type="text" class="cfg-input" id="cfgMqttTopicPrefix" placeholder="printer_keepalive">
+              <div class="cfg-field-desc">MQTT topic prefix for this add-on</div>
+            </div>
+          </div>
+          <div class="cfg-field-row">
+            <div class="cfg-field">
+              <div class="cfg-toggle-row">
+                <div>
+                  <div class="cfg-toggle-label">Retain</div>
+                  <div class="cfg-toggle-desc">Retain MQTT messages</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfgMqttRetain"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="cfg-field">
+              <div class="cfg-toggle-row">
+                <div>
+                  <div class="cfg-toggle-label">TLS</div>
+                  <div class="cfg-toggle-desc">Use TLS for MQTT connection</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="cfgMqttTls"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Client ID</label>
+            <input type="text" class="cfg-input" id="cfgMqttClientId" placeholder="printer_keepalive">
+            <div class="cfg-field-desc">MQTT client identifier</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 6: Integration -->
+      <div class="cfg-section" id="cfgSectionIntegration">
+        <div class="cfg-section-header">
+          <span class="cfg-section-title">Integration</span>
+          <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cfg-section-body">
+          <div class="cfg-field">
+            <label class="cfg-field-label">Home Assistant URL</label>
+            <input type="text" class="cfg-input" id="cfgHaUrl" placeholder="http://homeassistant.local:8123">
+            <div class="cfg-field-desc">URL of your Home Assistant instance</div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Home Assistant Token</label>
+            <input type="password" class="cfg-input" id="cfgHaToken" placeholder="Long-lived access token">
+            <div class="cfg-field-desc">Long-lived access token for HA API</div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Add-on Page URL</label>
+            <input type="text" class="cfg-input" id="cfgAddonPageUrl" placeholder="/hassio/ingress/...">
+            <div class="cfg-field-desc">Ingress URL for this add-on</div>
+          </div>
+          <div class="cfg-field">
+            <label class="cfg-field-label">Auth Token</label>
+            <input type="password" class="cfg-input" id="cfgAuthToken" placeholder="Add-on auth token">
+            <div class="cfg-field-desc">Bearer token for add-on API authentication</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADVANCED MODE -->
+    <div id="configAdvancedMode" style="display:none;">
+      <div class="card">
+        <textarea class="config-editor" id="configEditor" spellcheck="false" placeholder="Loading configuration..."></textarea>
+      </div>
+    </div>
+
+    <div class="config-status" id="configStatus"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── API Layer ──
+function apiPath(path) {
+  var pathname = window.location.pathname;
+  var base = pathname.replace(/\/design\/v[1-5]\/?$/, '/');
+  if (!base.endsWith('/')) base += '/';
+  var origin = window.location.origin;
+  var clean = String(path || '').replace(/^\/+/, '');
+  return new URL(clean, origin + base).toString();
+}
+
+var state = {
+  authToken: localStorage.getItem('pk_auth_token') || '',
+  refreshInFlight: false,
+  health: null,
+  discovery: null,
+  configLoaded: false
+};
+
+async function requestJson(path, init) {
+  if (!init) init = {};
+  var headers = Object.assign({}, init.headers || {});
+  if (init.body !== undefined && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (state.authToken) headers['Authorization'] = 'Bearer ' + state.authToken;
+  var response = await fetch(apiPath(path), Object.assign({}, init, { headers: headers }));
+  var raw = await response.text();
+  var payload = {};
+  if (raw) {
+    try { payload = JSON.parse(raw); }
+    catch (err) { throw new Error('Invalid JSON: ' + path + ' (' + response.status + ')'); }
+  }
+  if (!response.ok || (payload && payload.ok === false)) {
+    var message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + ' ' + response.statusText);
+    throw new Error(message);
+  }
+  return payload;
+}
+
+// ── Helpers ──
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function relTime(iso) {
+  if (!iso) return 'N/A';
+  var diff = new Date(iso) - Date.now();
+  var abs = Math.abs(diff); var past = diff < 0;
+  if (abs < 60000) return (past ? '' : 'in ') + '<1m' + (past ? ' ago' : '');
+  if (abs < 3600000) { var m = Math.floor(abs / 60000); return (past ? '' : 'in ') + m + 'm' + (past ? ' ago' : ''); }
+  if (abs < 86400000) { var h = Math.floor(abs / 3600000); return (past ? '' : 'in ') + h + 'h' + (past ? ' ago' : ''); }
+  var d = Math.floor(abs / 86400000); return (past ? '' : 'in ') + d + 'd' + (past ? ' ago' : '');
+}
+
+// ── Toast ──
+var toastTimer = null;
+function showToast(msg, type) {
+  var toast = document.getElementById('toast');
+  toast.className = 'toast' + (type === 'err' ? ' toast-err' : '') + (type === 'ok' ? ' toast-ok' : '');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 3000);
+}
+
+// ── Tabs ──
+var TABS = ['Dashboard', 'Printers', 'Discovery', 'Config'];
+var tabBar = document.getElementById('tabBar');
+TABS.forEach(function(t, i) {
+  var btn = document.createElement('button');
+  btn.className = 'tab' + (i === 0 ? ' active' : '');
+  btn.textContent = t;
+  btn.dataset.view = 'view-' + t.toLowerCase();
+  btn.addEventListener('click', function() { switchTab(btn); });
+  tabBar.appendChild(btn);
+});
+function switchTab(btn) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById(btn.dataset.view).classList.add('active');
+}
+
+// ── Theme ──
+function applyTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  document.getElementById('themeIconSun').style.display = dark ? 'block' : 'none';
+  document.getElementById('themeIconMoon').style.display = dark ? 'none' : 'block';
+  localStorage.setItem('pk_theme', dark ? 'dark' : 'light');
+}
+(function() {
+  var saved = localStorage.getItem('pk_theme');
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved ? saved === 'dark' : prefersDark);
+})();
+document.getElementById('themeToggle').addEventListener('click', function() {
+  applyTheme(!document.documentElement.classList.contains('dark'));
+});
+
+// ── Auth Popover ──
+document.getElementById('authInput').value = state.authToken;
+document.getElementById('authToggle').addEventListener('click', function() {
+  document.getElementById('authPopover').classList.toggle('open');
+  document.getElementById('authBackdrop').classList.toggle('open');
+});
+document.getElementById('authBackdrop').addEventListener('click', function() {
+  document.getElementById('authPopover').classList.remove('open');
+  document.getElementById('authBackdrop').classList.remove('open');
+});
+document.getElementById('btnAuthSave').addEventListener('click', function() {
+  var val = document.getElementById('authInput').value.trim();
+  state.authToken = val;
+  localStorage.setItem('pk_auth_token', val);
+  document.getElementById('authPopover').classList.remove('open');
+  document.getElementById('authBackdrop').classList.remove('open');
+  showToast('Auth token saved', 'ok');
+  state.configLoaded = false;
+  refreshAll();
+});
+document.getElementById('btnAuthClear').addEventListener('click', function() {
+  state.authToken = '';
+  localStorage.removeItem('pk_auth_token');
+  document.getElementById('authInput').value = '';
+  document.getElementById('authPopover').classList.remove('open');
+  document.getElementById('authBackdrop').classList.remove('open');
+  showToast('Auth token cleared', 'ok');
+  state.configLoaded = false;
+  refreshAll();
+});
+
+// ── Refresh Button ──
+document.getElementById('btnRefresh').addEventListener('click', function() { refreshAll(); });
+
+// ── Dashboard: Summary Grid ──
+function renderSummary() {
+  var h = state.health;
+  var d = state.discovery;
+  var printerCount = h ? (h.printer_count || 0) : 0;
+  var mqttStatus = h ? (h.mqtt_enabled ? 'Connected' : 'Disabled') : '--';
+  var autoPrint = h ? (h.auto_print_enabled ? 'Enabled' : 'Disabled') : '--';
+  var discCount = d ? (d.printer_count || 0) : 0;
+
+  document.getElementById('summaryGrid').innerHTML =
+    '<div class="summary-card">' +
+      '<div class="summary-icon blue"><svg viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + printerCount + '</div><div class="summary-label">Printers</div></div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-icon ' + (h && h.mqtt_enabled ? 'green' : 'gray') + '"><svg viewBox="0 0 24 24"><path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M4.93 13.222a9.003 9.003 0 0114.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + esc(mqttStatus) + '</div><div class="summary-label">MQTT Status</div></div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-icon ' + (h && h.auto_print_enabled ? 'orange' : 'gray') + '"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + esc(autoPrint) + '</div><div class="summary-label">Auto Print</div></div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-icon gray"><svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + discCount + '</div><div class="summary-label">Discovered</div></div>' +
+    '</div>';
+}
+
+// ── Dashboard: Health Rows ──
+function renderHealthRows() {
+  if (!state.health || !state.health.printers || !state.health.printers.length) {
+    document.getElementById('healthRows').innerHTML = '<div style="color:var(--secondary-text-color);padding:12px 0;">No printers configured.</div>';
+    return;
+  }
+  document.getElementById('healthRows').innerHTML = state.health.printers.map(function(p) {
+    var st = p.health_status === 'ok' ? 'ok' : p.health_status === 'warning' ? 'warn' : 'err';
+    var chipLabel = p.printer_state ? p.printer_state.charAt(0).toUpperCase() + p.printer_state.slice(1) : 'Unknown';
+    var due = relTime(p.next_keepalive_due_at);
+    var overdue = p.next_keepalive_due_at && new Date(p.next_keepalive_due_at) < Date.now();
+    return '<div class="health-row">' +
+      '<span class="dot ' + st + '"></span>' +
+      '<span class="health-name">' + esc(p.name) + '</span>' +
+      '<span class="chip ' + st + '">' + esc(chipLabel) + '</span>' +
+      '<span class="health-due ' + (overdue ? 'overdue' : '') + '">' + (overdue ? 'Overdue - ' : 'Next: ') + esc(due) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Dashboard: System Info ──
+function renderSysInfo() {
+  if (!state.health) { document.getElementById('sysInfo').innerHTML = ''; return; }
+  var h = state.health;
+  var rows = [
+    { label: 'Version', value: h.version || '__APP_VERSION__' },
+    { label: 'Timestamp', value: h.timestamp ? new Date(h.timestamp).toLocaleString() : '--' },
+    { label: 'Auto Print', value: h.auto_print_enabled ? 'Enabled' : 'Disabled' },
+    { label: 'MQTT', value: h.mqtt_enabled ? 'Connected' : 'Disabled' },
+    { label: 'Discovery', value: h.discovery ? (h.discovery.enabled ? 'Enabled' : 'Disabled') : '--' },
+    { label: 'Auth Required', value: h.auth_required ? 'Yes' : 'No' },
+  ];
+  document.getElementById('sysInfo').innerHTML = rows.map(function(r) {
+    return '<div class="info-row"><span class="info-label">' + esc(r.label) + '</span><span class="info-value">' + esc(String(r.value)) + '</span></div>';
+  }).join('');
+}
+
+// ── Printers View ──
+function renderPrinterCards() {
+  if (!state.health || !state.health.printers || !state.health.printers.length) {
+    document.getElementById('printerCards').innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured.</div></div>';
+    return;
+  }
+  var templates = state.health.supported_templates || [];
+  document.getElementById('printerCards').innerHTML = state.health.printers.map(function(p) {
+    var st = p.health_status === 'ok' ? 'ok' : p.health_status === 'warning' ? 'warn' : 'err';
+    var stats = [
+      { label: 'State', value: p.printer_state || 'unknown' },
+      { label: 'Template', value: p.template || '--' },
+      { label: 'Cadence', value: (p.cadence_hours || 0) + 'h' },
+      { label: 'Enabled', value: p.enabled ? 'Yes' : 'No' },
+      { label: 'Last Print', value: relTime(p.last_print_at) },
+      { label: 'Next Due', value: relTime(p.next_keepalive_due_at) },
+      { label: 'Keepalive Needed', value: p.keepalive_needed ? 'Yes' : 'No' },
+      { label: 'Health', value: p.health_status || '--' },
+    ];
+    var templateOpts = templates.map(function(t) {
+      return '<option value="' + esc(t) + '"' + (t === p.template ? ' selected' : '') + '>' + esc(t) + '</option>';
+    }).join('');
+    return '<div class="printer-card" data-printer-id="' + esc(p.printer_id) + '">' +
+      '<div class="printer-card-header">' +
+        '<div><div class="printer-card-name"><span class="dot ' + st + '"></span>' + esc(p.name) + '</div>' +
+        '<div class="printer-card-uri">' + esc(p.printer_uri || '') + '</div></div>' +
+        '<span class="chip ' + st + '">' + esc(p.health_status || 'unknown') + '</span>' +
+      '</div>' +
+      '<div class="printer-stats">' + stats.map(function(s) {
+        return '<div class="stat-row"><span class="stat-label">' + esc(s.label) + '</span><span class="stat-value">' + esc(String(s.value)) + '</span></div>';
+      }).join('') + '</div>' +
+      '<div class="controls-section">' +
+        '<div class="control-group"><label class="control-label">Enabled</label><label class="toggle"><input type="checkbox" class="pc-enabled"' + (p.enabled ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' +
+        '<div class="control-group"><label class="control-label">Cadence (h)</label><input type="number" class="control-input pc-cadence" style="width:70px;" value="' + (p.cadence_hours || 0) + '" min="1"></div>' +
+        '<div class="control-group"><label class="control-label">Template</label><select class="control-select pc-template">' + templateOpts + '</select></div>' +
+      '</div>' +
+      '<div class="btn-row">' +
+        '<button class="ha-btn pc-save">SAVE SETTINGS</button>' +
+        '<button class="ha-btn pc-print">PRINT</button>' +
+        '<button class="ha-btn warn pc-force">FORCE PRINT</button>' +
+        '<button class="ha-btn pc-poll">POLL</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Bind actions
+  document.querySelectorAll('.printer-card').forEach(function(card) {
+    var pid = card.dataset.printerId;
+    card.querySelector('.pc-save').addEventListener('click', function() { printerSave(pid, card); });
+    card.querySelector('.pc-print').addEventListener('click', function() { printerPrint(pid, card, false); });
+    card.querySelector('.pc-force').addEventListener('click', function() { printerPrint(pid, card, true); });
+    card.querySelector('.pc-poll').addEventListener('click', function() { printerPoll(pid); });
+  });
+}
+
+// ── Printer Actions ──
+async function printerSave(pid, card) {
+  try {
+    var template = card.querySelector('.pc-template').value;
+    var cadence = parseInt(card.querySelector('.pc-cadence').value, 10) || 168;
+    var enabled = card.querySelector('.pc-enabled').checked;
+    await requestJson('printers/' + encodeURIComponent(pid) + '/settings', {
+      method: 'POST', body: JSON.stringify({ enabled: enabled, cadence_hours: cadence, template: template })
+    });
+    showToast('Settings saved for ' + pid, 'ok');
+    refreshAll();
+  } catch (e) { showToast('Save failed: ' + e.message, 'err'); }
+}
+
+async function printerPrint(pid, card, force) {
+  try {
+    var template = card.querySelector('.pc-template').value;
+    await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+      method: 'POST', body: JSON.stringify({ template: template, force: force })
+    });
+    showToast((force ? 'Force print' : 'Print') + ' sent to ' + pid, 'ok');
+    refreshAll();
+  } catch (e) { showToast('Print failed: ' + e.message, 'err'); }
+}
+
+async function printerPoll(pid) {
+  try {
+    await requestJson('printers/' + encodeURIComponent(pid) + '/poll', {
+      method: 'POST', body: JSON.stringify({})
+    });
+    showToast('Poll sent to ' + pid, 'ok');
+    refreshAll();
+  } catch (e) { showToast('Poll failed: ' + e.message, 'err'); }
+}
+
+// ── Discovery View ──
+function renderDiscovery() {
+  if (!state.discovery) {
+    document.getElementById('discSummary').innerHTML = '';
+    document.getElementById('discBody').innerHTML = '';
+    return;
+  }
+  var d = state.discovery;
+  document.getElementById('discSummary').innerHTML =
+    '<div class="summary-card">' +
+      '<div class="summary-icon ' + (d.enabled ? 'green' : 'gray') + '"><svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + (d.enabled ? 'Enabled' : 'Disabled') + '</div><div class="summary-label">Discovery</div></div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-icon blue"><svg viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + (d.printer_count || 0) + '</div><div class="summary-label">Found</div></div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-icon orange"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+      '<div><div class="summary-value">' + (d.last_scan_duration_seconds || 0) + 's</div><div class="summary-label">Last Scan Duration</div></div>' +
+    '</div>';
+
+  var printers = d.printers || [];
+  if (!printers.length) {
+    document.getElementById('discBody').innerHTML = '<tr><td colspan="5" style="color:var(--secondary-text-color);padding:16px 12px;">No printers discovered.</td></tr>';
+    return;
+  }
+  document.getElementById('discBody').innerHTML = printers.map(function(p) {
+    var rCls = p.reachable ? 'ok' : 'err';
+    var cCls = p.already_configured ? 'info' : 'idle';
+    return '<tr>' +
+      '<td style="font-weight:500">' + esc(p.printer_name) + '</td>' +
+      '<td class="uri">' + esc(p.uri) + '</td>' +
+      '<td>' + esc((p.printer_type_guess || '').toUpperCase()) + '</td>' +
+      '<td><span class="chip ' + rCls + '">' + (p.reachable ? 'Online' : 'Offline') + '</span></td>' +
+      '<td><span class="chip ' + cCls + '">' + (p.already_configured ? 'Yes' : 'No') + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── Config View ──
+var configMode = 'form'; // 'form' or 'advanced'
+var currentConfig = {};
+
+function renderConfig(cfg) {
+  currentConfig = cfg || {};
+  document.getElementById('configEditor').value = JSON.stringify(cfg, null, 2);
+  populateForm(currentConfig);
+  document.getElementById('configStatus').textContent = 'Configuration loaded.';
+}
+
+// ── Config Mode Toggle ──
+document.querySelectorAll('.config-mode-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    var mode = tab.dataset.mode;
+    if (mode === configMode) return;
+    // Sync before switching
+    if (configMode === 'form') {
+      syncFormToRaw();
+    } else {
+      syncRawToForm();
+    }
+    configMode = mode;
+    document.querySelectorAll('.config-mode-tab').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('configFormMode').style.display = mode === 'form' ? 'block' : 'none';
+    document.getElementById('configAdvancedMode').style.display = mode === 'advanced' ? 'block' : 'none';
+  });
+});
+
+// ── Collapsible Sections ──
+document.querySelectorAll('.cfg-section-header').forEach(function(header) {
+  header.addEventListener('click', function() {
+    header.parentElement.classList.toggle('collapsed');
+  });
+});
+
+// ── Populate Form from Config ──
+function populateForm(cfg) {
+  if (!cfg) cfg = {};
+  // Scheduling
+  setChecked('cfgAutoPrintEnabled', cfg.auto_print_enabled);
+  setVal('cfgStatusPollInterval', cfg.status_poll_interval_minutes);
+  setVal('cfgFailureRetryMinutes', cfg.failure_retry_minutes);
+  // Discovery
+  setChecked('cfgDiscoveryEnabled', cfg.discovery_enabled);
+  setVal('cfgDiscoveryInterval', cfg.discovery_interval_minutes);
+  setVal('cfgDiscoveryTimeout', cfg.discovery_timeout_seconds);
+  setVal('cfgDiscoveryIppTimeout', cfg.discovery_ipp_query_timeout_seconds);
+  setChecked('cfgDiscoveryIncludeIpps', cfg.discovery_include_ipps);
+  // Templates & Content
+  setVal('cfgDefaultTemplate', cfg.default_template || 'color_bars');
+  setVal('cfgTitle', cfg.title);
+  setVal('cfgFooter', cfg.footer);
+  setVal('cfgWeatherEntity', cfg.weather_entity);
+  var eids = cfg.entity_ids;
+  setVal('cfgEntityIds', Array.isArray(eids) ? eids.join('\n') : (eids || ''));
+  // MQTT
+  var mqtt = cfg.mqtt || {};
+  setChecked('cfgMqttEnabled', mqtt.enabled);
+  setVal('cfgMqttHost', mqtt.host);
+  setVal('cfgMqttPort', mqtt.port);
+  setVal('cfgMqttUsername', mqtt.username);
+  setVal('cfgMqttPassword', mqtt.password);
+  setVal('cfgMqttDiscoveryPrefix', mqtt.discovery_prefix);
+  setVal('cfgMqttTopicPrefix', mqtt.topic_prefix);
+  setChecked('cfgMqttRetain', mqtt.retain);
+  setChecked('cfgMqttTls', mqtt.tls);
+  setVal('cfgMqttClientId', mqtt.client_id);
+  // Integration
+  setVal('cfgHaUrl', cfg.ha_url);
+  setVal('cfgHaToken', cfg.ha_token);
+  setVal('cfgAddonPageUrl', cfg.addon_page_url);
+  setVal('cfgAuthToken', cfg.auth_token);
+  // Printers
+  renderPrinterForms(cfg.printers || []);
+}
+
+function setVal(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.value = (val !== undefined && val !== null) ? val : '';
+}
+function getVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+function setChecked(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.checked = !!val;
+}
+function getChecked(id) {
+  var el = document.getElementById(id);
+  return el ? el.checked : false;
+}
+function getNum(id) {
+  var v = getVal(id);
+  return v !== '' ? Number(v) : undefined;
+}
+
+// ── Serialize Form to Config Object ──
+function serializeForm() {
+  var cfg = {};
+  // Scheduling
+  cfg.auto_print_enabled = getChecked('cfgAutoPrintEnabled');
+  var spi = getNum('cfgStatusPollInterval'); if (spi !== undefined) cfg.status_poll_interval_minutes = spi;
+  var frm = getNum('cfgFailureRetryMinutes'); if (frm !== undefined) cfg.failure_retry_minutes = frm;
+  // Discovery
+  cfg.discovery_enabled = getChecked('cfgDiscoveryEnabled');
+  var di = getNum('cfgDiscoveryInterval'); if (di !== undefined) cfg.discovery_interval_minutes = di;
+  var dt = getNum('cfgDiscoveryTimeout'); if (dt !== undefined) cfg.discovery_timeout_seconds = dt;
+  var diq = getNum('cfgDiscoveryIppTimeout'); if (diq !== undefined) cfg.discovery_ipp_query_timeout_seconds = diq;
+  cfg.discovery_include_ipps = getChecked('cfgDiscoveryIncludeIpps');
+  // Templates & Content
+  var dt2 = getVal('cfgDefaultTemplate'); if (dt2) cfg.default_template = dt2;
+  var tit = getVal('cfgTitle'); if (tit) cfg.title = tit;
+  var ft = getVal('cfgFooter'); if (ft) cfg.footer = ft;
+  var we = getVal('cfgWeatherEntity'); if (we) cfg.weather_entity = we;
+  var eidRaw = getVal('cfgEntityIds').trim();
+  if (eidRaw) cfg.entity_ids = eidRaw.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+  // MQTT
+  var mqtt = {};
+  mqtt.enabled = getChecked('cfgMqttEnabled');
+  var mh = getVal('cfgMqttHost'); if (mh) mqtt.host = mh;
+  var mp = getNum('cfgMqttPort'); if (mp !== undefined) mqtt.port = mp;
+  var mu = getVal('cfgMqttUsername'); if (mu) mqtt.username = mu;
+  var mpw = getVal('cfgMqttPassword'); if (mpw) mqtt.password = mpw;
+  var mdp = getVal('cfgMqttDiscoveryPrefix'); if (mdp) mqtt.discovery_prefix = mdp;
+  var mtp = getVal('cfgMqttTopicPrefix'); if (mtp) mqtt.topic_prefix = mtp;
+  mqtt.retain = getChecked('cfgMqttRetain');
+  mqtt.tls = getChecked('cfgMqttTls');
+  var mci = getVal('cfgMqttClientId'); if (mci) mqtt.client_id = mci;
+  cfg.mqtt = mqtt;
+  // Integration
+  var hu = getVal('cfgHaUrl'); if (hu) cfg.ha_url = hu;
+  var ht = getVal('cfgHaToken'); if (ht) cfg.ha_token = ht;
+  var apu = getVal('cfgAddonPageUrl'); if (apu) cfg.addon_page_url = apu;
+  var at = getVal('cfgAuthToken'); if (at) cfg.auth_token = at;
+  // Printers
+  cfg.printers = serializePrinterForms();
+  return cfg;
+}
+
+function syncFormToRaw() {
+  var cfg = serializeForm();
+  document.getElementById('configEditor').value = JSON.stringify(cfg, null, 2);
+  currentConfig = cfg;
+}
+
+function syncRawToForm() {
+  try {
+    var cfg = JSON.parse(document.getElementById('configEditor').value);
+    currentConfig = cfg;
+    populateForm(cfg);
+  } catch (e) {
+    showToast('Invalid JSON in editor', 'err');
+  }
+}
+
+// ── Dynamic Printer Form Cards ──
+var printerFormCounter = 0;
+
+function renderPrinterForms(printers) {
+  var container = document.getElementById('cfgPrinterList');
+  container.innerHTML = '';
+  printerFormCounter = 0;
+  if (!printers || !printers.length) return;
+  printers.forEach(function(p) { addPrinterForm(p); });
+}
+
+function addPrinterForm(p) {
+  if (!p) p = {};
+  var idx = printerFormCounter++;
+  var container = document.getElementById('cfgPrinterList');
+  var card = document.createElement('div');
+  card.className = 'cfg-printer-card';
+  card.dataset.idx = idx;
+
+  var templateOptions = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid'].map(function(t) {
+    return '<option value="' + t + '"' + (t === (p.template || '') ? ' selected' : '') + '>' + t + '</option>';
+  }).join('');
+
+  var typeOptions = ['inkjet','laser'].map(function(t) {
+    return '<option value="' + t + '"' + (t === (p.printer_type || '') ? ' selected' : '') + '>' + t + '</option>';
+  }).join('');
+
+  var pEids = p.entity_ids;
+  var eidsStr = Array.isArray(pEids) ? pEids.join('\n') : (pEids || '');
+
+  card.innerHTML =
+    '<div class="cfg-printer-card-header">' +
+      '<span class="cfg-printer-card-title">Printer ' + (idx + 1) + '</span>' +
+      '<button class="cfg-printer-remove" type="button">REMOVE</button>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Name *</label>' +
+        '<input type="text" class="cfg-input pf-name" value="' + esc(p.name || '') + '" placeholder="My Printer" required>' +
+        '<div class="cfg-field-desc">Display name for this printer</div>' +
+      '</div>' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Printer URI *</label>' +
+        '<input type="text" class="cfg-input pf-uri" value="' + esc(p.printer_uri || '') + '" placeholder="ipp://192.168.1.100/ipp/print" required>' +
+        '<div class="cfg-field-desc">IPP URI of the printer</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">ID</label>' +
+        '<input type="text" class="cfg-input pf-id" value="' + esc(p.id || '') + '" placeholder="auto-generated">' +
+        '<div class="cfg-field-desc">Unique identifier (optional, auto-generated)</div>' +
+      '</div>' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Printer Type</label>' +
+        '<select class="cfg-select pf-type">' + typeOptions + '</select>' +
+        '<div class="cfg-field-desc">Inkjet or laser printer</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field">' +
+        '<div class="cfg-toggle-row">' +
+          '<div>' +
+            '<div class="cfg-toggle-label">Enabled</div>' +
+            '<div class="cfg-toggle-desc">Include in keepalive schedule</div>' +
+          '</div>' +
+          '<label class="toggle"><input type="checkbox" class="pf-enabled"' + (p.enabled !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Cadence (hours)</label>' +
+        '<input type="number" class="cfg-input cfg-number pf-cadence" value="' + (p.cadence_hours || '') + '" min="1" max="720" placeholder="168">' +
+        '<div class="cfg-field-desc">Print interval in hours (1-720)</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Template</label>' +
+        '<select class="cfg-select pf-template">' + templateOptions + '</select>' +
+        '<div class="cfg-field-desc">Page template for keepalive prints</div>' +
+      '</div>' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Weather Entity</label>' +
+        '<input type="text" class="cfg-input pf-weather" value="' + esc(p.weather_entity || '') + '" placeholder="weather.home">' +
+        '<div class="cfg-field-desc">Weather entity for this printer</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cfg-field">' +
+      '<label class="cfg-field-label">Entity IDs</label>' +
+      '<textarea class="cfg-textarea pf-entities" placeholder="sensor.temperature&#10;(one per line)">' + esc(eidsStr) + '</textarea>' +
+      '<div class="cfg-field-desc">Entity IDs for reports (one per line)</div>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Title</label>' +
+        '<input type="text" class="cfg-input pf-title" value="' + esc(p.title || '') + '" placeholder="Page title">' +
+        '<div class="cfg-field-desc">Override page title for this printer</div>' +
+      '</div>' +
+      '<div class="cfg-field">' +
+        '<label class="cfg-field-label">Footer</label>' +
+        '<input type="text" class="cfg-input pf-footer" value="' + esc(p.footer || '') + '" placeholder="Page footer">' +
+        '<div class="cfg-field-desc">Override page footer for this printer</div>' +
+      '</div>' +
+    '</div>';
+
+  card.querySelector('.cfg-printer-remove').addEventListener('click', function() {
+    card.remove();
+    reindexPrinterCards();
+  });
+
+  container.appendChild(card);
+}
+
+function reindexPrinterCards() {
+  document.querySelectorAll('.cfg-printer-card').forEach(function(card, i) {
+    card.querySelector('.cfg-printer-card-title').textContent = 'Printer ' + (i + 1);
+  });
+}
+
+function serializePrinterForms() {
+  var printers = [];
+  document.querySelectorAll('.cfg-printer-card').forEach(function(card) {
+    var p = {};
+    var name = card.querySelector('.pf-name').value.trim();
+    var uri = card.querySelector('.pf-uri').value.trim();
+    if (name) p.name = name;
+    if (uri) p.printer_uri = uri;
+    var id = card.querySelector('.pf-id').value.trim();
+    if (id) p.id = id;
+    p.printer_type = card.querySelector('.pf-type').value;
+    p.enabled = card.querySelector('.pf-enabled').checked;
+    var cadence = card.querySelector('.pf-cadence').value;
+    if (cadence !== '') p.cadence_hours = Number(cadence);
+    p.template = card.querySelector('.pf-template').value;
+    var we = card.querySelector('.pf-weather').value.trim();
+    if (we) p.weather_entity = we;
+    var eidsRaw = card.querySelector('.pf-entities').value.trim();
+    if (eidsRaw) p.entity_ids = eidsRaw.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+    var tit = card.querySelector('.pf-title').value.trim();
+    if (tit) p.title = tit;
+    var ft = card.querySelector('.pf-footer').value.trim();
+    if (ft) p.footer = ft;
+    printers.push(p);
+  });
+  return printers;
+}
+
+document.getElementById('btnAddPrinter').addEventListener('click', function() {
+  addPrinterForm({});
+  reindexPrinterCards();
+});
+
+// ── Refresh All ──
+async function refreshAll() {
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
+  try {
+    var healthData = await requestJson('health');
+    state.health = healthData;
+    renderSummary();
+    renderHealthRows();
+    renderSysInfo();
+    renderPrinterCards();
+    if (state.health.version) {
+      document.getElementById('appVersion').textContent = 'v' + state.health.version;
+    }
+  } catch (e) {
+    console.error('Health fetch failed:', e);
+  }
+
+  try {
+    var discData = await requestJson('discovery');
+    state.discovery = discData;
+    renderSummary();
+    renderDiscovery();
+  } catch (e) {
+    console.error('Discovery fetch failed:', e);
+  }
+
+  if (!state.configLoaded) {
+    try {
+      var cfg = await requestJson('config');
+      renderConfig(cfg);
+      state.configLoaded = true;
+    } catch (e) {
+      console.error('Config fetch failed:', e);
+    }
+  }
+
+  state.refreshInFlight = false;
+}
+
+// ── Discovery Rescan ──
+document.getElementById('btnRescan').addEventListener('click', async function() {
+  var btn = this;
+  try {
+    btn.disabled = true;
+    btn.textContent = 'SCANNING...';
+    await requestJson('discovery/rescan', { method: 'POST', body: JSON.stringify({}) });
+    showToast('Rescan complete', 'ok');
+    await refreshAll();
+  } catch (e) {
+    showToast('Rescan failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'RESCAN';
+  }
+});
+
+// ── Config Actions ──
+document.getElementById('btnConfigLoad').addEventListener('click', async function() {
+  try {
+    var cfg = await requestJson('config');
+    renderConfig(cfg);
+    state.configLoaded = true;
+    showToast('Configuration loaded', 'ok');
+  } catch (e) {
+    showToast('Load failed: ' + e.message, 'err');
+  }
+});
+
+document.getElementById('btnConfigSave').addEventListener('click', async function() {
+  try {
+    var parsed;
+    if (configMode === 'form') {
+      parsed = serializeForm();
+      // Also sync to raw editor
+      document.getElementById('configEditor').value = JSON.stringify(parsed, null, 2);
+    } else {
+      var raw = document.getElementById('configEditor').value;
+      parsed = JSON.parse(raw);
+    }
+    await requestJson('config', { method: 'POST', body: JSON.stringify({ options: parsed }) });
+    showToast('Configuration saved', 'ok');
+    document.getElementById('configStatus').textContent = 'Configuration saved successfully.';
+    currentConfig = parsed;
+    state.configLoaded = false;
+    refreshAll();
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      showToast('Invalid JSON in config', 'err');
+      document.getElementById('configStatus').textContent = 'Error: Invalid JSON.';
+    } else {
+      showToast('Save failed: ' + e.message, 'err');
+      document.getElementById('configStatus').textContent = 'Error: ' + e.message;
+    }
+  }
+});
+
+document.getElementById('btnConfigRestart').addEventListener('click', async function() {
+  try {
+    await requestJson('actions/restart', { method: 'POST', body: JSON.stringify({}) });
+    showToast('Restart initiated', 'ok');
+  } catch (e) {
+    showToast('Restart failed: ' + e.message, 'err');
+  }
+});
+
+// ── Design Switcher ──
+(function() {
+  var sel = document.getElementById('designSwitcher');
+  sel.addEventListener('change', function() {
+    var v = sel.value;
+    document.cookie = 'pk_design=' + v + '; path=/; max-age=31536000; SameSite=Lax';
+    var pathname = window.location.pathname;
+    var base = pathname.replace(/\/design\/v[1-5]\/?$/, '/');
+    if (!base.endsWith('/')) base += '/';
+    window.location.href = window.location.origin + base + 'design/' + v;
+  });
+})();
+
+// ── Init ──
+renderSummary();
+refreshAll();
+setInterval(refreshAll, 60000);
+</script>
+</body>
+</html>

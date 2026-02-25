@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__APP_NAME__ — Glassmorphism</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --glass-bg: rgba(255,255,255,0.55);
+  --glass-bg-hover: rgba(255,255,255,0.7);
+  --glass-border: rgba(255,255,255,0.35);
+  --glass-shadow: rgba(0,0,0,0.06);
+  --text-primary: #1e1b4b;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --bg-mesh-opacity: 1;
+  --card-blur: 20px;
+  --input-bg: rgba(255,255,255,0.4);
+  --tab-active-bg: rgba(255,255,255,0.7);
+  --badge-bg: rgba(255,255,255,0.5);
+  --table-row-hover: rgba(255,255,255,0.3);
+  --glow-purple: rgba(124,58,237,0.3);
+  --glow-blue: rgba(59,130,246,0.3);
+  --glow-teal: rgba(6,182,212,0.3);
+  --glow-pink: rgba(236,72,153,0.3);
+}
+
+[data-theme="dark"] {
+  --glass-bg: rgba(255,255,255,0.06);
+  --glass-bg-hover: rgba(255,255,255,0.1);
+  --glass-border: rgba(255,255,255,0.12);
+  --glass-shadow: rgba(0,0,0,0.3);
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --input-bg: rgba(255,255,255,0.06);
+  --tab-active-bg: rgba(255,255,255,0.12);
+  --badge-bg: rgba(255,255,255,0.08);
+  --table-row-hover: rgba(255,255,255,0.06);
+  --glow-purple: rgba(124,58,237,0.4);
+  --glow-blue: rgba(59,130,246,0.4);
+  --glow-teal: rgba(6,182,212,0.4);
+  --glow-pink: rgba(236,72,153,0.4);
+}
+
+html { font-family: 'Sora', sans-serif; scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  background: #e0e7ff;
+  color: var(--text-primary);
+  overflow-x: hidden;
+  position: relative;
+}
+
+[data-theme="dark"] body { background: #0f0a1e; }
+
+/* ── Animated gradient mesh ── */
+.gradient-mesh {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+}
+.gradient-mesh .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.7;
+  will-change: transform;
+}
+[data-theme="dark"] .gradient-mesh .blob { opacity: 0.4; }
+
+.blob-1 { width: 600px; height: 600px; background: #7c3aed; top: -10%; left: -5%; animation: blobMove1 20s ease-in-out infinite; }
+.blob-2 { width: 700px; height: 700px; background: #3b82f6; top: 20%; right: -10%; animation: blobMove2 25s ease-in-out infinite; }
+.blob-3 { width: 500px; height: 500px; background: #06b6d4; bottom: 10%; left: 30%; animation: blobMove3 22s ease-in-out infinite; }
+.blob-4 { width: 550px; height: 550px; background: #ec4899; bottom: -10%; right: 10%; animation: blobMove4 18s ease-in-out infinite; }
+.blob-5 { width: 400px; height: 400px; background: #8b5cf6; top: 50%; left: 10%; animation: blobMove5 30s ease-in-out infinite; }
+
+@keyframes blobMove1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(80px,60px) scale(1.1)} 66%{transform:translate(-40px,100px) scale(0.95)} }
+@keyframes blobMove2 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-100px,50px) scale(1.05)} 66%{transform:translate(-50px,-80px) scale(1.1)} }
+@keyframes blobMove3 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(60px,-70px) scale(1.08)} 66%{transform:translate(-80px,40px) scale(0.92)} }
+@keyframes blobMove4 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-60px,-90px) scale(1.12)} 66%{transform:translate(70px,-40px) scale(0.98)} }
+@keyframes blobMove5 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(100px,-60px) scale(1.15)} }
+
+/* ── CMYK stripe ── */
+.cmyk-stripe {
+  height: 4px; width: 100%; position: relative; z-index: 10;
+  background: linear-gradient(90deg, #00bcd4 25%, #e91e63 25%, #e91e63 50%, #ffc107 50%, #ffc107 75%, #263238 75%);
+  flex-shrink: 0;
+}
+
+/* ── Layout ── */
+.app-shell { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.content-wrap { flex: 1; max-width: 1200px; width: 100%; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ── Glass utility ── */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px var(--glass-shadow);
+}
+
+/* ── Top bar ── */
+.top-bar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--glass-border);
+}
+.top-bar-left { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 15px rgba(124,58,237,0.35);
+  flex-shrink: 0;
+}
+.brand-icon svg { width: 20px; height: 20px; fill: white; }
+.brand-title { font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
+.version-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 10px;
+  border-radius: 20px; background: var(--badge-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+.top-bar-right { display: flex; align-items: center; gap: 10px; }
+
+/* ── Design switcher ── */
+.design-select {
+  padding: 6px 28px 6px 12px; border-radius: 12px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--text-primary); cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.design-select:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.design-select option { background: #fff; color: #1e1b4b; }
+[data-theme="dark"] .design-select option { background: #1e1b4b; color: #f1f5f9; }
+
+/* ── Auth popover ── */
+.auth-btn {
+  width: 38px; height: 38px; border: none; border-radius: 12px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); transition: all 0.3s; font-size: 16px;
+  backdrop-filter: blur(10px); position: relative;
+}
+.auth-btn:hover { background: var(--glass-bg-hover); }
+.auth-btn.authenticated { color: #22c55e; }
+.auth-popover {
+  display: none; position: absolute; top: 100%; right: 0; margin-top: 8px;
+  padding: 16px; border-radius: 14px; min-width: 280px; z-index: 200;
+  background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border); box-shadow: 0 12px 40px var(--glass-shadow);
+}
+.auth-popover.visible { display: block; }
+.auth-popover label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.auth-input {
+  width: 100%; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--glass-border); background: var(--input-bg);
+  font-family: 'Sora', sans-serif; font-size: 12px; color: var(--text-primary);
+  backdrop-filter: blur(6px);
+}
+.auth-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.auth-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ── Theme toggle pill ── */
+.theme-toggle {
+  display: flex; align-items: center; gap: 0;
+  border-radius: 24px; padding: 3px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.theme-btn {
+  width: 34px; height: 30px; border: none; border-radius: 20px;
+  background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all 0.3s;
+  font-size: 15px;
+}
+.theme-btn.active {
+  background: var(--tab-active-bg); color: var(--text-primary);
+  box-shadow: 0 2px 8px var(--glass-shadow);
+}
+.theme-btn:hover:not(.active) { color: var(--text-secondary); }
+
+.refresh-btn {
+  width: 38px; height: 38px; border: none; border-radius: 12px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); transition: all 0.3s; font-size: 16px;
+  backdrop-filter: blur(10px);
+}
+.refresh-btn:hover { background: var(--glass-bg-hover); transform: rotate(90deg); }
+
+/* ── Tab nav ── */
+.tab-nav {
+  display: flex; gap: 4px; padding: 6px;
+  margin-bottom: 28px; width: fit-content;
+  border-radius: 16px;
+}
+.tab-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border: none; border-radius: 12px;
+  background: transparent; cursor: pointer;
+  font-family: 'Sora', sans-serif; font-weight: 500; font-size: 14px;
+  color: var(--text-muted); transition: all 0.3s; position: relative;
+}
+.tab-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.tab-btn[data-tab="dashboard"] .tab-dot { background: #00bcd4; }
+.tab-btn[data-tab="printers"] .tab-dot { background: #e91e63; }
+.tab-btn[data-tab="discovery"] .tab-dot { background: #ffc107; }
+.tab-btn[data-tab="config"] .tab-dot { background: #263238; }
+[data-theme="dark"] .tab-btn[data-tab="config"] .tab-dot { background: #78909c; }
+
+.tab-btn.active {
+  background: var(--tab-active-bg);
+  color: var(--text-primary);
+  box-shadow: 0 0 20px var(--glow-purple), 0 4px 12px var(--glass-shadow);
+}
+.tab-btn.active::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  box-shadow: 0 0 10px var(--glow-blue);
+}
+.tab-btn:hover:not(.active) { color: var(--text-secondary); background: var(--glass-bg); }
+
+/* ── Views ── */
+.view { display: none; }
+.view.active { display: block; animation: viewIn 0.5s ease forwards; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+
+/* ── Metric cards ── */
+.metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+.metric-card {
+  padding: 20px; display: flex; align-items: flex-start; gap: 14px;
+  animation: cardUp 0.5s ease both;
+}
+.metric-card:nth-child(1) { animation-delay: 0.05s; }
+.metric-card:nth-child(2) { animation-delay: 0.1s; }
+.metric-card:nth-child(3) { animation-delay: 0.15s; }
+.metric-card:nth-child(4) { animation-delay: 0.2s; }
+@keyframes cardUp { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+
+.metric-icon {
+  width: 46px; height: 46px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.metric-icon.purple { background: rgba(124,58,237,0.15); color: #7c3aed; box-shadow: 0 0 20px rgba(124,58,237,0.15); }
+.metric-icon.blue { background: rgba(59,130,246,0.15); color: #3b82f6; box-shadow: 0 0 20px rgba(59,130,246,0.15); }
+.metric-icon.teal { background: rgba(6,182,212,0.15); color: #06b6d4; box-shadow: 0 0 20px rgba(6,182,212,0.15); }
+.metric-icon.pink { background: rgba(236,72,153,0.15); color: #ec4899; box-shadow: 0 0 20px rgba(236,72,153,0.15); }
+.metric-value { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.metric-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+/* ── Section ── */
+.section { margin-bottom: 28px; }
+.section-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Printer health rows (dashboard) ── */
+.health-panel { padding: 0; overflow: hidden; }
+.health-row {
+  display: grid; grid-template-columns: 8px 1.5fr 1fr 1.2fr; gap: 16px; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--glass-border);
+  transition: background 0.2s;
+}
+.health-row:last-child { border-bottom: none; }
+.health-row:hover { background: var(--table-row-hover); }
+.health-dot { width: 8px; height: 8px; border-radius: 50%; }
+.health-dot.ok { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+.health-dot.warning { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.5); }
+.health-dot.error { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+.health-name { font-weight: 600; font-size: 14px; }
+.health-state { font-size: 13px; color: var(--text-secondary); text-transform: capitalize; }
+.health-due { font-size: 12px; color: var(--text-muted); }
+.health-header {
+  display: grid; grid-template-columns: 8px 1.5fr 1fr 1.2fr; gap: 16px;
+  padding: 10px 20px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--glass-border);
+}
+
+/* ── Discovery summary row ── */
+.disc-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+.disc-stat { padding: 16px; text-align: center; }
+.disc-stat-value { font-size: 22px; font-weight: 700; }
+.disc-stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 4px; }
+
+/* ── Printer cards (printers view) ── */
+.printer-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); gap: 20px; }
+.printer-card {
+  padding: 0; overflow: hidden;
+  animation: cardUp 0.5s ease both;
+}
+.printer-card:nth-child(1) { animation-delay: 0.05s; }
+.printer-card:nth-child(2) { animation-delay: 0.12s; }
+.printer-card:nth-child(3) { animation-delay: 0.19s; }
+
+.pc-header {
+  padding: 18px 20px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--glass-border); position: relative; overflow: hidden;
+}
+.pc-header::before {
+  content: ''; position: absolute; top: -20px; right: -20px;
+  width: 80px; height: 80px; border-radius: 50%; filter: blur(30px);
+  opacity: 0.3;
+}
+.pc-header.ok::before { background: #22c55e; }
+.pc-header.warning::before { background: #f59e0b; }
+.pc-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pc-status-dot.ok { background: #22c55e; box-shadow: 0 0 10px rgba(34,197,94,0.5); }
+.pc-status-dot.warning { background: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.5); }
+.pc-name { font-weight: 600; font-size: 15px; flex: 1; }
+.pc-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase;
+}
+.pc-badge.ok { background: rgba(34,197,94,0.12); color: #22c55e; }
+.pc-badge.warning { background: rgba(245,158,11,0.12); color: #f59e0b; }
+
+.pc-body { padding: 18px 20px; }
+.pc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.pc-stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+.pc-stat-value { font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+.pc-uri { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-bottom: 16px; word-break: break-all; }
+
+.pc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-glass {
+  padding: 8px 16px; border: 1px solid var(--glass-border); border-radius: 10px;
+  background: var(--glass-bg); backdrop-filter: blur(10px);
+  font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600;
+  color: var(--text-primary); cursor: pointer; transition: all 0.3s;
+}
+.btn-glass:hover { background: var(--glass-bg-hover); transform: translateY(-1px); box-shadow: 0 4px 12px var(--glass-shadow); }
+.btn-glass:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-glass.primary {
+  background: linear-gradient(135deg, #7c3aed, #3b82f6); color: #fff; border: none;
+  box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+}
+.btn-glass.primary:hover { box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+.btn-glass.danger {
+  background: linear-gradient(135deg, #ef4444, #ec4899); color: #fff; border: none;
+  box-shadow: 0 4px 15px rgba(239,68,68,0.3);
+}
+.btn-glass.danger:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+
+/* ── Discovery table ── */
+.disc-table { width: 100%; border-collapse: collapse; }
+.disc-table th {
+  text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.disc-table td {
+  padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--glass-border);
+}
+.disc-table tr:last-child td { border-bottom: none; }
+.disc-table tr:hover td { background: var(--table-row-hover); }
+.disc-table .uri { font-family: monospace; font-size: 11px; color: var(--text-muted); }
+.reach-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+.reach-dot.yes { background: #22c55e; }
+.reach-dot.no { background: #ef4444; }
+.conf-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+}
+.conf-badge.yes { background: rgba(34,197,94,0.12); color: #22c55e; }
+.conf-badge.no { background: rgba(59,130,246,0.12); color: #3b82f6; }
+
+/* ── Config view ── */
+.config-panel { padding: 24px; }
+.config-panel label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.config-textarea {
+  width: 100%; min-height: 260px; padding: 16px; border-radius: 12px;
+  border: 1px solid var(--glass-border); background: var(--input-bg);
+  font-family: 'Sora', monospace; font-size: 12px; color: var(--text-primary);
+  resize: vertical; backdrop-filter: blur(6px);
+  line-height: 1.6;
+}
+.config-textarea:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.config-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+/* ── Config mode toggle ── */
+.config-mode-toggle {
+  display: inline-flex; padding: 3px; border-radius: 24px; margin-bottom: 20px;
+  background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border); box-shadow: 0 4px 16px var(--glass-shadow);
+}
+.config-mode-btn {
+  padding: 8px 22px; border: none; border-radius: 20px; background: transparent;
+  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; transition: all 0.3s; white-space: nowrap;
+}
+.config-mode-btn.active {
+  background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(59,130,246,0.25));
+  color: var(--text-primary);
+  box-shadow: 0 0 16px var(--glow-purple), 0 2px 8px var(--glass-shadow);
+}
+.config-mode-btn:hover:not(.active) { color: var(--text-secondary); }
+
+/* ── Config form sections ── */
+.cfg-section {
+  margin-bottom: 16px; border-radius: 16px; overflow: hidden;
+  background: var(--glass-bg); backdrop-filter: blur(var(--card-blur)); -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--glass-border); box-shadow: 0 8px 32px var(--glass-shadow);
+}
+.cfg-section-header {
+  display: flex; align-items: center; gap: 10px; padding: 16px 20px;
+  cursor: pointer; user-select: none; border-bottom: 1px solid transparent;
+  transition: border-color 0.3s;
+}
+.cfg-section.open .cfg-section-header { border-bottom-color: var(--glass-border); }
+.cfg-section-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cfg-section-title { font-size: 14px; font-weight: 600; flex: 1; }
+.cfg-section-chevron {
+  font-size: 12px; color: var(--text-muted); transition: transform 0.3s;
+}
+.cfg-section.open .cfg-section-chevron { transform: rotate(180deg); }
+.cfg-section-body { display: none; padding: 20px; }
+.cfg-section.open .cfg-section-body { display: block; }
+
+/* ── Form field rows ── */
+.cfg-field { margin-bottom: 16px; }
+.cfg-field:last-child { margin-bottom: 0; }
+.cfg-field-label {
+  display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px;
+  color: var(--text-primary);
+}
+.cfg-field-hint {
+  font-size: 11px; color: var(--text-muted); margin-top: 3px;
+}
+.cfg-input {
+  width: 100%; padding: 9px 14px; border-radius: 10px;
+  border: 1px solid var(--glass-border); background: var(--input-bg);
+  font-family: 'Sora', sans-serif; font-size: 13px; color: var(--text-primary);
+  backdrop-filter: blur(6px); transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cfg-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+.cfg-input::placeholder { color: var(--text-muted); }
+select.cfg-input { appearance: none; -webkit-appearance: none; padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; }
+select.cfg-input option { background: #fff; color: #1e1b4b; }
+[data-theme="dark"] select.cfg-input option { background: #1e1b4b; color: #f1f5f9; }
+textarea.cfg-input { resize: vertical; min-height: 80px; line-height: 1.5; font-family: 'Sora', monospace; font-size: 12px; }
+
+/* Number input with unit */
+.cfg-number-wrap { display: flex; align-items: center; gap: 0; }
+.cfg-number-wrap .cfg-input { border-radius: 10px 0 0 10px; flex: 1; }
+.cfg-number-unit {
+  padding: 9px 12px; font-size: 12px; font-weight: 500; color: var(--text-muted);
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-left: none;
+  border-radius: 0 10px 10px 0; white-space: nowrap;
+}
+
+/* ── Pill toggle ── */
+.cfg-toggle { display: flex; align-items: center; gap: 12px; }
+.cfg-toggle-track {
+  width: 44px; height: 24px; border-radius: 12px; position: relative; cursor: pointer;
+  background: var(--glass-border); transition: background 0.3s; flex-shrink: 0;
+  border: 1px solid var(--glass-border);
+}
+.cfg-toggle-track.on {
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  border-color: transparent;
+  box-shadow: 0 0 12px var(--glow-purple);
+}
+.cfg-toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.cfg-toggle-track.on .cfg-toggle-thumb { transform: translateX(20px); }
+.cfg-toggle-label { font-size: 12px; font-weight: 600; }
+
+/* ── Printer config cards ── */
+.cfg-printer-card {
+  margin-bottom: 12px; border-radius: 14px; overflow: hidden;
+  background: var(--glass-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border); box-shadow: 0 4px 16px var(--glass-shadow);
+  transition: box-shadow 0.3s;
+}
+.cfg-printer-card:hover { box-shadow: 0 4px 24px var(--glass-shadow), 0 0 16px var(--glow-blue); }
+.cfg-printer-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  cursor: pointer; border-bottom: 1px solid transparent; transition: border-color 0.3s;
+}
+.cfg-printer-card.open .cfg-printer-header { border-bottom-color: var(--glass-border); }
+.cfg-printer-num {
+  width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(59,130,246,0.2));
+  color: var(--text-primary); flex-shrink: 0;
+}
+.cfg-printer-name { font-size: 13px; font-weight: 600; flex: 1; }
+.cfg-printer-remove {
+  width: 28px; height: 28px; border: none; border-radius: 8px;
+  background: rgba(239,68,68,0.1); color: #ef4444; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: all 0.2s;
+}
+.cfg-printer-remove:hover { background: rgba(239,68,68,0.2); transform: scale(1.1); }
+.cfg-printer-chevron { font-size: 12px; color: var(--text-muted); transition: transform 0.3s; }
+.cfg-printer-card.open .cfg-printer-chevron { transform: rotate(180deg); }
+.cfg-printer-body { display: none; padding: 16px 18px; }
+.cfg-printer-card.open .cfg-printer-body { display: block; }
+
+.cfg-add-printer-btn {
+  width: 100%; padding: 14px; border: 2px dashed var(--glass-border); border-radius: 14px;
+  background: transparent; cursor: pointer; font-family: 'Sora', sans-serif;
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.cfg-add-printer-btn:hover {
+  border-color: #7c3aed; color: #7c3aed;
+  background: rgba(124,58,237,0.05);
+}
+
+/* ── Config form grid ── */
+.cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .cfg-grid { grid-template-columns: 1fr; } }
+.cfg-grid-full { grid-column: 1 / -1; }
+
+/* ── Toast ── */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 300;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+.toast {
+  padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
+  background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border); box-shadow: 0 8px 32px var(--glass-shadow);
+  color: var(--text-primary); animation: toastIn 0.3s ease;
+  max-width: 360px;
+}
+.toast.success { border-left: 3px solid #22c55e; }
+.toast.error { border-left: 3px solid #ef4444; }
+.toast.info { border-left: 3px solid #3b82f6; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Version badge (bottom-left) ── */
+.version-float {
+  position: fixed; bottom: 16px; left: 16px; z-index: 200;
+  font-size: 11px; font-weight: 600; padding: 6px 14px;
+  border-radius: 20px; color: var(--text-muted);
+  background: var(--glass-bg); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+.version-float a { color: var(--text-muted); text-decoration: none; }
+.version-float a:hover { color: var(--text-primary); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+  .disc-summary { grid-template-columns: 1fr 1fr; }
+  .printer-cards { grid-template-columns: 1fr; }
+  .top-bar { padding: 10px 14px; }
+  .brand-title { font-size: 15px; }
+  .content-wrap { padding: 16px 12px 80px; }
+  .tab-btn { padding: 8px 14px; font-size: 13px; }
+  .health-row, .health-header { grid-template-columns: 8px 1fr 0.8fr 1fr; gap: 10px; font-size: 12px; }
+  .design-select { display: none; }
+}
+@media (max-width: 500px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+  .disc-summary { grid-template-columns: 1fr; }
+  .tab-nav { flex-wrap: wrap; }
+  .version-badge { display: none; }
+  .health-row, .health-header { grid-template-columns: 8px 1fr 1fr; }
+  .health-due-col { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="gradient-mesh">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+  <div class="blob blob-5"></div>
+</div>
+
+<div class="app-shell">
+  <div class="cmyk-stripe"></div>
+
+  <!-- Top bar -->
+  <header class="top-bar">
+    <div class="top-bar-left">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+      </div>
+      <span class="brand-title">__APP_NAME__</span>
+      <span class="version-badge" id="versionBadge">__APP_VERSION__</span>
+    </div>
+    <div class="top-bar-right">
+      <select class="design-select" id="designSwitcher" title="Design theme">
+        <option value="v1">Bento Grid</option>
+        <option value="v2" selected>Glassmorphism</option>
+        <option value="v3">Neubrutalist</option>
+        <option value="v4">Cinematic Dark</option>
+        <option value="v5">Home Assistant</option>
+      </select>
+      <div class="theme-toggle">
+        <button class="theme-btn" data-mode="light" title="Light mode">&#9728;</button>
+        <button class="theme-btn" data-mode="dark" title="Dark mode">&#9790;</button>
+        <button class="theme-btn" data-mode="system" title="System">&#9881;</button>
+      </div>
+      <div style="position:relative">
+        <button class="auth-btn" id="authToggle" title="Authentication">&#128274;</button>
+        <div class="auth-popover" id="authPopover">
+          <label>Bearer Token</label>
+          <input type="password" class="auth-input" id="authTokenInput" placeholder="Paste token...">
+          <div class="auth-actions">
+            <button class="btn-glass primary" onclick="saveAuthToken()" style="font-size:11px;padding:6px 14px">Save</button>
+            <button class="btn-glass" onclick="clearAuthToken()" style="font-size:11px;padding:6px 14px">Clear</button>
+          </div>
+        </div>
+      </div>
+      <button class="refresh-btn" title="Refresh" onclick="refreshAll()">&#8635;</button>
+    </div>
+  </header>
+
+  <div class="content-wrap">
+    <!-- Tab nav -->
+    <nav class="tab-nav glass">
+      <button class="tab-btn active" data-tab="dashboard"><span class="tab-dot"></span>Dashboard</button>
+      <button class="tab-btn" data-tab="printers"><span class="tab-dot"></span>Printers</button>
+      <button class="tab-btn" data-tab="discovery"><span class="tab-dot"></span>Discovery</button>
+      <button class="tab-btn" data-tab="config"><span class="tab-dot"></span>Config</button>
+    </nav>
+
+    <!-- Dashboard View -->
+    <div class="view active" id="view-dashboard"></div>
+
+    <!-- Printers View -->
+    <div class="view" id="view-printers"></div>
+
+    <!-- Discovery View -->
+    <div class="view" id="view-discovery"></div>
+
+    <!-- Config View -->
+    <div class="view" id="view-config"></div>
+  </div>
+</div>
+
+<div class="version-float"><a href="__APP_URL__" target="_blank">__APP_NAME__</a> __APP_VERSION__</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ── API layer ── */
+function apiPath(path) {
+  var pathname = window.location.pathname;
+  var base = pathname.replace(/\/design\/v[1-5]\/?$/, '/');
+  if (!base.endsWith('/')) base += '/';
+  var origin = window.location.origin;
+  var clean = String(path || '').replace(/^\/+/, '');
+  return new URL(clean, origin + base).toString();
+}
+
+var state = {
+  authToken: localStorage.getItem('pk_auth_token') || '',
+  refreshInFlight: false,
+  health: null,
+  discovery: null,
+  configLoaded: false
+};
+
+async function requestJson(path, init) {
+  if (!init) init = {};
+  var headers = Object.assign({}, init.headers || {});
+  if (init.body !== undefined && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (state.authToken) headers['Authorization'] = 'Bearer ' + state.authToken;
+  var response = await fetch(apiPath(path), Object.assign({}, init, { headers: headers }));
+  var raw = await response.text();
+  var payload = {};
+  if (raw) {
+    try { payload = JSON.parse(raw); }
+    catch (err) { throw new Error('Invalid JSON: ' + path + ' (' + response.status + ')'); }
+  }
+  if (!response.ok || (payload && payload.ok === false)) {
+    var message = (payload && (payload.error || payload.details || payload.reason)) || (response.status + ' ' + response.statusText);
+    throw new Error(message);
+  }
+  return payload;
+}
+
+/* ── Toast notifications ── */
+function showToast(message, type) {
+  var container = document.getElementById('toastContainer');
+  var toast = document.createElement('div');
+  toast.className = 'toast ' + (type || 'info');
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(function() { toast.style.opacity = '0'; toast.style.transform = 'translateY(12px)'; toast.style.transition = 'all 0.3s'; }, 3000);
+  setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3400);
+}
+
+/* ── Auth ── */
+var authToggle = document.getElementById('authToggle');
+var authPopover = document.getElementById('authPopover');
+var authTokenInput = document.getElementById('authTokenInput');
+
+authToggle.addEventListener('click', function(e) {
+  e.stopPropagation();
+  authPopover.classList.toggle('visible');
+  if (authPopover.classList.contains('visible')) {
+    authTokenInput.value = state.authToken;
+    authTokenInput.focus();
+  }
+});
+document.addEventListener('click', function(e) {
+  if (!authPopover.contains(e.target) && e.target !== authToggle) {
+    authPopover.classList.remove('visible');
+  }
+});
+
+function updateAuthIcon() {
+  authToggle.classList.toggle('authenticated', !!state.authToken);
+}
+
+function saveAuthToken() {
+  state.authToken = authTokenInput.value.trim();
+  localStorage.setItem('pk_auth_token', state.authToken);
+  updateAuthIcon();
+  authPopover.classList.remove('visible');
+  showToast('Auth token saved', 'success');
+  refreshAll();
+}
+
+function clearAuthToken() {
+  state.authToken = '';
+  localStorage.removeItem('pk_auth_token');
+  authTokenInput.value = '';
+  updateAuthIcon();
+  authPopover.classList.remove('visible');
+  showToast('Auth token cleared', 'info');
+}
+
+updateAuthIcon();
+
+/* ── Design switcher ── */
+var designSwitcher = document.getElementById('designSwitcher');
+designSwitcher.addEventListener('change', function() {
+  var v = designSwitcher.value;
+  document.cookie = 'pk_design=' + v + '; path=/; max-age=31536000; SameSite=Lax';
+  var pathname = window.location.pathname;
+  var newPath = pathname.replace(/\/design\/v[1-5]\/?$/, '/design/' + v);
+  if (newPath === pathname) newPath = pathname.replace(/\/?$/, '') + '/design/' + v;
+  window.location.href = newPath;
+});
+
+/* ── Helpers ── */
+function timeAgo(iso) {
+  if (!iso) return 'Never';
+  var d = Date.now() - new Date(iso).getTime();
+  var mins = Math.floor(d/60000), hrs = Math.floor(d/3600000), days = Math.floor(d/86400000);
+  if (days > 0) return days + 'd ago';
+  if (hrs > 0) return hrs + 'h ago';
+  if (mins > 0) return mins + 'm ago';
+  return 'Just now';
+}
+function timeUntil(iso) {
+  if (!iso) return '\u2014';
+  var d = new Date(iso).getTime() - Date.now();
+  if (d < 0) return 'Overdue';
+  var hrs = Math.floor(d/3600000), days = Math.floor(d/86400000);
+  if (days > 0) return 'in ' + days + 'd';
+  if (hrs > 0) return 'in ' + hrs + 'h';
+  return 'Soon';
+}
+function h(tag, attrs) {
+  var children = Array.prototype.slice.call(arguments, 2);
+  var el = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function(k) {
+    var v = attrs[k];
+    if (k === 'className') el.className = v;
+    else if (k === 'innerHTML') el.innerHTML = v;
+    else if (k.indexOf('on') === 0) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
+  });
+  children.flat().forEach(function(c) { if (c != null) el.append(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return el;
+}
+
+/* ── Render Dashboard ── */
+function renderDashboard() {
+  var root = document.getElementById('view-dashboard');
+  root.innerHTML = '';
+  if (!state.health) { root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Loading...</p>'; return; }
+  var d = state.health;
+  var needsCount = d.printers.filter(function(p) { return p.keepalive_needed; }).length;
+
+  // Metrics
+  var grid = h('div', {className:'metrics-grid'});
+  var metrics = [
+    { icon: '&#9210;', cls: 'purple', value: d.printer_count, label: 'Managed Printers' },
+    { icon: '&#9888;', cls: 'pink', value: needsCount, label: 'Need Keepalive' },
+    { icon: '&#9211;', cls: 'teal', value: d.discovery ? d.discovery.printer_count : 0, label: 'Discovered' },
+    { icon: '&#9889;', cls: 'blue', value: d.auto_print_enabled ? 'On' : 'Off', label: 'Auto-Print' },
+  ];
+  metrics.forEach(function(m) {
+    grid.append(h('div', {className:'metric-card glass'},
+      h('div', {className:'metric-icon '+m.cls, innerHTML: m.icon}),
+      h('div', null,
+        h('div', {className:'metric-value'}, String(m.value)),
+        h('div', {className:'metric-label'}, m.label)
+      )
+    ));
+  });
+  root.append(grid);
+
+  // Printer Health
+  var sec1 = h('div', {className:'section'});
+  sec1.append(h('div', {className:'section-title'}, h('span', {className:'dot', style:'background:#7c3aed'}), 'Printer Health'));
+  var panel = h('div', {className:'health-panel glass'});
+  panel.append(h('div', {className:'health-header'},
+    h('span'), h('span', null, 'Printer'), h('span', null, 'State'), h('span', {className:'health-due-col'}, 'Next Due')
+  ));
+  d.printers.forEach(function(p) {
+    panel.append(h('div', {className:'health-row'},
+      h('span', {className:'health-dot '+p.health_status}),
+      h('span', {className:'health-name'}, p.name),
+      h('span', {className:'health-state'}, p.printer_state),
+      h('span', {className:'health-due health-due-col'}, timeUntil(p.next_keepalive_due_at))
+    ));
+  });
+  sec1.append(panel);
+  root.append(sec1);
+
+  // Discovery summary
+  if (d.discovery) {
+    var sec2 = h('div', {className:'section'});
+    sec2.append(h('div', {className:'section-title'}, h('span', {className:'dot', style:'background:#06b6d4'}), 'Discovery'));
+    var dg = h('div', {className:'disc-summary'});
+    var ds = d.discovery;
+    [
+      { v: ds.printer_count, l: 'Found' },
+      { v: ds.last_scan_duration_seconds + 's', l: 'Scan Time' },
+      { v: timeAgo(ds.last_scan_at), l: 'Last Scan' },
+      { v: ds.enabled ? 'Active' : 'Off', l: 'Status' },
+    ].forEach(function(s) {
+      dg.append(h('div', {className:'disc-stat glass'},
+        h('div', {className:'disc-stat-value'}, String(s.v)),
+        h('div', {className:'disc-stat-label'}, s.l)
+      ));
+    });
+    sec2.append(dg);
+    root.append(sec2);
+  }
+}
+
+/* ── Render Printers ── */
+function renderPrinters() {
+  var root = document.getElementById('view-printers');
+  root.innerHTML = '';
+  if (!state.health) { root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Loading...</p>'; return; }
+  var templates = state.health.supported_templates || [];
+  var grid = h('div', {className:'printer-cards'});
+  state.health.printers.forEach(function(p) {
+    var card = h('div', {className:'printer-card glass'});
+    card.append(h('div', {className:'pc-header '+p.health_status},
+      h('span', {className:'pc-status-dot '+p.health_status}),
+      h('span', {className:'pc-name'}, p.name),
+      h('span', {className:'pc-badge '+p.health_status}, p.health_status)
+    ));
+    var body = h('div', {className:'pc-body'});
+    var stats = h('div', {className:'pc-stats'});
+    [
+      { l: 'Template', v: p.template },
+      { l: 'Cadence', v: p.cadence_hours + 'h' },
+      { l: 'Last Print', v: timeAgo(p.last_print_at) },
+      { l: 'Next Due', v: timeUntil(p.next_keepalive_due_at) },
+    ].forEach(function(s) {
+      stats.append(h('div', null,
+        h('div', {className:'pc-stat-label'}, s.l),
+        h('div', {className:'pc-stat-value'}, s.v)
+      ));
+    });
+    body.append(stats);
+    body.append(h('div', {className:'pc-uri'}, p.printer_uri));
+
+    // Settings section
+    var settingsWrap = h('div', {style:'margin-bottom:14px; display:none'});
+    var enabledCheck = h('input', {type:'checkbox', style:'margin-right:6px'});
+    if (p.enabled) enabledCheck.checked = true;
+    var cadenceInput = h('input', {type:'number', className:'auth-input', value:String(p.cadence_hours), style:'width:80px; display:inline-block; margin:6px 8px 6px 0'});
+    var templateSelect = h('select', {className:'design-select', style:'margin:6px 0'});
+    templates.forEach(function(t) {
+      var opt = h('option', {value:t}, t);
+      if (t === p.template) opt.selected = true;
+      templateSelect.append(opt);
+    });
+    settingsWrap.append(
+      h('div', {style:'margin-bottom:8px'},
+        h('label', {style:'font-size:12px;font-weight:600;display:block;margin-bottom:4px'}, 'Settings')
+      ),
+      h('div', {style:'display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:12px'}, enabledCheck, 'Enabled'),
+      h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Cadence (hours)'),
+      cadenceInput,
+      h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Template'),
+      templateSelect,
+      h('div', {style:'margin-top:8px'},
+        h('button', {className:'btn-glass primary', style:'font-size:11px;padding:6px 14px', onClick: function() {
+          requestJson('printers/' + p.printer_id + '/settings', {
+            method: 'POST',
+            body: JSON.stringify({enabled: enabledCheck.checked, cadence_hours: parseInt(cadenceInput.value, 10), template: templateSelect.value})
+          }).then(function() { showToast('Settings saved for ' + p.name, 'success'); refreshAll(); })
+            .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+        }}, 'Save Settings')
+      )
+    );
+
+    var actions = h('div', {className:'pc-actions'});
+
+    // Print if needed
+    actions.append(h('button', {className:'btn-glass primary', onClick: function() {
+      requestJson('printers/' + p.printer_id + '/print', {
+        method: 'POST',
+        body: JSON.stringify({template: p.template, force: false})
+      }).then(function() { showToast('Print requested for ' + p.name, 'success'); refreshAll(); })
+        .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+    }}, 'Print If Needed'));
+
+    // Force print
+    actions.append(h('button', {className:'btn-glass', onClick: function() {
+      requestJson('printers/' + p.printer_id + '/print', {
+        method: 'POST',
+        body: JSON.stringify({template: p.template, force: true})
+      }).then(function() { showToast('Force print sent to ' + p.name, 'success'); refreshAll(); })
+        .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+    }}, 'Force Print'));
+
+    // Poll now
+    actions.append(h('button', {className:'btn-glass', onClick: function() {
+      requestJson('printers/' + p.printer_id + '/poll', {
+        method: 'POST',
+        body: JSON.stringify({})
+      }).then(function() { showToast('Poll sent to ' + p.name, 'success'); refreshAll(); })
+        .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+    }}, 'Poll Now'));
+
+    // Configure toggle
+    actions.append(h('button', {className:'btn-glass', onClick: function() {
+      settingsWrap.style.display = settingsWrap.style.display === 'none' ? 'block' : 'none';
+    }}, 'Configure'));
+
+    body.append(settingsWrap);
+    body.append(actions);
+    card.append(body);
+    grid.append(card);
+  });
+  root.append(grid);
+}
+
+/* ── Render Discovery ── */
+function renderDiscovery() {
+  var root = document.getElementById('view-discovery');
+  root.innerHTML = '';
+  if (!state.discovery) { root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Loading...</p>'; return; }
+  var ds = state.discovery;
+
+  var sg = h('div', {className:'disc-summary'});
+  var printers = ds.printers || [];
+  var reachable = printers.filter(function(p) { return p.reachable; }).length;
+  var configured = printers.filter(function(p) { return p.already_configured; }).length;
+  [
+    { v: ds.printer_count || printers.length, l: 'Total Found' },
+    { v: reachable, l: 'Reachable' },
+    { v: configured, l: 'Configured' },
+    { v: (ds.last_scan_duration_seconds || 0) + 's', l: 'Scan Time' },
+  ].forEach(function(s) {
+    sg.append(h('div', {className:'disc-stat glass'},
+      h('div', {className:'disc-stat-value'}, String(s.v)),
+      h('div', {className:'disc-stat-label'}, s.l)
+    ));
+  });
+  root.append(sg);
+
+  // Rescan button
+  var rescanRow = h('div', {style:'margin-bottom:16px'});
+  rescanRow.append(h('button', {className:'btn-glass primary', onClick: function() {
+    requestJson('discovery/rescan', { method: 'POST', body: JSON.stringify({}) })
+      .then(function() { showToast('Rescan complete', 'success'); refreshAll(); })
+      .catch(function(err) { showToast('Rescan error: ' + err.message, 'error'); });
+  }}, 'Rescan Network'));
+  root.append(rescanRow);
+
+  var panel = h('div', {className:'glass', style:'overflow:hidden; overflow-x:auto'});
+  var table = h('table', {className:'disc-table'});
+  var thead = h('thead');
+  thead.append(h('tr', null,
+    h('th', null, 'Printer'), h('th', null, 'URI'), h('th', null, 'Type'),
+    h('th', null, 'Reachable'), h('th', null, 'Configured')
+  ));
+  table.append(thead);
+  var tbody = h('tbody');
+  printers.forEach(function(p) {
+    tbody.append(h('tr', null,
+      h('td', {style:'font-weight:600'}, p.printer_name),
+      h('td', {className:'uri'}, p.uri),
+      h('td', {style:'text-transform:capitalize'}, p.printer_type_guess || ''),
+      h('td', {innerHTML: '<span class="reach-dot '+(p.reachable?'yes':'no')+'"></span>'+(p.reachable?'Yes':'No')}),
+      h('td', {innerHTML: '<span class="conf-badge '+(p.already_configured?'yes':'no')+'">'+(p.already_configured?'Yes':'Available')+'</span>'})
+    ));
+  });
+  table.append(tbody);
+  panel.append(table);
+  root.append(panel);
+}
+
+/* ── Config state ── */
+var configMode = 'form'; // 'form' or 'advanced'
+var currentConfig = {};
+
+var TEMPLATE_OPTIONS = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid'];
+
+/* ── Config helpers ── */
+function makeToggle(isOn, onChange) {
+  var track = h('div', {className: 'cfg-toggle-track' + (isOn ? ' on' : '')});
+  track.append(h('div', {className: 'cfg-toggle-thumb'}));
+  track.addEventListener('click', function() {
+    var on = track.classList.toggle('on');
+    if (onChange) onChange(on);
+  });
+  return track;
+}
+
+function makeField(label, input, hint, cls) {
+  var wrap = h('div', {className: 'cfg-field' + (cls ? ' ' + cls : '')});
+  wrap.append(h('label', {className: 'cfg-field-label'}, label));
+  wrap.append(input);
+  if (hint) wrap.append(h('div', {className: 'cfg-field-hint'}, hint));
+  return wrap;
+}
+
+function makeNumberField(label, key, value, min, max, unit, hint) {
+  var inp = h('input', {type: 'number', className: 'cfg-input', 'data-key': key, value: value != null ? String(value) : ''});
+  if (min != null) inp.min = min;
+  if (max != null) inp.max = max;
+  if (unit) {
+    var wrap = h('div', {className: 'cfg-number-wrap'});
+    wrap.append(inp);
+    wrap.append(h('span', {className: 'cfg-number-unit'}, unit));
+    return makeField(label, wrap, hint);
+  }
+  return makeField(label, inp, hint);
+}
+
+function makeTextField(label, key, value, placeholder, hint, type) {
+  var inp = h('input', {type: type || 'text', className: 'cfg-input', 'data-key': key, value: value || '', placeholder: placeholder || ''});
+  return makeField(label, inp, hint);
+}
+
+function makeSelectField(label, key, value, options, hint) {
+  var sel = h('select', {className: 'cfg-input', 'data-key': key});
+  options.forEach(function(o) {
+    var opt = h('option', {value: o}, o);
+    if (o === value) opt.selected = true;
+    sel.append(opt);
+  });
+  return makeField(label, sel, hint);
+}
+
+function makeToggleField(label, key, value, hint) {
+  var wrap = h('div', {className: 'cfg-field'});
+  var row = h('div', {className: 'cfg-toggle'});
+  var track = makeToggle(!!value);
+  track.setAttribute('data-key', key);
+  row.append(track);
+  row.append(h('span', {className: 'cfg-toggle-label'}, label));
+  wrap.append(row);
+  if (hint) wrap.append(h('div', {className: 'cfg-field-hint'}, hint));
+  return wrap;
+}
+
+function makeTextareaField(label, key, value, hint) {
+  var val = '';
+  if (Array.isArray(value)) val = value.join('\n');
+  else if (value) val = String(value);
+  var ta = h('textarea', {className: 'cfg-input', 'data-key': key, placeholder: 'One per line...', rows: '3'}, val);
+  return makeField(label, ta, hint);
+}
+
+function makeSection(title, color, id, content, openByDefault) {
+  var sec = h('div', {className: 'cfg-section' + (openByDefault ? ' open' : ''), id: id});
+  var header = h('div', {className: 'cfg-section-header'});
+  header.append(h('span', {className: 'cfg-section-dot', style: 'background:' + color}));
+  header.append(h('span', {className: 'cfg-section-title'}, title));
+  header.append(h('span', {className: 'cfg-section-chevron', innerHTML: '&#9660;'}));
+  header.addEventListener('click', function() { sec.classList.toggle('open'); });
+  sec.append(header);
+  var body = h('div', {className: 'cfg-section-body'});
+  if (typeof content === 'function') content(body);
+  else body.append(content);
+  sec.append(body);
+  return sec;
+}
+
+/* ── Printer card builder ── */
+function buildPrinterCard(printer, index, container) {
+  var card = h('div', {className: 'cfg-printer-card open'});
+  var pName = printer.name || ('Printer ' + (index + 1));
+
+  var header = h('div', {className: 'cfg-printer-header'});
+  header.append(h('span', {className: 'cfg-printer-num'}, String(index + 1)));
+  var nameSpan = h('span', {className: 'cfg-printer-name'}, pName);
+  header.append(nameSpan);
+  var removeBtn = h('button', {className: 'cfg-printer-remove', title: 'Remove printer', innerHTML: '&#10005;'});
+  removeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (confirm('Remove ' + pName + '?')) { card.remove(); }
+  });
+  header.append(removeBtn);
+  header.append(h('span', {className: 'cfg-printer-chevron', innerHTML: '&#9660;'}));
+  header.addEventListener('click', function(e) {
+    if (e.target.closest('.cfg-printer-remove')) return;
+    card.classList.toggle('open');
+  });
+  card.append(header);
+
+  var body = h('div', {className: 'cfg-printer-body'});
+  var grid = h('div', {className: 'cfg-grid'});
+
+  var nameInp = h('input', {type: 'text', className: 'cfg-input', 'data-pkey': 'name', value: printer.name || '', placeholder: 'e.g. Office Printer'});
+  nameInp.addEventListener('input', function() { nameSpan.textContent = nameInp.value || ('Printer ' + (index + 1)); });
+  grid.append(makeField('Name *', nameInp, null));
+  grid.append(makeField('Printer URI *', h('input', {type:'text', className:'cfg-input', 'data-pkey':'printer_uri', value: printer.printer_uri||'', placeholder:'ipp://192.168.1.x:631/ipp/print'}), null));
+  grid.append(makeField('ID', h('input', {type:'text', className:'cfg-input', 'data-pkey':'id', value: printer.id||'', placeholder:'Optional identifier'}), null));
+  var ptSel = h('select', {className:'cfg-input', 'data-pkey':'printer_type'});
+  ['inkjet','laser'].forEach(function(t) { var o = h('option', {value:t}, t); if (t===printer.printer_type) o.selected=true; ptSel.append(o); });
+  grid.append(makeField('Printer Type', ptSel, null));
+
+  // Enabled toggle
+  var enWrap = h('div', {className:'cfg-field'});
+  var enRow = h('div', {className:'cfg-toggle'});
+  var enTrack = makeToggle(printer.enabled !== false);
+  enTrack.setAttribute('data-pkey', 'enabled');
+  enRow.append(enTrack); enRow.append(h('span', {className:'cfg-toggle-label'}, 'Enabled'));
+  enWrap.append(enRow);
+  grid.append(enWrap);
+
+  // Cadence
+  var cadInp = h('input', {type:'number', className:'cfg-input', 'data-pkey':'cadence_hours', value: printer.cadence_hours!=null ? String(printer.cadence_hours) : '24', min:'1', max:'720'});
+  var cadWrap = h('div', {className:'cfg-number-wrap'}); cadWrap.append(cadInp); cadWrap.append(h('span', {className:'cfg-number-unit'}, 'hours'));
+  grid.append(makeField('Cadence', cadWrap, '1 - 720 hours'));
+
+  // Template
+  var tmplSel = h('select', {className:'cfg-input', 'data-pkey':'template'});
+  TEMPLATE_OPTIONS.forEach(function(t) { var o = h('option', {value:t}, t); if (t===printer.template) o.selected=true; tmplSel.append(o); });
+  grid.append(makeField('Template', tmplSel, null));
+
+  // Weather entity
+  grid.append(makeField('Weather Entity', h('input', {type:'text', className:'cfg-input', 'data-pkey':'weather_entity', value: printer.weather_entity||'', placeholder:'weather.home'}), null));
+
+  // Entity IDs
+  var eidsVal = Array.isArray(printer.entity_ids) ? printer.entity_ids.join('\n') : (printer.entity_ids||'');
+  var eidsTa = h('textarea', {className:'cfg-input', 'data-pkey':'entity_ids', placeholder:'One entity per line...', rows:'3'}, eidsVal);
+  grid.append(makeField('Entity IDs', eidsTa, 'One per line', 'cfg-grid-full'));
+
+  // Title & footer
+  grid.append(makeField('Title', h('input', {type:'text', className:'cfg-input', 'data-pkey':'title', value: printer.title||'', placeholder:'Optional title'}), null));
+  grid.append(makeField('Footer', h('input', {type:'text', className:'cfg-input', 'data-pkey':'footer', value: printer.footer||'', placeholder:'Optional footer'}), null));
+
+  body.append(grid);
+  card.append(body);
+  return card;
+}
+
+function serializePrinterCard(card) {
+  var p = {};
+  card.querySelectorAll('[data-pkey]').forEach(function(el) {
+    var key = el.getAttribute('data-pkey');
+    if (el.classList.contains('cfg-toggle-track')) {
+      p[key] = el.classList.contains('on');
+    } else if (el.tagName === 'TEXTAREA' && key === 'entity_ids') {
+      var lines = el.value.split('\n').map(function(s){return s.trim()}).filter(Boolean);
+      if (lines.length) p[key] = lines;
+    } else if (el.type === 'number') {
+      var v = el.value.trim();
+      if (v !== '') p[key] = Number(v);
+    } else {
+      var v = el.value.trim();
+      if (v !== '') p[key] = v;
+    }
+  });
+  return p;
+}
+
+/* ── populateForm ── */
+function populateForm(config) {
+  var root = document.getElementById('configFormView');
+  if (!root) return;
+  // Set simple data-key fields
+  root.querySelectorAll('[data-key]').forEach(function(el) {
+    var key = el.getAttribute('data-key');
+    var val;
+    if (key.indexOf('mqtt.') === 0) {
+      val = (config.mqtt || {})[key.slice(5)];
+    } else {
+      val = config[key];
+    }
+    if (el.classList.contains('cfg-toggle-track')) {
+      el.classList.toggle('on', !!val);
+      var thumb = el.querySelector('.cfg-toggle-thumb');
+      // thumb state handled by CSS
+    } else if (el.tagName === 'TEXTAREA') {
+      el.value = Array.isArray(val) ? val.join('\n') : (val || '');
+    } else if (el.tagName === 'SELECT') {
+      el.value = val || '';
+    } else {
+      el.value = val != null ? String(val) : '';
+    }
+  });
+
+  // Populate printers
+  var printersContainer = document.getElementById('cfgPrintersContainer');
+  if (printersContainer) {
+    // Remove all existing printer cards (not the add button)
+    printersContainer.querySelectorAll('.cfg-printer-card').forEach(function(c) { c.remove(); });
+    var addBtn = printersContainer.querySelector('.cfg-add-printer-btn');
+    var printers = config.printers || [];
+    printers.forEach(function(p, i) {
+      var card = buildPrinterCard(p, i, printersContainer);
+      if (addBtn) printersContainer.insertBefore(card, addBtn);
+      else printersContainer.append(card);
+    });
+  }
+}
+
+/* ── serializeForm ── */
+function serializeForm() {
+  var root = document.getElementById('configFormView');
+  if (!root) return {};
+  var config = {};
+
+  root.querySelectorAll('[data-key]').forEach(function(el) {
+    var key = el.getAttribute('data-key');
+    var val;
+    if (el.classList.contains('cfg-toggle-track')) {
+      val = el.classList.contains('on');
+    } else if (el.tagName === 'TEXTAREA') {
+      var lines = el.value.split('\n').map(function(s){return s.trim()}).filter(Boolean);
+      val = lines.length ? lines : undefined;
+    } else if (el.type === 'number') {
+      var v = el.value.trim();
+      val = v !== '' ? Number(v) : undefined;
+    } else if (el.type === 'password' || el.type === 'text') {
+      var v = el.value.trim();
+      val = v !== '' ? v : undefined;
+    } else if (el.tagName === 'SELECT') {
+      val = el.value || undefined;
+    } else {
+      val = el.value || undefined;
+    }
+
+    if (val === undefined) return;
+
+    if (key.indexOf('mqtt.') === 0) {
+      if (!config.mqtt) config.mqtt = {};
+      config.mqtt[key.slice(5)] = val;
+    } else {
+      config[key] = val;
+    }
+  });
+
+  // Serialize printers
+  var printersContainer = document.getElementById('cfgPrintersContainer');
+  if (printersContainer) {
+    var cards = printersContainer.querySelectorAll('.cfg-printer-card');
+    if (cards.length) {
+      config.printers = [];
+      cards.forEach(function(card) { config.printers.push(serializePrinterCard(card)); });
+    }
+  }
+
+  return config;
+}
+
+/* ── Sync functions ── */
+function syncFormToRaw() {
+  var config = serializeForm();
+  var ta = document.getElementById('configTextarea');
+  if (ta) ta.value = JSON.stringify(config, null, 2);
+}
+
+function syncRawToForm() {
+  var ta = document.getElementById('configTextarea');
+  if (!ta) return;
+  try {
+    var config = JSON.parse(ta.value);
+    currentConfig = config;
+    populateForm(config);
+  } catch(e) {
+    showToast('Invalid JSON in editor', 'error');
+  }
+}
+
+/* ── Render Config ── */
+function renderConfig(configData) {
+  var root = document.getElementById('view-config');
+  root.innerHTML = '';
+  currentConfig = configData || {};
+  var c = currentConfig;
+
+  var panel = h('div', {className: 'config-panel'});
+
+  // Mode toggle
+  var modeToggle = h('div', {className: 'config-mode-toggle'});
+  var formBtn = h('button', {className: 'config-mode-btn' + (configMode === 'form' ? ' active' : '')}, 'Form');
+  var advBtn = h('button', {className: 'config-mode-btn' + (configMode === 'advanced' ? ' active' : '')}, 'Advanced (JSON)');
+  modeToggle.append(formBtn, advBtn);
+  panel.append(modeToggle);
+
+  // Form view
+  var formView = h('div', {id: 'configFormView', style: configMode === 'form' ? '' : 'display:none'});
+
+  // Section 1: Printers
+  formView.append(makeSection('Printers', '#e91e63', 'cfgSecPrinters', function(body) {
+    var container = h('div', {id: 'cfgPrintersContainer'});
+    var printers = c.printers || [];
+    printers.forEach(function(p, i) {
+      container.append(buildPrinterCard(p, i, container));
+    });
+    var addBtn = h('button', {className: 'cfg-add-printer-btn'});
+    addBtn.innerHTML = '<span style="font-size:18px">+</span> Add Printer';
+    addBtn.addEventListener('click', function() {
+      var count = container.querySelectorAll('.cfg-printer-card').length;
+      var card = buildPrinterCard({enabled: true, cadence_hours: 24, printer_type: 'inkjet', template: 'color_bars'}, count, container);
+      container.insertBefore(card, addBtn);
+    });
+    container.append(addBtn);
+    body.append(container);
+  }, true));
+
+  // Section 2: Scheduling
+  formView.append(makeSection('Scheduling', '#7c3aed', 'cfgSecScheduling', function(body) {
+    var grid = h('div', {className: 'cfg-grid'});
+    // auto_print_enabled toggle
+    var apWrap = h('div', {className:'cfg-field cfg-grid-full'});
+    var apRow = h('div', {className:'cfg-toggle'});
+    var apTrack = makeToggle(c.auto_print_enabled !== false);
+    apTrack.setAttribute('data-key', 'auto_print_enabled');
+    apRow.append(apTrack); apRow.append(h('span', {className:'cfg-toggle-label'}, 'Auto-Print Enabled'));
+    apWrap.append(apRow);
+    apWrap.append(h('div', {className:'cfg-field-hint'}, 'Automatically print keepalive pages on schedule'));
+    grid.append(apWrap);
+
+    var pollInp = h('input', {type:'number', className:'cfg-input', 'data-key':'status_poll_interval_minutes', value: c.status_poll_interval_minutes!=null ? String(c.status_poll_interval_minutes) : '', min:'1', max:'1440'});
+    var pollWrap = h('div', {className:'cfg-number-wrap'}); pollWrap.append(pollInp); pollWrap.append(h('span', {className:'cfg-number-unit'}, 'min'));
+    grid.append(makeField('Status Poll Interval', pollWrap, '1 - 1440 minutes'));
+
+    var retryInp = h('input', {type:'number', className:'cfg-input', 'data-key':'failure_retry_minutes', value: c.failure_retry_minutes!=null ? String(c.failure_retry_minutes) : '', min:'1', max:'1440'});
+    var retryWrap = h('div', {className:'cfg-number-wrap'}); retryWrap.append(retryInp); retryWrap.append(h('span', {className:'cfg-number-unit'}, 'min'));
+    grid.append(makeField('Failure Retry', retryWrap, '1 - 1440 minutes'));
+
+    body.append(grid);
+  }, false));
+
+  // Section 3: Discovery
+  formView.append(makeSection('Discovery', '#06b6d4', 'cfgSecDiscovery', function(body) {
+    var grid = h('div', {className: 'cfg-grid'});
+
+    var deWrap = h('div', {className:'cfg-field cfg-grid-full'});
+    var deRow = h('div', {className:'cfg-toggle'});
+    var deTrack = makeToggle(!!c.discovery_enabled);
+    deTrack.setAttribute('data-key', 'discovery_enabled');
+    deRow.append(deTrack); deRow.append(h('span', {className:'cfg-toggle-label'}, 'Discovery Enabled'));
+    deWrap.append(deRow);
+    grid.append(deWrap);
+
+    var diInp = h('input', {type:'number', className:'cfg-input', 'data-key':'discovery_interval_minutes', value: c.discovery_interval_minutes!=null ? String(c.discovery_interval_minutes) : '', min:'1', max:'1440'});
+    var diWrap = h('div', {className:'cfg-number-wrap'}); diWrap.append(diInp); diWrap.append(h('span', {className:'cfg-number-unit'}, 'min'));
+    grid.append(makeField('Scan Interval', diWrap, '1 - 1440 minutes'));
+
+    var dtInp = h('input', {type:'number', className:'cfg-input', 'data-key':'discovery_timeout_seconds', value: c.discovery_timeout_seconds!=null ? String(c.discovery_timeout_seconds) : '', min:'1', max:'30'});
+    var dtWrap = h('div', {className:'cfg-number-wrap'}); dtWrap.append(dtInp); dtWrap.append(h('span', {className:'cfg-number-unit'}, 'sec'));
+    grid.append(makeField('Timeout', dtWrap, '1 - 30 seconds'));
+
+    var dqInp = h('input', {type:'number', className:'cfg-input', 'data-key':'discovery_ipp_query_timeout_seconds', value: c.discovery_ipp_query_timeout_seconds!=null ? String(c.discovery_ipp_query_timeout_seconds) : '', min:'1', max:'30'});
+    var dqWrap = h('div', {className:'cfg-number-wrap'}); dqWrap.append(dqInp); dqWrap.append(h('span', {className:'cfg-number-unit'}, 'sec'));
+    grid.append(makeField('IPP Query Timeout', dqWrap, '1 - 30 seconds'));
+
+    var ippsWrap = h('div', {className:'cfg-field'});
+    var ippsRow = h('div', {className:'cfg-toggle'});
+    var ippsTrack = makeToggle(!!c.discovery_include_ipps);
+    ippsTrack.setAttribute('data-key', 'discovery_include_ipps');
+    ippsRow.append(ippsTrack); ippsRow.append(h('span', {className:'cfg-toggle-label'}, 'Include IPPS'));
+    ippsWrap.append(ippsRow);
+    ippsWrap.append(h('div', {className:'cfg-field-hint'}, 'Also discover printers via IPPS (TLS)'));
+    grid.append(ippsWrap);
+
+    body.append(grid);
+  }, false));
+
+  // Section 4: Templates & Content
+  formView.append(makeSection('Templates & Content', '#ffc107', 'cfgSecTemplates', function(body) {
+    var grid = h('div', {className: 'cfg-grid'});
+
+    var dtSel = h('select', {className:'cfg-input', 'data-key':'default_template'});
+    TEMPLATE_OPTIONS.forEach(function(t) { var o = h('option', {value:t}, t); if (t===c.default_template) o.selected=true; dtSel.append(o); });
+    grid.append(makeField('Default Template', dtSel, null));
+
+    grid.append(makeField('Title', h('input', {type:'text', className:'cfg-input', 'data-key':'title', value: c.title||'', placeholder:'Page title'}), null));
+    grid.append(makeField('Footer', h('input', {type:'text', className:'cfg-input', 'data-key':'footer', value: c.footer||'', placeholder:'Page footer'}), null));
+    grid.append(makeField('Weather Entity', h('input', {type:'text', className:'cfg-input', 'data-key':'weather_entity', value: c.weather_entity||'', placeholder:'weather.home'}), null));
+
+    var eidsVal = Array.isArray(c.entity_ids) ? c.entity_ids.join('\n') : (c.entity_ids||'');
+    var eidsTa = h('textarea', {className:'cfg-input', 'data-key':'entity_ids', placeholder:'One entity per line...', rows:'4'}, eidsVal);
+    grid.append(makeField('Entity IDs', eidsTa, 'One per line', 'cfg-grid-full'));
+
+    body.append(grid);
+  }, false));
+
+  // Section 5: MQTT
+  formView.append(makeSection('MQTT', '#3b82f6', 'cfgSecMqtt', function(body) {
+    var mqtt = c.mqtt || {};
+    var grid = h('div', {className: 'cfg-grid'});
+
+    var meWrap = h('div', {className:'cfg-field cfg-grid-full'});
+    var meRow = h('div', {className:'cfg-toggle'});
+    var meTrack = makeToggle(!!mqtt.enabled);
+    meTrack.setAttribute('data-key', 'mqtt.enabled');
+    meRow.append(meTrack); meRow.append(h('span', {className:'cfg-toggle-label'}, 'MQTT Enabled'));
+    meWrap.append(meRow);
+    grid.append(meWrap);
+
+    grid.append(makeField('Host', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.host', value: mqtt.host||'', placeholder:'core-mosquitto'}), null));
+
+    var portInp = h('input', {type:'number', className:'cfg-input', 'data-key':'mqtt.port', value: mqtt.port!=null ? String(mqtt.port) : ''});
+    grid.append(makeField('Port', portInp, null));
+
+    grid.append(makeField('Username', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.username', value: mqtt.username||'', placeholder:'mqtt_user'}), null));
+    grid.append(makeField('Password', h('input', {type:'password', className:'cfg-input', 'data-key':'mqtt.password', value: mqtt.password||'', placeholder:'••••••'}), null));
+    grid.append(makeField('Discovery Prefix', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.discovery_prefix', value: mqtt.discovery_prefix||'', placeholder:'homeassistant'}), null));
+    grid.append(makeField('Topic Prefix', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.topic_prefix', value: mqtt.topic_prefix||'', placeholder:'printer_keepalive'}), null));
+
+    var retWrap = h('div', {className:'cfg-field'});
+    var retRow = h('div', {className:'cfg-toggle'});
+    var retTrack = makeToggle(!!mqtt.retain);
+    retTrack.setAttribute('data-key', 'mqtt.retain');
+    retRow.append(retTrack); retRow.append(h('span', {className:'cfg-toggle-label'}, 'Retain'));
+    retWrap.append(retRow);
+    grid.append(retWrap);
+
+    var tlsWrap = h('div', {className:'cfg-field'});
+    var tlsRow = h('div', {className:'cfg-toggle'});
+    var tlsTrack = makeToggle(!!mqtt.tls);
+    tlsTrack.setAttribute('data-key', 'mqtt.tls');
+    tlsRow.append(tlsTrack); tlsRow.append(h('span', {className:'cfg-toggle-label'}, 'TLS'));
+    tlsWrap.append(tlsRow);
+    grid.append(tlsWrap);
+
+    grid.append(makeField('Client ID', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.client_id', value: mqtt.client_id||'', placeholder:'printer_keepalive'}), null, 'cfg-grid-full'));
+
+    body.append(grid);
+  }, false));
+
+  // Section 6: Integration
+  formView.append(makeSection('Integration', '#ec4899', 'cfgSecIntegration', function(body) {
+    var grid = h('div', {className: 'cfg-grid'});
+    grid.append(makeField('HA URL', h('input', {type:'text', className:'cfg-input', 'data-key':'ha_url', value: c.ha_url||'', placeholder:'http://homeassistant.local:8123'}), null));
+    grid.append(makeField('HA Token', h('input', {type:'password', className:'cfg-input', 'data-key':'ha_token', value: c.ha_token||'', placeholder:'Long-lived access token'}), null));
+    grid.append(makeField('Add-on Page URL', h('input', {type:'text', className:'cfg-input', 'data-key':'addon_page_url', value: c.addon_page_url||'', placeholder:'URL for add-on web page'}), null));
+    grid.append(makeField('Auth Token', h('input', {type:'password', className:'cfg-input', 'data-key':'auth_token', value: c.auth_token||'', placeholder:'Bearer auth token'}), null));
+    body.append(grid);
+  }, false));
+
+  panel.append(formView);
+
+  // Advanced (JSON) view
+  var advView = h('div', {id: 'configAdvancedView', style: configMode === 'advanced' ? '' : 'display:none'});
+  var advPanel = h('div', {className: 'glass', style: 'padding:24px'});
+  advPanel.append(h('label', {style: 'display:block;font-size:13px;font-weight:600;margin-bottom:8px'}, 'Add-on Configuration (JSON)'));
+  var val = '';
+  try { val = JSON.stringify(c, null, 2); } catch(e) { val = '{}'; }
+  advPanel.append(h('textarea', {className: 'config-textarea', spellcheck: 'false', id: 'configTextarea'}, val));
+  advView.append(advPanel);
+  panel.append(advView);
+
+  // Actions
+  var actions = h('div', {className: 'config-actions', style: 'margin-top:20px'});
+
+  actions.append(h('button', {className: 'btn-glass primary', onClick: function() {
+    var parsed;
+    if (configMode === 'form') {
+      parsed = serializeForm();
+    } else {
+      var raw = document.getElementById('configTextarea').value;
+      try { parsed = JSON.parse(raw); } catch(e) { showToast('Invalid JSON: ' + e.message, 'error'); return; }
+    }
+    requestJson('config', { method: 'POST', body: JSON.stringify({options: parsed}) })
+      .then(function() { showToast('Configuration saved', 'success'); state.configLoaded = false; refreshAll(); })
+      .catch(function(err) { showToast('Save error: ' + err.message, 'error'); });
+  }}, 'Save Configuration'));
+
+  actions.append(h('button', {className: 'btn-glass', onClick: function() {
+    state.configLoaded = false;
+    loadConfig();
+    showToast('Configuration reloaded', 'info');
+  }}, 'Reload'));
+
+  actions.append(h('button', {className: 'btn-glass danger', onClick: function() {
+    if (!confirm('Restart the add-on?')) return;
+    requestJson('actions/restart', { method: 'POST', body: JSON.stringify({}) })
+      .then(function() { showToast('Restart triggered', 'success'); })
+      .catch(function(err) { showToast('Restart error: ' + err.message, 'error'); });
+  }}, 'Restart Add-on'));
+
+  panel.append(actions);
+  root.append(panel);
+
+  // Mode toggle handlers
+  formBtn.addEventListener('click', function() {
+    if (configMode === 'form') return;
+    configMode = 'form';
+    formBtn.classList.add('active'); advBtn.classList.remove('active');
+    syncRawToForm();
+    formView.style.display = ''; advView.style.display = 'none';
+  });
+  advBtn.addEventListener('click', function() {
+    if (configMode === 'advanced') return;
+    configMode = 'advanced';
+    advBtn.classList.add('active'); formBtn.classList.remove('active');
+    syncFormToRaw();
+    advView.style.display = ''; formView.style.display = 'none';
+  });
+}
+
+/* ── Load config ── */
+function loadConfig() {
+  requestJson('config')
+    .then(function(data) {
+      state.configLoaded = true;
+      var opts = data.options || data;
+      currentConfig = opts;
+      renderConfig(opts);
+    })
+    .catch(function(err) {
+      renderConfig(null);
+      showToast('Config load error: ' + err.message, 'error');
+    });
+}
+
+/* ── Refresh all data ── */
+async function refreshAll() {
+  if (state.refreshInFlight) return;
+  state.refreshInFlight = true;
+  try {
+    var results = await Promise.allSettled([
+      requestJson('health'),
+      requestJson('discovery')
+    ]);
+    if (results[0].status === 'fulfilled') {
+      state.health = results[0].value;
+      var vb = document.getElementById('versionBadge');
+      if (state.health.version && vb.textContent === '__APP_VERSION__') {
+        vb.textContent = 'v' + state.health.version;
+      }
+    } else {
+      console.error('Health fetch error:', results[0].reason);
+    }
+    if (results[1].status === 'fulfilled') {
+      state.discovery = results[1].value;
+    } else {
+      console.error('Discovery fetch error:', results[1].reason);
+    }
+    renderDashboard();
+    renderPrinters();
+    renderDiscovery();
+    if (!state.configLoaded) {
+      loadConfig();
+    }
+  } catch(err) {
+    showToast('Refresh error: ' + err.message, 'error');
+  } finally {
+    state.refreshInFlight = false;
+  }
+}
+
+/* ── Tab switching ── */
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    var target = document.getElementById('view-' + btn.dataset.tab);
+    target.classList.add('active');
+  });
+});
+
+/* ── Theme ── */
+function applyTheme(mode) {
+  var effective = mode;
+  if (mode === 'system') effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', effective);
+  document.querySelectorAll('.theme-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === mode); });
+  localStorage.setItem('pk-theme', mode);
+}
+document.querySelectorAll('.theme-btn').forEach(function(b) {
+  b.addEventListener('click', function() { applyTheme(b.dataset.mode); });
+});
+var savedTheme = localStorage.getItem('pk-theme') || 'light';
+applyTheme(savedTheme);
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+  if (localStorage.getItem('pk-theme') === 'system') applyTheme('system');
+});
+
+/* ── Init ── */
+refreshAll();
+setInterval(refreshAll, 60000);
+</script>
+</body>
+</html>

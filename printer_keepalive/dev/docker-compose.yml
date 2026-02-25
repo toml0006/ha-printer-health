@@ -12,5 +12,6 @@ services:
       - "18099:8099"
     volumes:
       - ../app.py:/app/app.py
+      - ../designs:/app/designs
       - ./data:/data
     restart: unless-stopped

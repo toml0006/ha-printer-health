@@ -9,6 +9,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY app.py /app/app.py
+COPY designs/ /app/designs/
 
 EXPOSE 8099
 
