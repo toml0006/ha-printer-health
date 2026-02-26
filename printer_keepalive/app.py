@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.5"
+APP_VERSION = "0.5.6"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -844,23 +844,72 @@ def line_height(font: ImageFont.ImageFont) -> int:
     return bottom - top
 
 
-def load_font(size: int) -> ImageFont.ImageFont:
+def load_font(size: int, path: str | None = None) -> ImageFont.ImageFont:
+    if path:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            pass
     candidates = (
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     )
-    for path in candidates:
+    for p in candidates:
         try:
-            return ImageFont.truetype(path, size)
+            return ImageFont.truetype(p, size)
         except OSError:
             continue
     return ImageFont.load_default()
 
 
-FONT_TITLE = load_font(72)
-FONT_SECTION = load_font(42)
-FONT_BODY = load_font(32)
-FONT_SMALL = load_font(26)
+# Theme font file mapping — design variant -> TTF path
+THEME_FONTS: dict[str, str] = {
+    "v1": "/app/fonts/Outfit-Variable.ttf",
+    "v2": "/app/fonts/Sora-Variable.ttf",
+    "v3": "/app/fonts/DMSans-Variable.ttf",
+    "v4": "/app/fonts/JetBrainsMono-Variable.ttf",
+    "v5": "/app/fonts/Roboto-Variable.ttf",
+}
+
+# Font set: {title, section, body, small} keyed by design variant
+_FONT_CACHE: dict[str, dict[str, ImageFont.ImageFont]] = {}
+
+
+def load_theme_fonts(design: str = "v1") -> dict[str, ImageFont.ImageFont]:
+    """Return a dict of {title, section, body, small} ImageFont objects for the given design."""
+    if design in _FONT_CACHE:
+        return _FONT_CACHE[design]
+    font_path = THEME_FONTS.get(design)
+    fonts = {
+        "title": load_font(72, font_path),
+        "section": load_font(42, font_path),
+        "body": load_font(32, font_path),
+        "small": load_font(26, font_path),
+    }
+    _FONT_CACHE[design] = fonts
+    return fonts
+
+
+_default_fonts = load_theme_fonts("v1")
+FONT_TITLE = _default_fonts["title"]
+FONT_SECTION = _default_fonts["section"]
+FONT_BODY = _default_fonts["body"]
+FONT_SMALL = _default_fonts["small"]
+
+
+def _set_active_fonts(design: str) -> None:
+    """Set the module-level FONT_* globals to the given design's fonts."""
+    global FONT_TITLE, FONT_SECTION, FONT_BODY, FONT_SMALL
+    fonts = load_theme_fonts(design)
+    FONT_TITLE = fonts["title"]
+    FONT_SECTION = fonts["section"]
+    FONT_BODY = fonts["body"]
+    FONT_SMALL = fonts["small"]
+
+
+def _reset_default_fonts() -> None:
+    """Reset module-level FONT_* globals to the default (v1) design."""
+    _set_active_fonts("v1")
 
 
 def draw_wrapped_text(
@@ -949,9 +998,8 @@ def states_by_entity(states: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 _HA_IPP_CACHE: dict[str, Any] = {"ts": 0.0, "data": {}}
 _HA_IPP_CACHE_TTL = 300  # 5 minutes
 
-# Preview image cache — keyed by (printer_id, template_name), stores (bytes, timestamp)
-_PREVIEW_CACHE: dict[tuple[str, str], tuple[bytes, float]] = {}
-_PREVIEW_CACHE_TTL = 120  # 2 minutes
+# Static preview images — keyed by template name, generated once at startup with sample data
+_STATIC_PREVIEWS: dict[str, bytes] = {}
 
 
 def _fetch_ha_ipp_entities() -> dict[str, list[dict[str, Any]]]:
@@ -2123,12 +2171,88 @@ TEMPLATE_BUILDERS = {
     "daily_summary": build_daily_summary_page,
 }
 
+# Sample HA states used for static preview generation (no API calls needed)
+_SAMPLE_STATES: list[dict[str, Any]] = [
+    {"entity_id": "weather.home", "state": "sunny", "attributes": {"friendly_name": "Home", "temperature": 72, "temperature_unit": "\u00b0F", "humidity": 45, "wind_speed": 8, "pressure": 1013}},
+    {"entity_id": "sensor.living_room_temperature", "state": "72.4", "attributes": {"friendly_name": "Living Room Temperature", "unit_of_measurement": "\u00b0F"}},
+    {"entity_id": "sensor.outdoor_temperature", "state": "65.1", "attributes": {"friendly_name": "Outdoor Temperature", "unit_of_measurement": "\u00b0F"}},
+    {"entity_id": "sensor.humidity", "state": "45", "attributes": {"friendly_name": "Indoor Humidity", "unit_of_measurement": "%"}},
+    {"entity_id": "binary_sensor.front_door", "state": "off", "attributes": {"friendly_name": "Front Door", "device_class": "door"}},
+    {"entity_id": "binary_sensor.motion_hallway", "state": "on", "attributes": {"friendly_name": "Hallway Motion", "device_class": "motion"}},
+    {"entity_id": "light.living_room", "state": "on", "attributes": {"friendly_name": "Living Room Light", "brightness": 200}},
+    {"entity_id": "light.bedroom", "state": "off", "attributes": {"friendly_name": "Bedroom Light"}},
+    {"entity_id": "switch.porch_light", "state": "on", "attributes": {"friendly_name": "Porch Light"}},
+    {"entity_id": "sensor.energy_daily", "state": "12.4", "attributes": {"friendly_name": "Energy Today", "unit_of_measurement": "kWh", "state_class": "total_increasing", "device_class": "energy"}},
+    {"entity_id": "sensor.power_consumption", "state": "1250", "attributes": {"friendly_name": "Power Consumption", "unit_of_measurement": "W", "device_class": "power"}},
+    {"entity_id": "automation.morning_routine", "state": "on", "attributes": {"friendly_name": "Morning Routine"}},
+    {"entity_id": "automation.evening_lights", "state": "on", "attributes": {"friendly_name": "Evening Lights"}},
+    {"entity_id": "person.jackson", "state": "home", "attributes": {"friendly_name": "Jackson"}},
+    {"entity_id": "sensor.water_daily", "state": "42", "attributes": {"friendly_name": "Water Today", "unit_of_measurement": "gal", "state_class": "total_increasing", "device_class": "water"}},
+    {"entity_id": "sensor.solar_production", "state": "3.2", "attributes": {"friendly_name": "Solar Production", "unit_of_measurement": "kWh", "state_class": "total_increasing", "device_class": "energy"}},
+]
+
+
+def _generate_static_previews() -> None:
+    """Generate one static preview image per template using sample data (no HA API calls)."""
+    global _STATIC_PREVIEWS
+    import io
+
+    real_fetch = fetch_all_states
+    real_hass_post = hass_post_json
+
+    def _mock_fetch() -> list[dict[str, Any]]:
+        return list(_SAMPLE_STATES)
+
+    def _mock_hass_post(path: str, data: dict[str, Any]) -> Any | None:
+        return None
+
+    # Monkey-patch for static preview generation
+    globals()["fetch_all_states"] = _mock_fetch
+    globals()["hass_post_json"] = _mock_hass_post
+
+    sample_printer = PrinterConfig(
+        printer_id="preview",
+        name="Preview Printer",
+        printer_uri="ipp://preview/ipp/print",
+        printer_type="inkjet",
+        enabled=True,
+        cadence_hours=168,
+        template="color_bars",
+        weather_entity="weather.home",
+        entity_ids=["sensor.living_room_temperature", "sensor.outdoor_temperature", "sensor.humidity",
+                     "binary_sensor.front_door", "light.living_room", "sensor.energy_daily"],
+        title="Printer Keepalive",
+        footer="Generated by Home Assistant",
+    )
+
+    previews: dict[str, bytes] = {}
+    _set_active_fonts("v1")
+
+    for template_name, builder in TEMPLATE_BUILDERS.items():
+        try:
+            image, _meta = builder(sample_printer, print_context=None)
+            buf = io.BytesIO()
+            image.save(buf, format="JPEG", quality=85, optimize=True)
+            previews[template_name] = buf.getvalue()
+            log(f"Generated static preview for template '{template_name}' ({len(previews[template_name])} bytes)")
+        except Exception as exc:  # noqa: BLE001
+            log(f"Failed to generate static preview for '{template_name}': {exc}")
+
+    # Restore original functions
+    globals()["fetch_all_states"] = real_fetch
+    globals()["hass_post_json"] = real_hass_post
+
+    _STATIC_PREVIEWS = previews
+    log(f"Static previews ready: {len(previews)}/{len(TEMPLATE_BUILDERS)} templates")
+
 
 def generate_template_image(
     printer: PrinterConfig,
     template_name: str,
     print_context: dict[str, Any] | None = None,
+    design: str = "v1",
 ) -> tuple[str, dict[str, Any]]:
+    _set_active_fonts(design)
     builder = TEMPLATE_BUILDERS.get(template_name, build_color_bars_page)
     image, metadata = builder(printer, print_context=print_context)
     if print_context:
@@ -5657,22 +5781,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 template_name = query.get("template", [printer.template])[0]
                 if template_name not in SUPPORTED_TEMPLATES:
                     template_name = printer.template
-                try:
-                    cache_key = (printer.printer_id, template_name)
-                    now = time.time()
-                    cached = _PREVIEW_CACHE.get(cache_key)
-                    if cached and (now - cached[1]) < _PREVIEW_CACHE_TTL:
-                        data = cached[0]
-                    else:
-                        file_path, _meta = generate_template_image(printer, template_name)
-                        with open(file_path, "rb") as fh:
-                            data = fh.read()
-                        os.unlink(file_path)
-                        _PREVIEW_CACHE[cache_key] = (data, now)
+                data = _STATIC_PREVIEWS.get(template_name)
+                if data:
                     self._write_bytes(HTTPStatus.OK, data, "image/jpeg")
-                except Exception as exc:
-                    LOG.warning("Preview generation failed: %s", exc)
-                    self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(exc)})
+                else:
+                    self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "Preview not available"})
                 return
 
         self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not Found"})
@@ -5870,6 +5983,8 @@ def main() -> None:
             log(f"Initial discovery found {discovery.get('printer_count', 0)} candidate(s).")
         else:
             log(f"Initial discovery failed: {discovery.get('last_error', 'unknown error')}")
+
+    _generate_static_previews()
 
     MQTT_BRIDGE.start()
 

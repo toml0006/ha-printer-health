@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.6
+
+- **Static preview images**: template previews are now pre-generated at startup with sample data, eliminating HA API calls and PIL renders on every preview request. Preview endpoint returns instantly from an in-memory cache.
+- **Theme-aware fonts**: bundled TTF fonts for each UI design theme (Outfit, Sora, DM Sans, JetBrains Mono, Roboto). Print jobs and previews render with the theme's distinctive font instead of always using DejaVu Sans Mono.
+- Added `THEME_FONTS` mapping and `load_theme_fonts()` with per-design font caching.
+- Added `design` parameter to `generate_template_image()` for theme-aware rendering.
+- Removed `_PREVIEW_CACHE` and `_PREVIEW_CACHE_TTL` in favor of static previews.
+- Added font files to Docker image via `COPY fonts/ /app/fonts/`.
+
 ## 0.5.5
 
 - **Daily summary overhaul**: utility usage (energy, water, solar, gas) with 30-day rolling averages and trend indicators; cost sensor detection with daily cost and projected monthly bills; 5-day weather forecast via HA service call; AI-generated weather preparation tips via `conversation.process`; localized number formatting; sensor activity stats (active/total with percentages) instead of raw entity counts.

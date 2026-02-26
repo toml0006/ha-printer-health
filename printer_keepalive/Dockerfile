@@ -12,6 +12,7 @@ ARG BUILD_VERSION=unknown
 LABEL io.hass.version="${BUILD_VERSION}"
 COPY app.py /app/app.py
 COPY designs/ /app/designs/
+COPY fonts/ /app/fonts/
 
 EXPOSE 8099
 
