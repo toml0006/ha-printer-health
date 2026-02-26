@@ -39,14 +39,9 @@ options:
   entity_ids: []
   mqtt:
     enabled: true
-    host: "core-mosquitto"
-    port: 1883
-    username: ""
-    password: ""
     discovery_prefix: "homeassistant"
     topic_prefix: "printer_keepalive"
     retain: true
-    tls: false
     client_id: "printer_keepalive"
   ha_url: ""
   ha_token: ""
@@ -85,14 +80,9 @@ schema:
     - str?
   mqtt:
     enabled: bool
-    host: str?
-    port: port
-    username: str?
-    password: password?
     discovery_prefix: str
     topic_prefix: str
     retain: bool
-    tls: bool
     client_id: str
   ha_url: str?
   ha_token: password?
