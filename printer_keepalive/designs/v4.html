@@ -318,6 +318,108 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 .auth-input:focus{outline:none;box-shadow:0 0 8px var(--glow-cyan);}
 .auth-input::placeholder{color:var(--dim);}
 
+/* Cards tab */
+.card-gen-block{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--cyan);
+  border-radius:6px;padding:20px;margin-bottom:16px;
+}
+.card-gen-name{
+  font-size:1rem;font-weight:700;color:var(--cyan);margin-bottom:12px;
+  text-shadow:0 0 10px var(--glow-cyan);
+}
+.card-gen-controls{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.card-gen-controls label{font-size:.7rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+.yaml-block{
+  background:#080810;border:1px solid var(--border);border-radius:4px;
+  padding:14px;font-family:'JetBrains Mono',monospace;font-size:.78rem;
+  color:var(--cyan);line-height:1.7;white-space:pre-wrap;word-break:break-all;
+  max-height:320px;overflow-y:auto;position:relative;
+  box-shadow:inset 0 0 20px rgba(0,240,255,.03);
+}
+.yaml-block::-webkit-scrollbar{width:4px;}
+.yaml-block::-webkit-scrollbar-track{background:transparent;}
+.yaml-block::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* Templates tab */
+.tpl-block{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--cyan);
+  border-radius:6px;padding:20px;margin-bottom:16px;
+}
+.tpl-name{
+  font-size:1rem;font-weight:700;color:var(--cyan);margin-bottom:12px;
+  text-shadow:0 0 10px var(--glow-cyan);
+}
+.tpl-controls{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.tpl-controls label{font-size:.7rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+.tpl-desc{font-size:.78rem;color:var(--dim);margin-bottom:12px;font-style:italic;}
+.tpl-preview{
+  border:1px solid var(--border);border-radius:4px;max-width:400px;
+  margin-bottom:14px;display:block;
+  box-shadow:0 0 16px rgba(0,240,255,.06);
+}
+.tpl-preview img{width:100%;border-radius:3px;display:block;}
+
+/* Help tab - man page */
+.man-page{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:24px 28px;font-size:.82rem;line-height:1.9;
+}
+.man-header{
+  font-size:1.1rem;font-weight:700;color:var(--cyan);letter-spacing:.2em;
+  text-shadow:0 0 12px var(--glow-cyan);margin-bottom:20px;
+  border-bottom:1px solid var(--border);padding-bottom:12px;
+}
+.man-section{margin-bottom:20px;}
+.man-section-title{
+  font-size:.8rem;font-weight:700;color:var(--bright);letter-spacing:.18em;
+  text-transform:uppercase;margin-bottom:8px;
+}
+.man-text{color:var(--text);}
+.man-text a,.man-link{
+  color:var(--cyan);text-decoration:none;cursor:pointer;
+  border-bottom:1px dashed rgba(0,240,255,.3);
+}
+.man-text a:hover,.man-link:hover{
+  text-shadow:0 0 6px var(--glow-cyan);border-bottom-color:var(--cyan);
+}
+.man-indent{padding-left:24px;}
+.man-dl{display:grid;grid-template-columns:180px 1fr;gap:4px 16px;margin:6px 0;}
+.man-dt{color:var(--success);font-weight:600;}
+.man-dd{color:var(--text);}
+.man-entity{color:var(--purple);font-weight:600;}
+.man-code{
+  background:#080810;border:1px solid var(--border);border-radius:3px;
+  padding:2px 6px;font-size:.78rem;color:var(--success);
+}
+.man-collapsible{margin-bottom:8px;}
+.man-collapsible summary{
+  cursor:pointer;color:var(--cyan);font-weight:600;letter-spacing:.1em;
+  font-size:.78rem;text-transform:uppercase;padding:6px 0;
+}
+.man-collapsible summary:hover{text-shadow:0 0 6px var(--glow-cyan);}
+.man-collapsible[open] summary{margin-bottom:8px;}
+.man-api-endpoint{
+  display:flex;gap:10px;align-items:baseline;padding:4px 0;font-size:.78rem;
+  border-bottom:1px solid rgba(26,26,46,.3);
+}
+.man-api-method{
+  font-weight:700;min-width:50px;
+}
+.man-api-method.get{color:var(--success);}
+.man-api-method.post{color:#ffc800;}
+.man-api-path{color:var(--text);}
+.man-api-desc{color:var(--dim);margin-left:auto;}
+
+/* Config section descriptions */
+.cfg-section-desc{
+  font-size:.75rem;color:var(--dim);margin-bottom:14px;line-height:1.6;
+}
+.cfg-section-desc a{
+  color:var(--cyan);text-decoration:none;border-bottom:1px dashed rgba(0,240,255,.3);
+  cursor:pointer;font-size:.7rem;
+}
+.cfg-section-desc a:hover{text-shadow:0 0 6px var(--glow-cyan);border-bottom-color:var(--cyan);}
+
 /* Light mode toggle */
 .theme-toggle{
   font-family:inherit;font-size:.7rem;background:none;border:1px solid var(--border);
@@ -449,6 +551,22 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
     </div>
   </section>
 
+  <!-- CARDS -->
+  <section class="view" id="view-cards">
+    <div class="card boot-hidden">
+      <div class="card-title">&gt; <span>LOVELACE_CARDS</span></div>
+      <div id="cardsContainer"></div>
+    </div>
+  </section>
+
+  <!-- TEMPLATES -->
+  <section class="view" id="view-templates">
+    <div class="card boot-hidden">
+      <div class="card-title">&gt; <span>TEMPLATE_PREVIEWS</span></div>
+      <div id="templatesContainer"></div>
+    </div>
+  </section>
+
   <!-- CONFIG -->
   <section class="view" id="view-config">
     <div class="boot-hidden">
@@ -464,6 +582,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 1: Printers -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; PRINTERS</div>
+        <div class="cfg-section-desc">Define your printers with individual URIs, types, and print schedules. <a onclick="switchToTab('help')">Learn more</a></div>
         <div id="cfgPrinterList"></div>
         <button class="btn-add-printer" id="btnAddPrinter">[ ADD_PRINTER ]</button>
       </div>
@@ -471,6 +590,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 2: Scheduling -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; SCHEDULING</div>
+        <div class="cfg-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgAutoPrint"><span class="toggle-track"></span></label>
           <span class="cfg-toggle-label">AUTO_PRINT_ENABLED</span>
@@ -490,6 +610,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 3: Discovery -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; DISCOVERY</div>
+        <div class="cfg-section-desc">Network scanning for printers via mDNS/DNS-SD. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgDiscoveryEnabled"><span class="toggle-track"></span></label>
           <span class="cfg-toggle-label">DISCOVERY_ENABLED</span>
@@ -521,6 +642,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 4: Templates & Content -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; TEMPLATES_&amp;_CONTENT</div>
+        <div class="cfg-section-desc">Default template and content settings for printed pages. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-row">
           <div class="cfg-field">
             <label class="cfg-label">DEFAULT_TEMPLATE</label>
@@ -556,6 +678,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 5: MQTT -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; MQTT</div>
+        <div class="cfg-section-desc">Home Assistant device discovery via MQTT broker. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgMqttEnabled"><span class="toggle-track"></span></label>
           <span class="cfg-toggle-label">MQTT.ENABLED</span>
@@ -609,6 +732,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       <!-- Section 6: Integration -->
       <div class="cfg-section boot-hidden">
         <div class="cfg-section-title">&gt; INTEGRATION</div>
+        <div class="cfg-section-desc">Home Assistant connection and API authentication. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-row">
           <div class="cfg-field">
             <label class="cfg-label">HA_URL</label>
@@ -659,6 +783,11 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
         <button class="btn danger" id="btnAuthClear">[ CLEAR ]</button>
       </div>
     </div>
+  </section>
+
+  <!-- HELP -->
+  <section class="view" id="view-help">
+    <div class="man-page boot-hidden" id="helpContent"></div>
   </section>
 </main>
 
@@ -734,7 +863,7 @@ function updateClock(){document.getElementById('clock').textContent=timeStr(new 
 setInterval(updateClock,1000);updateClock();
 
 // ── Tabs ──
-var TABS=['DASHBOARD','PRINTERS','DISCOVERY','CONFIG'];
+var TABS=['DASHBOARD','PRINTERS','DISCOVERY','CARDS','TEMPLATES','CONFIG','HELP'];
 var tabBar=document.getElementById('tabBar');
 TABS.forEach(function(t,i){
   if(i>0){var sep=document.createElement('span');sep.className='tab-sep';sep.textContent='|';tabBar.appendChild(sep);}
@@ -1176,6 +1305,270 @@ function serializePrinterCards() {
   return printers;
 }
 
+// ── Switch to tab helper ──
+function switchToTab(name) {
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t){
+    if (t.textContent.trim().toLowerCase() === name.toLowerCase()) {
+      switchTab(t);
+    }
+  });
+}
+
+// ── Cards View ──
+var cardStyles = ['full_dashboard','compact','glance','status_only','controls_only'];
+var cardStyleLabels = {full_dashboard:'Full Dashboard',compact:'Compact',glance:'Glance',status_only:'Status Only',controls_only:'Controls Only'};
+var cardYamlCache = {};
+
+function buildCards() {
+  var container = document.getElementById('cardsContainer');
+  if (!state.health || !state.health.printers || state.health.printers.length === 0) {
+    container.innerHTML = '<div style="color:var(--dim);font-size:.82rem;">&gt; No printers configured.</div>';
+    return;
+  }
+  container.innerHTML = state.health.printers.map(function(p) {
+    var pid = p.printer_id;
+    var styleOpts = cardStyles.map(function(s){
+      return '<option value="'+esc(s)+'">'+esc(cardStyleLabels[s]||s)+'</option>';
+    }).join('');
+    return '<div class="card-gen-block" data-card-pid="'+esc(pid)+'">' +
+      '<div class="card-gen-name">'+esc(p.name)+'</div>' +
+      '<div class="card-gen-controls">' +
+        '<label>STYLE: <select class="design-select cg-style" style="margin-left:4px;">'+styleOpts+'</select></label>' +
+        '<button class="btn cg-fetch">[ GENERATE ]</button>' +
+        '<button class="btn cg-copy" style="display:none;">[ COPY YAML ]</button>' +
+      '</div>' +
+      '<div class="yaml-block cg-yaml" style="display:none;"></div>' +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('.card-gen-block').forEach(function(block){
+    var pid = block.dataset.cardPid;
+    var styleEl = block.querySelector('.cg-style');
+    var fetchBtn = block.querySelector('.cg-fetch');
+    var copyBtn = block.querySelector('.cg-copy');
+    var yamlEl = block.querySelector('.cg-yaml');
+
+    fetchBtn.addEventListener('click', async function(){
+      var style = styleEl.value;
+      fetchBtn.disabled = true;
+      fetchBtn.textContent = '[ LOADING... ]';
+      try {
+        var data = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
+        var yaml = data.lovelace_yaml || '# No YAML returned';
+        yamlEl.textContent = yaml;
+        yamlEl.style.display = 'block';
+        copyBtn.style.display = 'inline-block';
+        cardYamlCache[pid] = yaml;
+      } catch(e) {
+        yamlEl.textContent = '# Error: ' + e.message;
+        yamlEl.style.display = 'block';
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = '[ GENERATE ]';
+      }
+    });
+
+    copyBtn.addEventListener('click', function(){
+      var yaml = cardYamlCache[pid] || yamlEl.textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(yaml).then(function(){
+          showToast('YAML copied to clipboard', 'ok');
+        }).catch(function(){ showToast('Copy failed', 'err'); });
+      } else {
+        showToast('Clipboard not available', 'err');
+      }
+    });
+  });
+}
+
+// ── Templates View ──
+var TEMPLATE_DESCS = {
+  color_bars: 'CMYK swatches and patterns to exercise all nozzles',
+  home_summary: 'HA overview with entity counts and key states',
+  weather_snapshot: 'Weather data with temperature, humidity, wind',
+  entity_report: 'State report for up to 12 configured entities',
+  hybrid: 'Combined weather and entity report'
+};
+
+function buildTemplates() {
+  var container = document.getElementById('templatesContainer');
+  if (!state.health || !state.health.printers || state.health.printers.length === 0) {
+    container.innerHTML = '<div style="color:var(--dim);font-size:.82rem;">&gt; No printers configured.</div>';
+    return;
+  }
+  var templates = state.health.supported_templates || Object.keys(TEMPLATE_DESCS);
+  container.innerHTML = state.health.printers.map(function(p) {
+    var pid = p.printer_id;
+    var tplOpts = templates.map(function(t){
+      return '<option value="'+esc(t)+'">'+esc(t)+'</option>';
+    }).join('');
+    return '<div class="tpl-block" data-tpl-pid="'+esc(pid)+'">' +
+      '<div class="tpl-name">'+esc(p.name)+'</div>' +
+      '<div class="tpl-controls">' +
+        '<label>TEMPLATE: <select class="design-select tp-select" style="margin-left:4px;">'+tplOpts+'</select></label>' +
+        '<button class="btn tp-preview-btn">[ PREVIEW ]</button>' +
+        '<button class="btn success tp-print-btn">[ EXECUTE PRINT ]</button>' +
+      '</div>' +
+      '<div class="tpl-desc tp-desc">'+esc(TEMPLATE_DESCS[templates[0]] || '')+'</div>' +
+      '<div class="tpl-preview tp-preview" style="display:none;"><img></div>' +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('.tpl-block').forEach(function(block){
+    var pid = block.dataset.tplPid;
+    var selectEl = block.querySelector('.tp-select');
+    var descEl = block.querySelector('.tp-desc');
+    var previewBtn = block.querySelector('.tp-preview-btn');
+    var printBtn = block.querySelector('.tp-print-btn');
+    var previewDiv = block.querySelector('.tp-preview');
+    var previewImg = previewDiv.querySelector('img');
+
+    selectEl.addEventListener('change', function(){
+      descEl.textContent = TEMPLATE_DESCS[selectEl.value] || '';
+      previewDiv.style.display = 'none';
+    });
+
+    previewBtn.addEventListener('click', function(){
+      var tpl = selectEl.value;
+      previewImg.src = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
+      previewDiv.style.display = 'block';
+    });
+
+    printBtn.addEventListener('click', async function(){
+      var tpl = selectEl.value;
+      printBtn.disabled = true;
+      printBtn.textContent = '[ PRINTING... ]';
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+          method: 'POST',
+          body: JSON.stringify({template: tpl, force: false})
+        });
+        showToast('Print job sent: ' + tpl + ' on ' + pid, 'ok');
+      } catch(e) {
+        showToast('Print failed: ' + e.message, 'err');
+      } finally {
+        printBtn.disabled = false;
+        printBtn.textContent = '[ EXECUTE PRINT ]';
+      }
+    });
+  });
+}
+
+// ── Help View ──
+function buildHelp() {
+  document.getElementById('helpContent').innerHTML =
+    '<div class="man-header">PRINTER_KEEPALIVE(1) &mdash; Manual Page</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">NAME</div>' +
+      '<div class="man-text man-indent">Printer Keepalive &mdash; Multi-printer IPP keepalive add-on for Home Assistant</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">DESCRIPTION</div>' +
+      '<div class="man-text man-indent">Prevents inkjet nozzle dry-out by scheduling periodic print jobs. Supports mDNS printer discovery and MQTT-based Home Assistant device integration. Each configured printer is exposed as a full HA device with controls, status sensors, and IPP statistics.</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">MAINTENANCE MODEL</div>' +
+      '<div class="man-text man-indent">History-aware scheduling. Tracks keepalive print jobs, IPP-reported page impressions, and a startup anchor timestamp. The next due date is computed as: <span class="man-code">next_due = last_print + cadence</span>. The scheduler evaluates all printers each tick and dispatches print jobs only when a printer is overdue.</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">PRINTER TYPES</div>' +
+      '<div class="man-text man-indent">' +
+        '<div class="man-dl">' +
+          '<span class="man-dt">inkjet</span><span class="man-dd">Benefits from frequent activity to prevent nozzle clogging. Default cadence: 168h (7 days).</span>' +
+          '<span class="man-dt">laser</span><span class="man-dd">Tolerates long idle periods. Periodic test prints verify toner and fuser health.</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">CONFIGURATION</div>' +
+      '<div class="man-text man-indent">Managed via the <a class="man-link" onclick="switchToTab(\'config\')">Config</a> tab. Sections:</div>' +
+      '<div class="man-indent" style="margin-top:8px;">' +
+        '<div class="man-dl">' +
+          '<span class="man-dt">PRINTERS</span><span class="man-dd">Define printers with URIs, types, cadences, and templates.</span>' +
+          '<span class="man-dt">SCHEDULING</span><span class="man-dd">Auto-print and IPP polling intervals.</span>' +
+          '<span class="man-dt">DISCOVERY</span><span class="man-dd">mDNS/DNS-SD network scanning parameters.</span>' +
+          '<span class="man-dt">TEMPLATES</span><span class="man-dd">Default template and content for prints.</span>' +
+          '<span class="man-dt">MQTT</span><span class="man-dd">HA device discovery. Each printer becomes a HA device.</span>' +
+          '<span class="man-dt">INTEGRATION</span><span class="man-dd">HA URL/token and API auth settings.</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">ENTITIES</div>' +
+      '<div class="man-text man-indent">Each printer exposes the following Home Assistant entities:</div>' +
+      '<div class="man-indent" style="margin-top:8px;">' +
+        '<div style="margin-bottom:8px;font-size:.75rem;color:var(--dim);letter-spacing:.1em;">CONTROLS</div>' +
+        '<div class="man-dl">' +
+          '<span class="man-entity">button.{id}_print</span><span class="man-dd">Trigger a keepalive print</span>' +
+          '<span class="man-entity">button.{id}_force_print</span><span class="man-dd">Force print (bypass cadence)</span>' +
+          '<span class="man-entity">button.{id}_poll</span><span class="man-dd">Poll IPP status now</span>' +
+          '<span class="man-entity">switch.{id}_enabled</span><span class="man-dd">Enable/disable auto-print</span>' +
+          '<span class="man-entity">number.{id}_cadence</span><span class="man-dd">Cadence in hours</span>' +
+          '<span class="man-entity">select.{id}_template</span><span class="man-dd">Active template selection</span>' +
+        '</div>' +
+        '<div style="margin:12px 0 8px;font-size:.75rem;color:var(--dim);letter-spacing:.1em;">STATUS</div>' +
+        '<div class="man-dl">' +
+          '<span class="man-entity">sensor.{id}_state</span><span class="man-dd">IPP printer-state</span>' +
+          '<span class="man-entity">sensor.{id}_health</span><span class="man-dd">Keepalive health (ok/warning/error)</span>' +
+          '<span class="man-entity">sensor.{id}_next_due</span><span class="man-dd">Next keepalive due timestamp</span>' +
+          '<span class="man-entity">binary_sensor.{id}_needed</span><span class="man-dd">Keepalive needed flag</span>' +
+        '</div>' +
+        '<div style="margin:12px 0 8px;font-size:.75rem;color:var(--dim);letter-spacing:.1em;">IPP STATS</div>' +
+        '<div class="man-dl">' +
+          '<span class="man-entity">sensor.{id}_impressions</span><span class="man-dd">Total page impressions</span>' +
+          '<span class="man-entity">sensor.{id}_uptime</span><span class="man-dd">Printer uptime</span>' +
+          '<span class="man-entity">sensor.{id}_ink_*</span><span class="man-dd">Ink/toner levels per color</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">TEMPLATES</div>' +
+      '<div class="man-text man-indent">Available print templates (preview in <a class="man-link" onclick="switchToTab(\'templates\')">Templates</a> tab):</div>' +
+      '<div class="man-indent" style="margin-top:8px;">' +
+        '<div class="man-dl">' +
+          '<span class="man-dt">color_bars</span><span class="man-dd">CMYK swatches and patterns to exercise all nozzles</span>' +
+          '<span class="man-dt">home_summary</span><span class="man-dd">HA overview with entity counts and key states</span>' +
+          '<span class="man-dt">weather_snapshot</span><span class="man-dd">Weather data with temperature, humidity, wind</span>' +
+          '<span class="man-dt">entity_report</span><span class="man-dd">State report for up to 12 configured entities</span>' +
+          '<span class="man-dt">hybrid</span><span class="man-dd">Combined weather and entity report</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">API</div>' +
+      '<details class="man-collapsible">' +
+        '<summary>&gt; EXPAND API REFERENCE</summary>' +
+        '<div class="man-indent">' +
+          '<div class="man-api-endpoint"><span class="man-api-method get">GET</span><span class="man-api-path">/health</span><span class="man-api-desc">System health and printer status</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method get">GET</span><span class="man-api-path">/config</span><span class="man-api-desc">Current configuration</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/config</span><span class="man-api-desc">Update configuration</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method get">GET</span><span class="man-api-path">/discovery</span><span class="man-api-desc">Discovery scan results</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/discovery/rescan</span><span class="man-api-desc">Trigger new mDNS scan</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method get">GET</span><span class="man-api-path">/printers/{id}/card</span><span class="man-api-desc">Lovelace card YAML</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method get">GET</span><span class="man-api-path">/printers/{id}/preview</span><span class="man-api-desc">Template preview image</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/print</span><span class="man-api-desc">Send print job</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/poll</span><span class="man-api-desc">Poll IPP status</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/settings</span><span class="man-api-desc">Update printer settings</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/actions/restart</span><span class="man-api-desc">Restart the add-on</span></div>' +
+        '</div>' +
+      '</details>' +
+    '</div>' +
+
+    '<div class="man-section">' +
+      '<div class="man-section-title">SEE ALSO</div>' +
+      '<div class="man-text man-indent"><a class="man-link" onclick="switchToTab(\'cards\')">Cards</a> tab for Lovelace YAML generation. <a class="man-link" onclick="switchToTab(\'templates\')">Templates</a> tab for print template previews. <a class="man-link" onclick="switchToTab(\'config\')">Config</a> tab for add-on configuration.</div>' +
+    '</div>';
+}
+
 // ── Refresh All ──
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -1190,6 +1583,8 @@ async function refreshAll() {
     renderSysReadout();
     renderHealthRows();
     renderPrinterCards();
+    buildCards();
+    buildTemplates();
 
     // Update version display
     if (state.health.version) {
@@ -1345,6 +1740,7 @@ function boot(){
 
 // ── Init ──
 boot();
+buildHelp();
 refreshAll();
 setInterval(refreshAll, 60000);
 </script>

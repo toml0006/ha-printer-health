@@ -2193,45 +2193,122 @@ def update_printer_setting(printer: PrinterConfig, updates: dict[str, Any]) -> d
     }
 
 
-def generate_lovelace_card_yaml(printer: PrinterConfig) -> str:
+def generate_lovelace_card_yaml(printer: PrinterConfig, style: str = "full") -> str:
     pid = printer.printer_id
-    return "\n".join(
-        [
-            "type: vertical-stack",
-            "cards:",
-            "  - type: entities",
-            f"    title: {printer.name} Health",
-            "    entities:",
-            f"      - sensor.{pid}_printer_state",
-            f"      - sensor.{pid}_health",
-            f"      - sensor.{pid}_last_keepalive_result",
-            f"      - binary_sensor.{pid}_keepalive_needed",
-            f"      - sensor.{pid}_time_since_last_print",
-            f"      - sensor.{pid}_next_keepalive_due",
-            f"      - sensor.{pid}_keepalive_print_count",
-            f"      - sensor.{pid}_queued_job_count",
-            f"      - sensor.{pid}_job_impressions_completed",
-            f"      - sensor.{pid}_media_sheets_completed",
-            f"      - sensor.{pid}_printer_up_time",
-            f"      - sensor.{pid}_lowest_marker_level",
-            "  - type: gauge",
-            f"    entity: sensor.{pid}_lowest_marker_level",
-            "    min: 0",
-            "    max: 100",
-            "    severity:",
-            "      green: 50",
-            "      yellow: 20",
-            "      red: 0",
-            "    name: Lowest Supply Level",
-            "  - type: entities",
-            "    title: Keepalive Controls",
-            "    entities:",
-            f"      - switch.{pid}_keepalive_enabled",
-            f"      - select.{pid}_template",
-            f"      - number.{pid}_cadence_hours",
-            f"      - button.{pid}_print_now",
-        ]
-    )
+    name = printer.name
+    builders = {
+        "full": _lovelace_full,
+        "compact": _lovelace_compact,
+        "glance": _lovelace_glance,
+        "status": _lovelace_status,
+        "controls": _lovelace_controls,
+    }
+    builder = builders.get(style, _lovelace_full)
+    return builder(pid, name)
+
+
+LOVELACE_CARD_STYLES = ("full", "compact", "glance", "status", "controls")
+
+
+def _lovelace_full(pid: str, name: str) -> str:
+    return "\n".join([
+        "type: vertical-stack",
+        "cards:",
+        "  - type: entities",
+        f"    title: {name} Health",
+        "    entities:",
+        f"      - sensor.{pid}_printer_state",
+        f"      - sensor.{pid}_health",
+        f"      - sensor.{pid}_last_keepalive_result",
+        f"      - binary_sensor.{pid}_keepalive_needed",
+        f"      - sensor.{pid}_time_since_last_print",
+        f"      - sensor.{pid}_next_keepalive_due",
+        f"      - sensor.{pid}_keepalive_print_count",
+        f"      - sensor.{pid}_queued_job_count",
+        f"      - sensor.{pid}_job_impressions_completed",
+        f"      - sensor.{pid}_media_sheets_completed",
+        f"      - sensor.{pid}_printer_up_time",
+        f"      - sensor.{pid}_lowest_marker_level",
+        "  - type: gauge",
+        f"    entity: sensor.{pid}_lowest_marker_level",
+        "    min: 0",
+        "    max: 100",
+        "    severity:",
+        "      green: 50",
+        "      yellow: 20",
+        "      red: 0",
+        "    name: Lowest Supply Level",
+        "  - type: entities",
+        "    title: Keepalive Controls",
+        "    entities:",
+        f"      - switch.{pid}_keepalive_enabled",
+        f"      - select.{pid}_template",
+        f"      - number.{pid}_cadence_hours",
+        f"      - button.{pid}_print_now",
+    ])
+
+
+def _lovelace_compact(pid: str, name: str) -> str:
+    return "\n".join([
+        "type: vertical-stack",
+        "cards:",
+        "  - type: entities",
+        f"    title: {name}",
+        "    entities:",
+        f"      - sensor.{pid}_printer_state",
+        f"      - sensor.{pid}_health",
+        f"      - sensor.{pid}_lowest_marker_level",
+        f"      - binary_sensor.{pid}_keepalive_needed",
+        f"      - sensor.{pid}_next_keepalive_due",
+        "  - type: entities",
+        "    entities:",
+        f"      - switch.{pid}_keepalive_enabled",
+        f"      - button.{pid}_print_now",
+    ])
+
+
+def _lovelace_glance(pid: str, name: str) -> str:
+    return "\n".join([
+        "type: glance",
+        f"title: {name}",
+        "columns: 4",
+        "show_state: true",
+        "entities:",
+        f"  - entity: sensor.{pid}_printer_state",
+        "    name: State",
+        f"  - entity: sensor.{pid}_health",
+        "    name: Health",
+        f"  - entity: sensor.{pid}_lowest_marker_level",
+        "    name: Supply",
+        f"  - entity: binary_sensor.{pid}_keepalive_needed",
+        "    name: Due",
+    ])
+
+
+def _lovelace_status(pid: str, name: str) -> str:
+    return "\n".join([
+        "type: entities",
+        f"title: {name} Status",
+        "entities:",
+        f"  - sensor.{pid}_printer_state",
+        f"  - sensor.{pid}_health",
+        f"  - sensor.{pid}_lowest_marker_level",
+        f"  - sensor.{pid}_time_since_last_print",
+        f"  - sensor.{pid}_next_keepalive_due",
+        f"  - sensor.{pid}_last_keepalive_result",
+    ])
+
+
+def _lovelace_controls(pid: str, name: str) -> str:
+    return "\n".join([
+        "type: entities",
+        f"title: {name} Controls",
+        "entities:",
+        f"  - switch.{pid}_keepalive_enabled",
+        f"  - select.{pid}_template",
+        f"  - number.{pid}_cadence_hours",
+        f"  - button.{pid}_print_now",
+    ])
 
 
 class MqttBridge:
@@ -4428,6 +4505,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(encoded)
 
+    def _write_bytes(self, status: HTTPStatus, data: bytes, content_type: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def _is_authorized(self) -> bool:
         if not AUTH_TOKEN:
             return True
@@ -4575,14 +4659,43 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if not printer:
                     self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Unknown printer id"})
                     return
+                style = query.get("style", ["full"])[0]
+                if style not in LOVELACE_CARD_STYLES:
+                    style = "full"
+                cards: dict[str, str] = {}
+                if style == "all":
+                    for s in LOVELACE_CARD_STYLES:
+                        cards[s] = generate_lovelace_card_yaml(printer, s)
                 self._write_json(
                     HTTPStatus.OK,
                     {
                         "ok": True,
                         "printer_id": printer.printer_id,
-                        "lovelace_yaml": generate_lovelace_card_yaml(printer),
+                        "style": style,
+                        "styles_available": list(LOVELACE_CARD_STYLES),
+                        "lovelace_yaml": generate_lovelace_card_yaml(printer, style),
+                        **({"all_cards": cards} if cards else {}),
                     },
                 )
+                return
+
+            if len(parts) == 3 and parts[2] == "preview":
+                printer = PRINTERS_BY_ID.get(parts[1])
+                if not printer:
+                    self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Unknown printer id"})
+                    return
+                template_name = query.get("template", [printer.template])[0]
+                if template_name not in SUPPORTED_TEMPLATES:
+                    template_name = printer.template
+                try:
+                    file_path, _meta = generate_template_image(printer, template_name)
+                    with open(file_path, "rb") as fh:
+                        data = fh.read()
+                    os.unlink(file_path)
+                    self._write_bytes(HTTPStatus.OK, data, "image/jpeg")
+                except Exception as exc:
+                    LOG.warning("Preview generation failed: %s", exc)
+                    self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(exc)})
                 return
 
         self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not Found"})

@@ -886,10 +886,358 @@
   .toast-ok { background: var(--mint); color: var(--black); }
   .toast-error { background: var(--coral); color: var(--white); }
 
+  /* CARDS TAB */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 22px;
+  }
+
+  .card-gen {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .card-gen:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .card-gen-header {
+    padding: 16px 22px;
+    border-bottom: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-gen-header h3 {
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .card-gen-body {
+    padding: 18px 22px;
+  }
+
+  .card-style-select {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: var(--white);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23000' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .yaml-block {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 16px 18px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: #1a1a2e;
+    color: #e0e0ff;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+  }
+
+  .btn-copy-yaml {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+    border: var(--border);
+    box-shadow: 3px 3px 0px #000;
+    background: var(--yellow);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .btn-copy-yaml:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .btn-copy-yaml:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px #000;
+  }
+
+  /* TEMPLATES TAB */
+  .templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 22px;
+  }
+
+  .template-card {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .template-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .template-card-header {
+    padding: 16px 22px;
+    border-bottom: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .template-card-header h3 {
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .template-card-body {
+    padding: 18px 22px;
+  }
+
+  .template-select {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border: var(--border);
+    box-shadow: 2px 2px 0px #000;
+    background: var(--white);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23000' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .template-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    opacity: 0.7;
+  }
+
+  .template-preview-img {
+    max-width: 400px;
+    width: 100%;
+    border: var(--border);
+    box-shadow: 3px 3px 0px #000;
+    display: block;
+    margin-bottom: 14px;
+    background: #f0f0e0;
+    min-height: 120px;
+  }
+
+  .template-card-actions {
+    padding: 0 22px 18px;
+  }
+
+  /* HELP TAB */
+  .help-section {
+    border: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--white);
+    margin-bottom: 24px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .help-section:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .help-section-header {
+    padding: 16px 22px;
+    border-bottom: var(--border);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  .help-section-body {
+    padding: 22px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .help-section-body p {
+    margin-bottom: 12px;
+  }
+
+  .help-section-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .help-section-body ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+  }
+
+  .help-section-body ul li {
+    padding: 8px 14px;
+    border: 2px solid var(--black);
+    margin-bottom: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .help-section-body ul li strong {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+  }
+
+  .help-link {
+    color: var(--blue);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 2px solid var(--blue);
+    cursor: pointer;
+  }
+
+  .help-link:hover {
+    background: var(--blue);
+    color: var(--white);
+  }
+
+  .help-entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+  }
+
+  .help-entity-item {
+    padding: 8px 14px;
+    border: 2px solid var(--black);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: #f5f5e8;
+  }
+
+  .help-collapsible {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .help-collapsible::after {
+    content: ' [+]';
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  .help-collapsible.open::after {
+    content: ' [-]';
+  }
+
+  .help-collapse-body {
+    display: none;
+    padding-top: 14px;
+  }
+
+  .help-collapse-body.open {
+    display: block;
+  }
+
+  .help-api-endpoint {
+    padding: 10px 16px;
+    border: 2px solid var(--black);
+    margin-bottom: 8px;
+    font-size: 13px;
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .help-api-method {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 11px;
+    padding: 2px 8px;
+    border: 2px solid var(--black);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .help-api-method.get { background: var(--mint); }
+  .help-api-method.post { background: var(--yellow); }
+
+  .help-api-path {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .help-api-desc {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* CONFIG SECTION DESCRIPTION */
+  .config-section-desc {
+    padding: 10px 22px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.7;
+  }
+
+  .config-section-desc .help-link {
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
   /* Responsive */
   @media (max-width: 900px) {
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .printer-cards { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .templates-grid { grid-template-columns: 1fr; }
+    .help-entity-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 600px) {
@@ -955,7 +1303,10 @@
   <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
   <button class="tab-btn" data-tab="printers">Printers</button>
   <button class="tab-btn" data-tab="discovery">Discovery</button>
+  <button class="tab-btn" data-tab="cards">Cards</button>
+  <button class="tab-btn" data-tab="templates">Templates</button>
   <button class="tab-btn" data-tab="config">Config</button>
+  <button class="tab-btn" data-tab="help">Help</button>
 </nav>
 
 <main class="main">
@@ -1033,6 +1384,18 @@
     </div>
   </div>
 
+  <!-- ==================== CARDS ==================== -->
+  <section class="view" id="view-cards">
+    <div class="section-title">Lovelace Cards</div>
+    <div class="cards-grid" id="cards-grid"></div>
+  </section>
+
+  <!-- ==================== TEMPLATES ==================== -->
+  <section class="view" id="view-templates">
+    <div class="section-title">Print Templates</div>
+    <div class="templates-grid" id="templates-grid"></div>
+  </section>
+
   <!-- ==================== CONFIG ==================== -->
   <div class="view" id="view-config">
     <div class="section-title">Add-on Configuration</div>
@@ -1049,6 +1412,7 @@
       <!-- Section 1: Printers -->
       <div class="config-section">
         <div class="config-section-header" style="background: var(--yellow);">Printers</div>
+        <div class="config-section-desc">Define your printers with individual URIs, types, and print schedules. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="printer-config-cards" id="printer-config-cards"></div>
           <button class="btn-add-printer" onclick="addPrinterCard()" style="margin-top:18px">+ Add Printer</button>
@@ -1058,6 +1422,7 @@
       <!-- Section 2: Scheduling -->
       <div class="config-section">
         <div class="config-section-header" style="background: #90CAF9;">Scheduling</div>
+        <div class="config-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field">
             <div class="toggle-wrap">
@@ -1084,6 +1449,7 @@
       <!-- Section 3: Discovery -->
       <div class="config-section">
         <div class="config-section-header" style="background: var(--coral); color: var(--white);">Discovery</div>
+        <div class="config-section-desc">Network scanning for printers via mDNS/DNS-SD. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field">
             <div class="toggle-wrap">
@@ -1125,6 +1491,7 @@
       <!-- Section 4: Templates & Content -->
       <div class="config-section">
         <div class="config-section-header" style="background: var(--mint);">Templates &amp; Content</div>
+        <div class="config-section-desc">Default template and content settings for printed pages. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field-row">
             <div class="config-field">
@@ -1162,6 +1529,7 @@
       <!-- Section 5: MQTT -->
       <div class="config-section">
         <div class="config-section-header" style="background: #CE93D8;">MQTT</div>
+        <div class="config-section-desc">Home Assistant device discovery via MQTT broker. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field">
             <div class="toggle-wrap">
@@ -1232,6 +1600,7 @@
       <!-- Section 6: Integration -->
       <div class="config-section">
         <div class="config-section-header" style="background: #FFB74D;">Integration</div>
+        <div class="config-section-desc">Home Assistant connection and API authentication. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field-row">
             <div class="config-field">
@@ -1268,6 +1637,9 @@
       <button class="btn" onclick="reloadConfig()">Reset</button>
     </div>
   </div>
+
+  <!-- ==================== HELP ==================== -->
+  <section class="view" id="view-help"></section>
 
 </main>
 
@@ -1887,6 +2259,312 @@ async function doRescan() {
   }
 }
 
+/* ===== Tab switch helper ===== */
+function switchToTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  var btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+  if (btn) btn.classList.add('active');
+  var view = document.getElementById('view-' + tabName);
+  if (view) view.classList.add('active');
+}
+
+/* ===== Render: Cards ===== */
+var cardStyles = ['full_dashboard', 'compact', 'glance', 'status_only', 'controls_only'];
+var cardStyleLabels = {
+  full_dashboard: 'Full Dashboard',
+  compact: 'Compact',
+  glance: 'Glance',
+  status_only: 'Status Only',
+  controls_only: 'Controls Only'
+};
+var cardYamlCache = {};
+
+async function fetchCardYaml(pid, style, codeEl) {
+  var cacheKey = pid + ':' + style;
+  if (cardYamlCache[cacheKey]) {
+    codeEl.textContent = cardYamlCache[cacheKey];
+    return;
+  }
+  codeEl.textContent = 'Loading...';
+  try {
+    var data = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
+    var yaml = data.lovelace_yaml || '# No YAML returned';
+    cardYamlCache[cacheKey] = yaml;
+    codeEl.textContent = yaml;
+  } catch (err) {
+    codeEl.textContent = '# Error: ' + err.message;
+  }
+}
+
+function buildCards(health) {
+  var grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  var printers = (health && health.printers) || [];
+  if (printers.length === 0) {
+    grid.innerHTML = '<p style="opacity:.5;font-weight:700;text-transform:uppercase;letter-spacing:1px">No printers configured.</p>';
+    return;
+  }
+  printers.forEach(function(p, i) {
+    var pid = p.printer_id;
+    var color = stripeColors[i % stripeColors.length];
+    var card = document.createElement('div');
+    card.className = 'card-gen';
+
+    var optionsHtml = cardStyles.map(function(s) {
+      return '<option value="' + s + '">' + esc(cardStyleLabels[s]) + '</option>';
+    }).join('');
+
+    var selectId = 'card-style-' + pid;
+    var codeId = 'card-yaml-' + pid;
+
+    card.innerHTML =
+      '<div style="height:8px;background:' + color + '"></div>' +
+      '<div class="card-gen-header"><h3 style="color:' + color + '">' + esc(p.name) + '</h3></div>' +
+      '<div class="card-gen-body">' +
+        '<label class="config-field-label" style="margin-bottom:8px">Card Style</label>' +
+        '<select class="card-style-select" id="' + selectId + '">' + optionsHtml + '</select>' +
+        '<div class="yaml-block" id="' + codeId + '">Loading...</div>' +
+        '<button class="btn-copy-yaml" onclick="copyCardYaml(\'' + esc(codeId) + '\')">Copy YAML</button>' +
+      '</div>';
+
+    grid.appendChild(card);
+
+    var selectEl = document.getElementById(selectId);
+    var codeEl = document.getElementById(codeId);
+
+    // Fetch initial
+    fetchCardYaml(pid, selectEl.value, codeEl);
+
+    // Re-fetch on change
+    selectEl.addEventListener('change', function() {
+      fetchCardYaml(pid, selectEl.value, codeEl);
+    });
+  });
+}
+
+function copyCardYaml(codeId) {
+  var el = document.getElementById(codeId);
+  if (!el) return;
+  var text = el.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('YAML copied');
+    });
+  } else {
+    showToast('Copy not supported', true);
+  }
+}
+
+/* ===== Render: Templates ===== */
+var templateList = ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid'];
+var templateDescriptions = {
+  color_bars: 'CMYK swatches and patterns to exercise all nozzles',
+  home_summary: 'HA overview with entity counts and key states',
+  weather_snapshot: 'Weather conditions with temperature, humidity, wind',
+  entity_report: 'State report for up to 12 configured entities',
+  hybrid: 'Combined weather and entity report'
+};
+
+function buildTemplates(health) {
+  var grid = document.getElementById('templates-grid');
+  grid.innerHTML = '';
+  var printers = (health && health.printers) || [];
+  if (printers.length === 0) {
+    grid.innerHTML = '<p style="opacity:.5;font-weight:700;text-transform:uppercase;letter-spacing:1px">No printers configured.</p>';
+    return;
+  }
+  printers.forEach(function(p, i) {
+    var pid = p.printer_id;
+    var color = stripeColors[i % stripeColors.length];
+    var card = document.createElement('div');
+    card.className = 'template-card';
+
+    var optionsHtml = templateList.map(function(t) {
+      var sel = (t === (p.template || 'color_bars')) ? ' selected' : '';
+      return '<option value="' + t + '"' + sel + '>' + esc(t) + '</option>';
+    }).join('');
+
+    var selectId = 'tpl-select-' + pid;
+    var imgId = 'tpl-img-' + pid;
+    var descId = 'tpl-desc-' + pid;
+    var defaultTpl = p.template || 'color_bars';
+
+    card.innerHTML =
+      '<div style="height:8px;background:' + color + '"></div>' +
+      '<div class="template-card-header"><h3 style="color:' + color + '">' + esc(p.name) + '</h3></div>' +
+      '<div class="template-card-body">' +
+        '<label class="config-field-label" style="margin-bottom:8px">Template</label>' +
+        '<select class="template-select" id="' + selectId + '">' + optionsHtml + '</select>' +
+        '<div class="template-desc" id="' + descId + '">' + esc(templateDescriptions[defaultTpl] || '') + '</div>' +
+        '<img class="template-preview-img" id="' + imgId + '" src="' + apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(defaultTpl)) + '" alt="Template preview" onerror="this.alt=\'Preview unavailable\';this.style.minHeight=\'60px\'">' +
+      '</div>' +
+      '<div class="template-card-actions">' +
+        '<button class="btn btn-yellow" onclick="doPrintTemplate(\'' + esc(pid) + '\',\'' + selectId + '\')">Print This</button>' +
+      '</div>';
+
+    grid.appendChild(card);
+
+    var selectEl = document.getElementById(selectId);
+    selectEl.addEventListener('change', function() {
+      var tpl = selectEl.value;
+      document.getElementById(imgId).src = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
+      document.getElementById(descId).textContent = templateDescriptions[tpl] || '';
+    });
+  });
+}
+
+async function doPrintTemplate(pid, selectId) {
+  var tpl = document.getElementById(selectId).value;
+  try {
+    await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+      method: 'POST',
+      body: JSON.stringify({ template: tpl, force: false })
+    });
+    showToast('Print sent: ' + tpl);
+    setTimeout(refreshAll, 2000);
+  } catch (err) {
+    showToast('Print failed: ' + err.message, true);
+  }
+}
+
+/* ===== Render: Help ===== */
+function buildHelp() {
+  var container = document.getElementById('view-help');
+  container.innerHTML =
+    '<div class="section-title">Documentation</div>' +
+
+    /* What is Printer Keepalive? */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:var(--yellow)">What is Printer Keepalive?</div>' +
+      '<div class="help-section-body">' +
+        '<p>Multi-printer IPP keepalive add-on for Home Assistant. Prevents inkjet nozzle dry-out by printing maintenance pages on a configurable schedule. Features mDNS/DNS-SD printer discovery and MQTT device exposure for full HA integration.</p>' +
+      '</div>' +
+    '</div>' +
+
+    /* Maintenance Model */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:var(--blue);color:var(--white)">Maintenance Model</div>' +
+      '<div class="help-section-body">' +
+        '<p>History-aware scheduling tracks print activity from three sources: keepalive jobs, IPP impression counters, and add-on startup detection. The next maintenance due date is calculated as: <strong>next_due = last_print + cadence</strong>.</p>' +
+        '<p>This ensures printers that see regular use are not over-maintained, while idle printers receive timely keepalive prints.</p>' +
+      '</div>' +
+    '</div>' +
+
+    /* Inkjet vs Laser */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:var(--coral);color:var(--white)">Inkjet vs Laser</div>' +
+      '<div class="help-section-body">' +
+        '<p><strong>Inkjet:</strong> Requires frequent activity to prevent nozzle clogging and ink dry-out. Short cadences (24-72h) recommended.</p>' +
+        '<p><strong>Laser:</strong> Tolerates long idle periods without degradation. Periodic test prints are still useful for detecting toner and fuser issues early. Longer cadences (168-720h) are typical.</p>' +
+      '</div>' +
+    '</div>' +
+
+    /* Configuration Guide */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:var(--mint)">Configuration Guide</div>' +
+      '<div class="help-section-body">' +
+        '<p>The <a class="help-link" onclick="switchToTab(\'config\')">Config</a> tab contains all add-on settings organized in sections:</p>' +
+        '<ul>' +
+          '<li><strong>Printers</strong> &mdash; Define printers with URIs, types, cadences, and templates.</li>' +
+          '<li><strong>Scheduling</strong> &mdash; Auto-print scheduler and IPP polling.</li>' +
+          '<li><strong>Discovery</strong> &mdash; mDNS/DNS-SD network scanning.</li>' +
+          '<li><strong>Templates &amp; Content</strong> &mdash; Default template and content for printed pages.</li>' +
+          '<li><strong>MQTT</strong> &mdash; HA device discovery. Each printer becomes an HA device.</li>' +
+          '<li><strong>Integration</strong> &mdash; HA URL/token for non-Supervisor installs. API auth.</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>' +
+
+    /* Exposed HA Entities */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:#CE93D8">Exposed HA Entities</div>' +
+      '<div class="help-section-body">' +
+        '<p><strong>Controls</strong></p>' +
+        '<div class="help-entity-grid">' +
+          '<div class="help-entity-item">switch (on/off)</div>' +
+          '<div class="help-entity-item">select (template)</div>' +
+          '<div class="help-entity-item">number (cadence)</div>' +
+          '<div class="help-entity-item">button (print now)</div>' +
+        '</div>' +
+        '<p><strong>Status</strong></p>' +
+        '<div class="help-entity-grid">' +
+          '<div class="help-entity-item">binary_sensor (health)</div>' +
+          '<div class="help-entity-item">sensor (state)</div>' +
+          '<div class="help-entity-item">sensor (template)</div>' +
+          '<div class="help-entity-item">sensor (cadence)</div>' +
+          '<div class="help-entity-item">sensor (last print)</div>' +
+          '<div class="help-entity-item">sensor (next due)</div>' +
+          '<div class="help-entity-item">sensor (health status)</div>' +
+        '</div>' +
+        '<p><strong>IPP Stats</strong></p>' +
+        '<div class="help-entity-grid">' +
+          '<div class="help-entity-item">sensor (impressions)</div>' +
+          '<div class="help-entity-item">sensor (uptime)</div>' +
+          '<div class="help-entity-item">sensor (state message)</div>' +
+          '<div class="help-entity-item">sensor (marker levels)</div>' +
+          '<div class="help-entity-item">sensor (printer info)</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    /* Print Templates */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:#FFB74D">Print Templates</div>' +
+      '<div class="help-section-body">' +
+        '<p>Preview and print templates from the <a class="help-link" onclick="switchToTab(\'templates\')">Templates</a> tab.</p>' +
+        '<ul>' +
+          '<li><strong>color_bars</strong> &mdash; CMYK swatches and patterns to exercise all nozzles</li>' +
+          '<li><strong>home_summary</strong> &mdash; HA overview with entity counts and key states</li>' +
+          '<li><strong>weather_snapshot</strong> &mdash; Weather conditions with temperature, humidity, wind</li>' +
+          '<li><strong>entity_report</strong> &mdash; State report for up to 12 configured entities</li>' +
+          '<li><strong>hybrid</strong> &mdash; Combined weather and entity report</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>' +
+
+    /* API Reference */
+    '<div class="help-section">' +
+      '<div class="help-section-header help-collapsible" style="background:#f5f5e8" onclick="toggleHelpCollapse(this)">API Reference</div>' +
+      '<div class="help-collapse-body">' +
+        '<div style="padding:22px">' +
+          '<div class="help-api-endpoint"><span class="help-api-method get">GET</span><span class="help-api-path">/health</span><span class="help-api-desc">Overall status and printer health</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method get">GET</span><span class="help-api-path">/config</span><span class="help-api-desc">Current configuration</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/config</span><span class="help-api-desc">Update configuration</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method get">GET</span><span class="help-api-path">/discovery</span><span class="help-api-desc">Discovered printers</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/discovery/rescan</span><span class="help-api-desc">Trigger network rescan</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/printers/{id}/print</span><span class="help-api-desc">Print a page</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/printers/{id}/poll</span><span class="help-api-desc">Poll IPP status</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/printers/{id}/settings</span><span class="help-api-desc">Update printer settings</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method get">GET</span><span class="help-api-path">/printers/{id}/card?style=</span><span class="help-api-desc">Lovelace card YAML</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method get">GET</span><span class="help-api-path">/printers/{id}/preview?template=</span><span class="help-api-desc">Template preview image</span></div>' +
+          '<div class="help-api-endpoint"><span class="help-api-method post">POST</span><span class="help-api-path">/actions/restart</span><span class="help-api-desc">Restart add-on</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    /* Lovelace Cards */
+    '<div class="help-section">' +
+      '<div class="help-section-header" style="background:var(--yellow)">Lovelace Cards</div>' +
+      '<div class="help-section-body">' +
+        '<p>Generate Lovelace card YAML from the <a class="help-link" onclick="switchToTab(\'cards\')">Cards</a> tab. Five styles available:</p>' +
+        '<ul>' +
+          '<li><strong>Full Dashboard</strong> &mdash; Complete printer panel with all controls and status</li>' +
+          '<li><strong>Compact</strong> &mdash; Condensed single-row card</li>' +
+          '<li><strong>Glance</strong> &mdash; Minimal glance-style entity card</li>' +
+          '<li><strong>Status Only</strong> &mdash; Read-only status display</li>' +
+          '<li><strong>Controls Only</strong> &mdash; Action buttons without status details</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>';
+}
+
+function toggleHelpCollapse(header) {
+  header.classList.toggle('open');
+  var body = header.nextElementSibling;
+  if (body) body.classList.toggle('open');
+}
+
 /* ===== Refresh all data ===== */
 async function refreshDiscovery() {
   try {
@@ -1905,6 +2583,8 @@ async function refreshAll() {
     state.health = health;
     renderDashboard(health);
     renderPrinters(health);
+    buildCards(health);
+    buildTemplates(health);
   } catch (err) {
     console.error('Health fetch error:', err);
     showToast('Failed to load health: ' + err.message, true);
@@ -1932,6 +2612,7 @@ async function refreshAll() {
 }
 
 /* ===== Init ===== */
+buildHelp();
 refreshAll();
 setInterval(refreshAll, 60000);
 </script>

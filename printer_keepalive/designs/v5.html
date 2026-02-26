@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__APP_NAME__</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
@@ -483,6 +483,97 @@ body{
   .summary-grid{grid-template-columns:1fr;}
   .tab{padding:10px 10px;font-size:11px;letter-spacing:0;}
 }
+
+/* ── Cards Tab ── */
+.card-gen-card{
+  background:var(--card-background-color);border-radius:12px;
+  box-shadow:var(--card-shadow);padding:20px;margin-bottom:16px;
+}
+.card-gen-header{font-size:16px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.card-gen-controls{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.card-gen-controls label{font-size:12px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;}
+.yaml-block{
+  background:var(--code-bg);border:1px solid var(--divider-color);border-radius:8px;
+  padding:16px;font-family:'Roboto Mono',monospace;font-size:13px;line-height:1.6;
+  color:var(--primary-text-color);overflow-x:auto;white-space:pre;max-height:400px;
+  overflow-y:auto;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* ── Templates Tab ── */
+.tpl-card{
+  background:var(--card-background-color);border-radius:12px;
+  box-shadow:var(--card-shadow);padding:20px;margin-bottom:16px;
+}
+.tpl-header{font-size:16px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.tpl-controls{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.tpl-controls label{font-size:12px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;}
+.tpl-desc{font-size:13px;color:var(--secondary-text-color);margin-bottom:12px;line-height:1.5;}
+.tpl-preview{
+  border-radius:8px;overflow:hidden;box-shadow:var(--card-shadow);
+  max-width:400px;margin-bottom:12px;background:var(--code-bg);
+  min-height:100px;display:flex;align-items:center;justify-content:center;
+}
+.tpl-preview img{width:100%;height:auto;display:block;}
+.tpl-preview .tpl-placeholder{color:var(--secondary-text-color);font-size:13px;padding:24px;}
+
+/* ── Help Tab ── */
+.help-card{
+  background:var(--card-background-color);border-radius:12px;
+  box-shadow:var(--card-shadow);padding:20px;margin-bottom:16px;
+}
+.help-card-title{font-size:18px;font-weight:500;margin-bottom:12px;color:var(--primary-text-color);}
+.help-card p,.help-card li{font-size:14px;line-height:1.7;color:var(--primary-text-color);margin-bottom:8px;}
+.help-card ul{padding-left:20px;margin-bottom:12px;}
+.help-card li{margin-bottom:4px;}
+.help-card a{color:var(--primary-color);text-decoration:none;font-weight:500;}
+.help-card a:hover{text-decoration:underline;}
+.help-card .help-divider{height:1px;background:var(--divider-color);margin:16px 0;}
+.help-card code{
+  font-family:'Roboto Mono',monospace;font-size:13px;
+  background:var(--code-bg);padding:2px 6px;border-radius:4px;
+}
+.help-card .help-subtitle{font-size:15px;font-weight:500;margin:12px 0 8px;color:var(--primary-text-color);}
+
+/* Help: expansion panel */
+.help-expand{
+  background:var(--card-background-color);border-radius:12px;
+  box-shadow:var(--card-shadow);margin-bottom:16px;overflow:hidden;
+}
+.help-expand-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;cursor:pointer;user-select:none;
+}
+.help-expand-header:hover{background:var(--hover-bg);}
+.help-expand-title{font-size:18px;font-weight:500;color:var(--primary-text-color);}
+.help-expand-chevron{
+  width:24px;height:24px;color:var(--secondary-text-color);
+  transition:transform .2s;flex-shrink:0;
+}
+.help-expand.collapsed .help-expand-chevron{transform:rotate(-90deg);}
+.help-expand.collapsed .help-expand-body{display:none;}
+.help-expand-body{padding:0 20px 20px;}
+.help-expand-body p{font-size:14px;line-height:1.7;color:var(--primary-text-color);margin-bottom:8px;}
+.help-expand-body code{
+  font-family:'Roboto Mono',monospace;font-size:13px;
+  background:var(--code-bg);padding:2px 6px;border-radius:4px;
+}
+.api-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+.api-table th{
+  text-align:left;padding:8px 12px;color:var(--secondary-text-color);font-weight:500;
+  border-bottom:2px solid var(--divider-color);font-size:12px;
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.api-table td{padding:8px 12px;border-bottom:1px solid var(--divider-color);}
+.api-table tr:last-child td{border-bottom:none;}
+.api-table code{font-family:'Roboto Mono',monospace;font-size:12px;background:var(--code-bg);padding:1px 5px;border-radius:3px;}
+
+/* Config section descriptions */
+.cfg-section-desc{
+  font-size:13px;color:var(--secondary-text-color);padding:0 20px 12px;line-height:1.5;
+  margin-top:-8px;
+}
+.cfg-section-desc a{color:var(--primary-color);text-decoration:none;font-weight:500;font-size:12px;}
+.cfg-section-desc a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -569,6 +660,16 @@ body{
     </div>
   </section>
 
+  <!-- CARDS -->
+  <section class="view" id="view-cards">
+    <div id="cardsContent"><div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">Loading printers...</div></div></div>
+  </section>
+
+  <!-- TEMPLATES -->
+  <section class="view" id="view-templates">
+    <div id="templatesContent"><div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">Loading printers...</div></div></div>
+  </section>
+
   <!-- CONFIG -->
   <section class="view" id="view-config">
     <div class="config-toolbar">
@@ -589,6 +690,7 @@ body{
           <span class="cfg-section-title">Printers</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Define your printers with individual URIs, types, and print schedules. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div id="cfgPrinterList"></div>
           <button class="ha-btn" id="btnAddPrinter" type="button">ADD PRINTER</button>
@@ -601,6 +703,7 @@ body{
           <span class="cfg-section-title">Scheduling</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div class="cfg-toggle-row">
             <div>
@@ -630,6 +733,7 @@ body{
           <span class="cfg-section-title">Discovery</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Network scanning for printers via mDNS/DNS-SD. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div class="cfg-toggle-row">
             <div>
@@ -675,6 +779,7 @@ body{
           <span class="cfg-section-title">Templates &amp; Content</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Default template and content settings for printed pages. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div class="cfg-field">
             <label class="cfg-field-label">Default Template</label>
@@ -718,6 +823,7 @@ body{
           <span class="cfg-section-title">MQTT</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Home Assistant device discovery via MQTT broker. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div class="cfg-toggle-row">
             <div>
@@ -796,6 +902,7 @@ body{
           <span class="cfg-section-title">Integration</span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
+        <div class="cfg-section-desc">Home Assistant connection and API authentication. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
         <div class="cfg-section-body">
           <div class="cfg-field">
             <label class="cfg-field-label">Home Assistant URL</label>
@@ -829,6 +936,11 @@ body{
     </div>
 
     <div class="config-status" id="configStatus"></div>
+  </section>
+
+  <!-- HELP -->
+  <section class="view" id="view-help">
+    <div id="helpContent"></div>
   </section>
 </main>
 
@@ -896,7 +1008,7 @@ function showToast(msg, type) {
 }
 
 // ── Tabs ──
-var TABS = ['Dashboard', 'Printers', 'Discovery', 'Config'];
+var TABS = ['Dashboard', 'Printers', 'Discovery', 'Cards', 'Templates', 'Config', 'Help'];
 var tabBar = document.getElementById('tabBar');
 TABS.forEach(function(t, i) {
   var btn = document.createElement('button');
@@ -1468,6 +1580,263 @@ document.getElementById('btnAddPrinter').addEventListener('click', function() {
   reindexPrinterCards();
 });
 
+// ── Switch to Tab by name ──
+function switchToTab(name) {
+  var btn = document.querySelector('.tab[data-view="view-' + name.toLowerCase() + '"]');
+  if (btn) switchTab(btn);
+}
+
+// ── Cards Tab ──
+function buildCards() {
+  var container = document.getElementById('cardsContent');
+  if (!state.health || !state.health.printers || !state.health.printers.length) {
+    container.innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured.</div></div>';
+    return;
+  }
+  var styles = ['full_dashboard', 'compact', 'glance', 'status_only', 'controls_only'];
+  var styleLabels = { full_dashboard: 'Full Dashboard', compact: 'Compact', glance: 'Glance', status_only: 'Status Only', controls_only: 'Controls Only' };
+  container.innerHTML = state.health.printers.map(function(p) {
+    var pid = p.printer_id;
+    var styleOpts = styles.map(function(s) {
+      return '<option value="' + s + '">' + esc(styleLabels[s]) + '</option>';
+    }).join('');
+    return '<div class="card-gen-card" data-card-pid="' + esc(pid) + '">' +
+      '<div class="card-gen-header">' + esc(p.name) + '</div>' +
+      '<div class="card-gen-controls">' +
+        '<label>Style</label>' +
+        '<select class="control-select cg-style">' + styleOpts + '</select>' +
+        '<button class="ha-btn cg-generate">GENERATE</button>' +
+        '<button class="ha-btn cg-copy" style="display:none;">COPY YAML</button>' +
+      '</div>' +
+      '<div class="yaml-block cg-yaml" style="display:none;"></div>' +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('.card-gen-card').forEach(function(card) {
+    var pid = card.dataset.cardPid;
+    var styleEl = card.querySelector('.cg-style');
+    var yamlEl = card.querySelector('.cg-yaml');
+    var copyBtn = card.querySelector('.cg-copy');
+    card.querySelector('.cg-generate').addEventListener('click', async function() {
+      try {
+        var style = styleEl.value;
+        var resp = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
+        yamlEl.textContent = resp.lovelace_yaml || '# No YAML returned';
+        yamlEl.style.display = 'block';
+        copyBtn.style.display = 'inline-block';
+      } catch (e) {
+        yamlEl.textContent = '# Error: ' + e.message;
+        yamlEl.style.display = 'block';
+        copyBtn.style.display = 'none';
+      }
+    });
+    copyBtn.addEventListener('click', function() {
+      var text = yamlEl.textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+          showToast('YAML copied to clipboard', 'ok');
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('YAML copied to clipboard', 'ok');
+      }
+    });
+  });
+}
+
+// ── Templates Tab ──
+var TEMPLATE_DESCRIPTIONS = {
+  color_bars: 'CMYK swatches and patterns to exercise all nozzles',
+  home_summary: 'HA overview with entity counts and key states',
+  weather_snapshot: 'Weather data with temperature, humidity, wind',
+  entity_report: 'State report for up to 12 configured entities',
+  hybrid: 'Combined weather and entity report'
+};
+
+function buildTemplates() {
+  var container = document.getElementById('templatesContent');
+  if (!state.health || !state.health.printers || !state.health.printers.length) {
+    container.innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured.</div></div>';
+    return;
+  }
+  var tpls = ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid'];
+  container.innerHTML = state.health.printers.map(function(p) {
+    var pid = p.printer_id;
+    var tplOpts = tpls.map(function(t) {
+      return '<option value="' + t + '"' + (t === (p.template || 'color_bars') ? ' selected' : '') + '>' + esc(t) + '</option>';
+    }).join('');
+    return '<div class="tpl-card" data-tpl-pid="' + esc(pid) + '">' +
+      '<div class="tpl-header">' + esc(p.name) + '</div>' +
+      '<div class="tpl-controls">' +
+        '<label>Template</label>' +
+        '<select class="control-select tp-select">' + tplOpts + '</select>' +
+        '<button class="ha-btn tp-preview-btn">PREVIEW</button>' +
+        '<button class="ha-btn tp-print">PRINT TEMPLATE</button>' +
+      '</div>' +
+      '<div class="tpl-desc tp-desc">' + esc(TEMPLATE_DESCRIPTIONS[p.template || 'color_bars'] || '') + '</div>' +
+      '<div class="tpl-preview tp-preview"><span class="tpl-placeholder">Select a template and click Preview</span></div>' +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('.tpl-card').forEach(function(card) {
+    var pid = card.dataset.tplPid;
+    var selectEl = card.querySelector('.tp-select');
+    var descEl = card.querySelector('.tp-desc');
+    var previewEl = card.querySelector('.tp-preview');
+    selectEl.addEventListener('change', function() {
+      descEl.textContent = TEMPLATE_DESCRIPTIONS[selectEl.value] || '';
+    });
+    card.querySelector('.tp-preview-btn').addEventListener('click', function() {
+      var tpl = selectEl.value;
+      var imgUrl = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
+      previewEl.innerHTML = '<img src="' + esc(imgUrl) + '" alt="Preview of ' + esc(tpl) + '" onerror="this.parentNode.innerHTML=\'<span class=tpl-placeholder>Preview not available</span>\'">';
+    });
+    card.querySelector('.tp-print').addEventListener('click', async function() {
+      try {
+        var tpl = selectEl.value;
+        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+          method: 'POST', body: JSON.stringify({ template: tpl, force: true })
+        });
+        showToast('Print sent to ' + pid, 'ok');
+      } catch (e) {
+        showToast('Print failed: ' + e.message, 'err');
+      }
+    });
+  });
+}
+
+// ── Help Tab ──
+function buildHelp() {
+  var chevronSvg = '<svg class="help-expand-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  document.getElementById('helpContent').innerHTML =
+    // About
+    '<div class="help-card">' +
+      '<div class="help-card-title">About Printer Keepalive</div>' +
+      '<p>Multi-printer IPP keepalive add-on for Home Assistant. Prevents inkjet nozzle dry-out by scheduling periodic print jobs. Features mDNS/DNS-SD printer discovery and MQTT device exposure for full HA integration.</p>' +
+    '</div>' +
+
+    // How It Works
+    '<div class="help-card">' +
+      '<div class="help-card-title">How It Works</div>' +
+      '<p>Printer Keepalive uses history-aware scheduling to determine when each printer needs a keepalive print. It tracks the last print time from multiple sources: keepalive jobs sent by this add-on, IPP page-count impressions reported by the printer, and add-on startup time.</p>' +
+      '<p>The scheduling formula is simple: <code>next_due = last_print + cadence</code>. When a printer becomes overdue, the scheduler automatically sends a print job using the configured template.</p>' +
+    '</div>' +
+
+    // Inkjet vs Laser
+    '<div class="help-card">' +
+      '<div class="help-card-title">Inkjet vs Laser</div>' +
+      '<p><strong>Inkjet printers</strong> require frequent prints to prevent nozzle clogging and ink drying. A cadence of 48-168 hours is recommended depending on your environment.</p>' +
+      '<p><strong>Laser printers</strong> tolerate long idle periods since toner does not dry out. However, periodic test prints are still useful to verify functionality, exercise paper feed mechanisms, and monitor toner levels.</p>' +
+    '</div>' +
+
+    // Configuration Guide
+    '<div class="help-card">' +
+      '<div class="help-card-title">Configuration Guide</div>' +
+      '<p>Configure the add-on in the <a href="#" onclick="switchToTab(\'config\');return false;">Config tab</a>. The configuration is organized into sections:</p>' +
+      '<ul>' +
+        '<li><strong>Printers</strong> &mdash; Define printers with URIs, types, cadences, templates.</li>' +
+        '<li><strong>Scheduling</strong> &mdash; Auto-print scheduler and IPP polling.</li>' +
+        '<li><strong>Discovery</strong> &mdash; mDNS/DNS-SD network scanning.</li>' +
+        '<li><strong>Templates &amp; Content</strong> &mdash; Default template and content for prints.</li>' +
+        '<li><strong>MQTT</strong> &mdash; HA device discovery. Each printer becomes an HA device.</li>' +
+        '<li><strong>Integration</strong> &mdash; HA URL/token for non-Supervisor. API auth.</li>' +
+      '</ul>' +
+    '</div>' +
+
+    // Home Assistant Entities
+    '<div class="help-card">' +
+      '<div class="help-card-title">Home Assistant Entities</div>' +
+      '<div class="help-subtitle">Controls</div>' +
+      '<ul>' +
+        '<li><code>switch.printer_keepalive_{name}_enabled</code> &mdash; Enable/disable keepalive for this printer</li>' +
+        '<li><code>select.printer_keepalive_{name}_template</code> &mdash; Select the print template</li>' +
+        '<li><code>number.printer_keepalive_{name}_cadence</code> &mdash; Set cadence in hours</li>' +
+        '<li><code>button.printer_keepalive_{name}_print</code> &mdash; Trigger an immediate print</li>' +
+      '</ul>' +
+      '<div class="help-subtitle">Status</div>' +
+      '<ul>' +
+        '<li><code>binary_sensor.printer_keepalive_{name}_health</code> &mdash; Overall health (ok/warning/error)</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_state</code> &mdash; Printer state (idle, printing, etc.)</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_next_due</code> &mdash; Next keepalive due timestamp</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_last_print</code> &mdash; Last print timestamp</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_keepalive_needed</code> &mdash; Whether keepalive is overdue</li>' +
+      '</ul>' +
+      '<div class="help-subtitle">IPP Stats</div>' +
+      '<ul>' +
+        '<li><code>sensor.printer_keepalive_{name}_ipp_page_count</code> &mdash; Total page count from IPP</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_ipp_color_supported</code> &mdash; Color support</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_ipp_duplex_supported</code> &mdash; Duplex support</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_ipp_printer_make</code> &mdash; Printer make/model</li>' +
+        '<li><code>sensor.printer_keepalive_{name}_ipp_firmware</code> &mdash; Firmware version</li>' +
+      '</ul>' +
+    '</div>' +
+
+    // Print Templates
+    '<div class="help-card">' +
+      '<div class="help-card-title">Print Templates</div>' +
+      '<p>Preview and print templates from the <a href="#" onclick="switchToTab(\'templates\');return false;">Templates tab</a>.</p>' +
+      '<ul>' +
+        '<li><strong>color_bars</strong> &mdash; CMYK swatches and patterns to exercise all nozzles</li>' +
+        '<li><strong>home_summary</strong> &mdash; HA overview with entity counts and key states</li>' +
+        '<li><strong>weather_snapshot</strong> &mdash; Weather data with temperature, humidity, wind</li>' +
+        '<li><strong>entity_report</strong> &mdash; State report for up to 12 configured entities</li>' +
+        '<li><strong>hybrid</strong> &mdash; Combined weather and entity report</li>' +
+      '</ul>' +
+    '</div>' +
+
+    // API Reference (collapsible)
+    '<div class="help-expand collapsed">' +
+      '<div class="help-expand-header">' +
+        '<span class="help-expand-title">API Reference</span>' +
+        chevronSvg +
+      '</div>' +
+      '<div class="help-expand-body">' +
+        '<p>All endpoints are relative to the add-on base URL. Authentication via <code>Authorization: Bearer &lt;token&gt;</code> header when configured.</p>' +
+        '<table class="api-table">' +
+          '<thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>' +
+          '<tbody>' +
+            '<tr><td><code>GET</code></td><td><code>/health</code></td><td>System health and printer summary</td></tr>' +
+            '<tr><td><code>GET</code></td><td><code>/config</code></td><td>Current configuration</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/config</code></td><td>Update configuration</td></tr>' +
+            '<tr><td><code>GET</code></td><td><code>/discovery</code></td><td>Discovery results</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/discovery/rescan</code></td><td>Trigger network rescan</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/printers/{id}/print</code></td><td>Send print job</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/printers/{id}/poll</code></td><td>Poll printer status via IPP</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/printers/{id}/settings</code></td><td>Update printer settings</td></tr>' +
+            '<tr><td><code>GET</code></td><td><code>/printers/{id}/card?style=</code></td><td>Generate Lovelace card YAML</td></tr>' +
+            '<tr><td><code>GET</code></td><td><code>/printers/{id}/preview?template=</code></td><td>Template preview image (JPEG)</td></tr>' +
+            '<tr><td><code>POST</code></td><td><code>/actions/restart</code></td><td>Restart the add-on</td></tr>' +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>' +
+
+    // Dashboard Cards
+    '<div class="help-card">' +
+      '<div class="help-card-title">Dashboard Cards</div>' +
+      '<p>Generate Lovelace card YAML in the <a href="#" onclick="switchToTab(\'cards\');return false;">Cards tab</a>. Five styles available:</p>' +
+      '<ul>' +
+        '<li><strong>Full Dashboard</strong> &mdash; Complete printer status with all controls and stats</li>' +
+        '<li><strong>Compact</strong> &mdash; Condensed view with key status and controls</li>' +
+        '<li><strong>Glance</strong> &mdash; Minimal glance card for overview dashboards</li>' +
+        '<li><strong>Status Only</strong> &mdash; Read-only status display without controls</li>' +
+        '<li><strong>Controls Only</strong> &mdash; Action buttons and settings without status details</li>' +
+      '</ul>' +
+    '</div>';
+
+  // Bind expand/collapse
+  document.querySelectorAll('.help-expand-header').forEach(function(header) {
+    header.addEventListener('click', function() {
+      header.parentElement.classList.toggle('collapsed');
+    });
+  });
+}
+
 // ── Refresh All ──
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -1479,6 +1848,8 @@ async function refreshAll() {
     renderHealthRows();
     renderSysInfo();
     renderPrinterCards();
+    buildCards();
+    buildTemplates();
     if (state.health.version) {
       document.getElementById('appVersion').textContent = 'v' + state.health.version;
     }
@@ -1589,6 +1960,7 @@ document.getElementById('btnConfigRestart').addEventListener('click', async func
 
 // ── Init ──
 renderSummary();
+buildHelp();
 refreshAll();
 setInterval(refreshAll, 60000);
 </script>

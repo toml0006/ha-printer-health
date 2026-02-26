@@ -951,6 +951,265 @@ body {
   color: #ff453a;
 }
 
+/* Cards view - YAML code blocks */
+.yaml-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  gap: var(--gap);
+}
+
+.yaml-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 12px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+[data-theme="dark"] .yaml-block {
+  background: #111118;
+}
+
+.yaml-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.yaml-card-header .printer-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.yaml-style-select {
+  padding: 6px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.yaml-style-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-copy-yaml {
+  margin-top: 8px;
+}
+
+/* Templates view - preview images */
+.tpl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--gap);
+}
+
+.tpl-preview-img {
+  width: 100%;
+  max-width: 400px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--divider);
+  margin: 12px 0;
+  display: block;
+  background: var(--bg);
+}
+
+.tpl-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 8px 0 12px;
+}
+
+.tpl-select {
+  padding: 6px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tpl-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Help view */
+.help-content {
+  max-width: 800px;
+}
+
+.help-content .card {
+  opacity: 1;
+  transform: none;
+  margin-bottom: var(--gap);
+}
+
+.help-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.help-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.help-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+
+.help-body ul li {
+  padding: 4px 0 4px 16px;
+  position: relative;
+}
+
+.help-body ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.help-body h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 14px 0 6px;
+}
+
+.help-body code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.help-body a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.help-body a:hover {
+  text-decoration: underline;
+}
+
+.help-collapsible {
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.help-collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  transition: background var(--transition);
+}
+
+.help-collapsible-header:hover {
+  background: var(--accent-light);
+}
+
+.help-collapsible-chevron {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  transition: transform 0.25s ease;
+}
+
+.help-collapsible.collapsed .help-collapsible-chevron {
+  transform: rotate(-90deg);
+}
+
+.help-collapsible-body {
+  padding: 12px 16px;
+}
+
+.help-collapsible.collapsed .help-collapsible-body {
+  display: none;
+}
+
+.help-entity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.help-entity-group h4 {
+  margin-top: 0;
+}
+
+.help-endpoint {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  padding: 4px 0;
+  color: var(--text-secondary);
+}
+
+.help-endpoint .method {
+  display: inline-block;
+  width: 44px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Config section description + learn more link */
+.cfg-section-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.cfg-section-desc a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.cfg-section-desc a:hover {
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .bento {
@@ -966,10 +1225,14 @@ body {
   }
   .span-2, .span-3 { grid-column: span 1; }
   .row-2 { grid-row: span 1; }
-  .tabs { gap: 20px; }
+  .tabs { gap: 12px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .tab-btn { white-space: nowrap; font-size: 13px; }
   .topbar { flex-wrap: wrap; gap: 12px; }
   .metric-value { font-size: 26px; }
   .printer-cards { grid-template-columns: 1fr; }
+  .yaml-cards { grid-template-columns: 1fr; }
+  .tpl-cards { grid-template-columns: 1fr; }
+  .help-entity-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -1038,6 +1301,24 @@ body {
     <div id="discovery-content"></div>
   </section>
 
+  <!-- Cards View -->
+  <section class="view" id="view-cards">
+    <div class="view-header">
+      <h2 class="view-title">Lovelace Cards</h2>
+      <p class="view-sub">Copy generated YAML to add printer cards to your Home Assistant dashboard.</p>
+    </div>
+    <div class="yaml-cards" id="cards-content"></div>
+  </section>
+
+  <!-- Templates View -->
+  <section class="view" id="view-templates">
+    <div class="view-header">
+      <h2 class="view-title">Print Templates</h2>
+      <p class="view-sub">Preview and print maintenance page templates for each printer.</p>
+    </div>
+    <div class="tpl-cards" id="templates-content"></div>
+  </section>
+
   <!-- Config View -->
   <section class="view" id="view-config">
     <div class="view-header">
@@ -1057,6 +1338,15 @@ body {
         <button class="btn btn-ghost" id="cfg-restart">Restart Add-on</button>
       </div>
     </div>
+  </section>
+
+  <!-- Help View -->
+  <section class="view" id="view-help">
+    <div class="view-header">
+      <h2 class="view-title">Help &amp; Documentation</h2>
+      <p class="view-sub">Everything you need to know about Printer Keepalive.</p>
+    </div>
+    <div class="help-content" id="help-content"></div>
   </section>
 </div>
 
@@ -1224,7 +1514,7 @@ setTheme(localStorage.getItem('pk-theme') || (matchMedia('(prefers-color-scheme:
 document.getElementById('version-badge').textContent = 'v__APP_VERSION__';
 
 /* ── Tabs ────────────────────────────────────────────────── */
-var TAB_NAMES = ['Dashboard', 'Printers', 'Discovery', 'Config'];
+var TAB_NAMES = ['Dashboard', 'Printers', 'Discovery', 'Cards', 'Templates', 'Config', 'Help'];
 var tabsEl = document.getElementById('tabs');
 TAB_NAMES.forEach(function(name, i) {
   var btn = el('button', 'tab-btn' + (i === 0 ? ' active' : ''), name);
@@ -1569,10 +1859,13 @@ function makeTextareaField(key, label, desc) {
   '</div>';
 }
 
-function makeSection(id, title, bodyHtml, collapsed) {
+function makeSection(id, title, bodyHtml, collapsed, desc) {
   return '<div class="cfg-section' + (collapsed ? ' collapsed' : '') + '" id="cfg-sec-' + id + '">' +
     '<div class="cfg-section-header">' +
-      '<span class="cfg-section-title">' + escHtml(title) + '</span>' +
+      '<div>' +
+        '<span class="cfg-section-title">' + escHtml(title) + '</span>' +
+        (desc ? '<div class="cfg-section-desc">' + escHtml(desc) + '<a href="#" onclick="event.preventDefault();event.stopPropagation();document.querySelector(\'[data-view=help]\').click()">Learn more</a></div>' : '') +
+      '</div>' +
       '<span class="cfg-section-chevron">&#9660;</span>' +
     '</div>' +
     '<div class="cfg-section-body">' + bodyHtml + '</div>' +
@@ -1652,12 +1945,12 @@ function buildConfigForm() {
     makeTextField('auth_token', 'API Auth Token', 'Bearer token for API callers', 'password');
 
   formView.innerHTML =
-    makeSection('printers', 'Printers', printersBody, false) +
-    makeSection('scheduling', 'Scheduling', schedBody, true) +
-    makeSection('discovery', 'Discovery', discBody, true) +
-    makeSection('templates', 'Templates & Content', tplBody, true) +
-    makeSection('mqtt', 'MQTT', mqttBody, true) +
-    makeSection('integration', 'Integration', intBody, true);
+    makeSection('printers', 'Printers', printersBody, false, 'Define your printers with individual URIs, types, and print schedules.') +
+    makeSection('scheduling', 'Scheduling', schedBody, true, 'Controls the auto-print scheduler and IPP polling frequency.') +
+    makeSection('discovery', 'Discovery', discBody, true, 'Network scanning for printers via mDNS/DNS-SD.') +
+    makeSection('templates', 'Templates & Content', tplBody, true, 'Default template and content settings for printed pages.') +
+    makeSection('mqtt', 'MQTT', mqttBody, true, 'Home Assistant device discovery via MQTT broker.') +
+    makeSection('integration', 'Integration', intBody, true, 'Home Assistant connection and API authentication.');
 
   // Bind section toggles
   formView.querySelectorAll('.cfg-section-header').forEach(function(hdr) {
@@ -1993,6 +2286,297 @@ function buildConfig() {
   };
 }
 
+/* ── Cards View ──────────────────────────────────────────── */
+var CARD_STYLES = [
+  { value: 'full', label: 'Full Dashboard' },
+  { value: 'compact', label: 'Compact' },
+  { value: 'glance', label: 'Glance' },
+  { value: 'status', label: 'Status Only' },
+  { value: 'controls', label: 'Controls Only' }
+];
+
+function buildCards() {
+  var container = document.getElementById('cards-content');
+  container.innerHTML = '';
+  if (!state.health || !state.health.printers.length) {
+    container.innerHTML = '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">No printers configured. Add printers in the Config tab.</p></div>';
+    return;
+  }
+
+  state.health.printers.forEach(function(p) {
+    var card = el('div', 'card');
+    var styleOpts = CARD_STYLES.map(function(s) {
+      return '<option value="' + escHtml(s.value) + '">' + escHtml(s.label) + '</option>';
+    }).join('');
+
+    card.innerHTML =
+      '<div class="yaml-card-header">' +
+        '<div class="printer-name">' + escHtml(p.name) + '</div>' +
+        '<select class="yaml-style-select">' + styleOpts + '</select>' +
+      '</div>' +
+      '<div class="yaml-block">Loading...</div>' +
+      '<button class="btn btn-secondary btn-copy-yaml">Copy YAML</button>';
+
+    var pid = p.printer_id;
+    var yamlBlock = card.querySelector('.yaml-block');
+    var styleSelect = card.querySelector('.yaml-style-select');
+    var copyBtn = card.querySelector('.btn-copy-yaml');
+
+    function loadCard(style) {
+      yamlBlock.textContent = 'Loading...';
+      requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style))
+        .then(function(resp) {
+          yamlBlock.textContent = resp.lovelace_yaml || '# No YAML returned';
+        })
+        .catch(function(e) {
+          yamlBlock.textContent = '# Error: ' + e.message;
+        });
+    }
+
+    styleSelect.onchange = function() { loadCard(styleSelect.value); };
+    loadCard('full');
+
+    copyBtn.onclick = function() {
+      var text = yamlBlock.textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+          showToast('YAML copied to clipboard');
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('YAML copied to clipboard');
+      }
+    };
+
+    container.appendChild(card);
+  });
+}
+
+/* ── Templates View ─────────────────────────────────────── */
+var TEMPLATE_DESCRIPTIONS = {
+  color_bars: 'CMYK color swatches, gradients, and fine-line patterns to exercise all printer nozzles.',
+  home_summary: 'Home Assistant instance overview with entity counts, active sensors, and key states.',
+  weather_snapshot: 'Current weather conditions with temperature, humidity, wind, and tracked entities.',
+  entity_report: 'Detailed state report for up to 12 configured Home Assistant entities.',
+  hybrid: 'Combined weather snapshot and entity report on a single page.'
+};
+
+function buildTemplates() {
+  var container = document.getElementById('templates-content');
+  container.innerHTML = '';
+  if (!state.health || !state.health.printers.length) {
+    container.innerHTML = '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">No printers configured. Add printers in the Config tab.</p></div>';
+    return;
+  }
+
+  var templates = TEMPLATE_OPTIONS;
+
+  state.health.printers.forEach(function(p) {
+    var card = el('div', 'card');
+    var tplOpts = templates.map(function(t) {
+      return '<option value="' + escHtml(t) + '"' + (t === p.template ? ' selected' : '') + '>' + escHtml(t.replace(/_/g, ' ')) + '</option>';
+    }).join('');
+
+    var defaultTpl = p.template || templates[0];
+    var pid = p.printer_id;
+
+    card.innerHTML =
+      '<div class="yaml-card-header">' +
+        '<div class="printer-name">' + escHtml(p.name) + '</div>' +
+        '<select class="tpl-select">' + tplOpts + '</select>' +
+      '</div>' +
+      '<div class="tpl-desc">' + escHtml(TEMPLATE_DESCRIPTIONS[defaultTpl] || '') + '</div>' +
+      '<img class="tpl-preview-img" src="' + escHtml(apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(defaultTpl))) + '" alt="Template preview">' +
+      '<div class="btn-row" style="margin-top:12px">' +
+        '<button class="btn btn-primary btn-print-tpl">Print This Template</button>' +
+      '</div>';
+
+    var tplSelect = card.querySelector('.tpl-select');
+    var previewImg = card.querySelector('.tpl-preview-img');
+    var descDiv = card.querySelector('.tpl-desc');
+    var printBtn = card.querySelector('.btn-print-tpl');
+
+    tplSelect.onchange = function() {
+      var tpl = tplSelect.value;
+      previewImg.src = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
+      descDiv.textContent = TEMPLATE_DESCRIPTIONS[tpl] || '';
+    };
+
+    printBtn.onclick = async function() {
+      var tpl = tplSelect.value;
+      try {
+        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+          method: 'POST',
+          body: JSON.stringify({ template: tpl, force: true })
+        });
+        showToast('Print sent to ' + p.name);
+      } catch (e) { showToast('Print failed: ' + e.message, true); }
+    };
+
+    container.appendChild(card);
+  });
+}
+
+/* ── Help View ──────────────────────────────────────────── */
+var helpBuilt = false;
+
+function buildHelp() {
+  if (helpBuilt) return;
+  helpBuilt = true;
+
+  var container = document.getElementById('help-content');
+
+  function helpCard(title, bodyHtml) {
+    return '<div class="card"><div class="help-section-title">' + title + '</div><div class="help-body">' + bodyHtml + '</div></div>';
+  }
+
+  function collapsible(title, bodyHtml, collapsed) {
+    return '<div class="help-collapsible' + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="help-collapsible-header">' + escHtml(title) + '<span class="help-collapsible-chevron">&#9660;</span></div>' +
+      '<div class="help-collapsible-body">' + bodyHtml + '</div></div>';
+  }
+
+  var html = '';
+
+  // What is Printer Keepalive?
+  html += helpCard('What is Printer Keepalive?',
+    '<ul>' +
+      '<li>Multi-printer IPP keepalive add-on for Home Assistant</li>' +
+      '<li>Prevents inkjet nozzle dry-out by periodically printing small maintenance pages</li>' +
+      '<li>Discovers network printers via mDNS/DNS-SD</li>' +
+      '<li>Exposes printers as HA devices via MQTT discovery</li>' +
+    '</ul>'
+  );
+
+  // Maintenance Model
+  html += helpCard('Maintenance Model',
+    '<ul>' +
+      '<li>Tracks last print time from keepalive jobs, external printing (IPP impression counts), and initial startup</li>' +
+      '<li>Calculates <code>next_keepalive_due = last_print + cadence_hours</code></li>' +
+      '<li>Only prints when actually due (history-aware)</li>' +
+    '</ul>'
+  );
+
+  // Inkjet vs Laser
+  html += helpCard('Inkjet vs Laser',
+    '<ul>' +
+      '<li><strong>Inkjet:</strong> Needs frequent activity to reduce nozzle dry-out risk</li>' +
+      '<li><strong>Laser:</strong> Toner is dry, tolerates idle periods better, but periodic test prints are still useful</li>' +
+    '</ul>'
+  );
+
+  // Configuration Guide
+  html += helpCard('Configuration Guide',
+    '<p>Configure the add-on in the <a href="#" onclick="event.preventDefault();document.querySelector(\'[data-view=config]\').click()">Config tab</a>. Each section controls a different aspect:</p>' +
+    '<h4>Printers</h4><p>Define multiple printers with individual URIs, types, cadences, and templates. Each printer runs independently.</p>' +
+    '<h4>Scheduling</h4><p>Controls the internal auto-print scheduler and how often printer status is polled via IPP. Failure cooldown prevents rapid retries after errors.</p>' +
+    '<h4>Discovery</h4><p>Network scanning for printers using mDNS/zeroconf. Produces ready-to-copy config snippets for found printers.</p>' +
+    '<h4>Templates &amp; Content</h4><p>Default template and content settings inherited by printers that don\'t override them. Weather entity enables weather-aware templates.</p>' +
+    '<h4>MQTT</h4><p>Enables Home Assistant device/entity discovery. Each printer becomes an HA device with sensors, switches, and buttons. Defaults to the HA Mosquitto broker.</p>' +
+    '<h4>Integration</h4><p>For non-Supervisor installs, provide HA URL and long-lived token. Auth token protects write API endpoints.</p>'
+  );
+
+  // Exposed HA Entities
+  html += helpCard('Exposed HA Entities',
+    '<p>Each printer gets the following entities via MQTT:</p>' +
+    '<div class="help-entity-grid">' +
+      '<div class="help-entity-group">' +
+        '<h4>Controls</h4>' +
+        '<ul>' +
+          '<li><code>switch</code> keepalive_enabled</li>' +
+          '<li><code>select</code> template</li>' +
+          '<li><code>number</code> cadence_hours</li>' +
+          '<li><code>button</code> print_now</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="help-entity-group">' +
+        '<h4>Status</h4>' +
+        '<ul>' +
+          '<li><code>binary_sensor</code> keepalive_needed</li>' +
+          '<li><code>sensor</code> time_since_last_print</li>' +
+          '<li><code>sensor</code> keepalive_print_count</li>' +
+          '<li><code>sensor</code> next_keepalive_due</li>' +
+          '<li><code>sensor</code> last_keepalive_result</li>' +
+          '<li><code>sensor</code> printer_state</li>' +
+          '<li><code>sensor</code> health</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>' +
+    '<h4>IPP Stats</h4>' +
+    '<ul>' +
+      '<li><code>sensor</code> queued_job_count</li>' +
+      '<li><code>sensor</code> job_impressions_completed</li>' +
+      '<li><code>sensor</code> media_sheets_completed</li>' +
+      '<li><code>sensor</code> printer_up_time</li>' +
+      '<li><code>sensor</code> lowest_marker_level</li>' +
+    '</ul>'
+  );
+
+  // Print Templates
+  html += helpCard('Print Templates',
+    '<p>Five built-in templates are available. Preview them in the <a href="#" onclick="event.preventDefault();document.querySelector(\'[data-view=templates]\').click()">Templates tab</a>.</p>' +
+    '<ul>' +
+      '<li><strong>color_bars</strong> &mdash; ' + escHtml(TEMPLATE_DESCRIPTIONS.color_bars) + '</li>' +
+      '<li><strong>home_summary</strong> &mdash; ' + escHtml(TEMPLATE_DESCRIPTIONS.home_summary) + '</li>' +
+      '<li><strong>weather_snapshot</strong> &mdash; ' + escHtml(TEMPLATE_DESCRIPTIONS.weather_snapshot) + '</li>' +
+      '<li><strong>entity_report</strong> &mdash; ' + escHtml(TEMPLATE_DESCRIPTIONS.entity_report) + '</li>' +
+      '<li><strong>hybrid</strong> &mdash; ' + escHtml(TEMPLATE_DESCRIPTIONS.hybrid) + '</li>' +
+    '</ul>'
+  );
+
+  // API Reference (collapsible)
+  var apiBody =
+    '<h4>GET Endpoints</h4>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /health</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /config</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /printers</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /printers/{id}</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /printers/{id}/card</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /printers/{id}/preview</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /templates</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /guidance</div>' +
+    '<div class="help-endpoint"><span class="method">GET</span> /discovery</div>' +
+    '<h4>POST Endpoints</h4>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /print</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /printers/{id}/print</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /printers/{id}/settings</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /printers/{id}/poll</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /discovery/rescan</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /config</div>' +
+    '<div class="help-endpoint"><span class="method">POST</span> /actions/restart</div>' +
+    '<h4>Authentication</h4>' +
+    '<p>When <code>auth_token</code> is configured, include a <code>Bearer</code> token in the <code>Authorization</code> header for write endpoints.</p>';
+
+  html += helpCard('API Reference', collapsible('Show all API endpoints', apiBody, true));
+
+  // Lovelace Cards
+  html += helpCard('Lovelace Cards',
+    '<p>Five card styles are available for your HA dashboard. Generate and copy YAML from the <a href="#" onclick="event.preventDefault();document.querySelector(\'[data-view=cards]\').click()">Cards tab</a>.</p>' +
+    '<ul>' +
+      '<li><strong>Full Dashboard</strong> &mdash; Complete printer overview with all stats and controls</li>' +
+      '<li><strong>Compact</strong> &mdash; Condensed card with key info</li>' +
+      '<li><strong>Glance</strong> &mdash; Minimal at-a-glance status</li>' +
+      '<li><strong>Status Only</strong> &mdash; Printer status without controls</li>' +
+      '<li><strong>Controls Only</strong> &mdash; Just the control buttons and inputs</li>' +
+    '</ul>'
+  );
+
+  container.innerHTML = html;
+
+  // Bind collapsible toggles
+  container.querySelectorAll('.help-collapsible-header').forEach(function(hdr) {
+    hdr.addEventListener('click', function() {
+      hdr.parentElement.classList.toggle('collapsed');
+    });
+  });
+}
+
 /* ── Animation ───────────────────────────────────────────── */
 function animateCards() {
   document.querySelectorAll('.view.active .card').forEach(function(c, i) {
@@ -2030,6 +2614,9 @@ async function refreshAll() {
     buildDashboard();
     buildPrinters();
     buildDiscovery();
+    buildCards();
+    buildTemplates();
+    buildHelp();
 
     if (!state.configLoaded) {
       state.configLoaded = true;
@@ -2058,6 +2645,9 @@ async function refreshAll() {
 buildDashboard();
 buildPrinters();
 buildDiscovery();
+buildCards();
+buildTemplates();
+buildHelp();
 buildConfig();
 refreshAll();
 setInterval(refreshAll, 60000);
