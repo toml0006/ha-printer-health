@@ -1549,7 +1549,8 @@ function buildDashboard() {
 
   var metrics = [
     { label: 'Printers', value: h.printer_count, sub: 'Configured', icon: 'printer' },
-    { label: 'MQTT', value: h.mqtt_enabled ? 'On' : 'Off', sub: h.mqtt_enabled ? 'Connected & publishing' : 'Disabled', icon: 'wifi' },
+    { label: 'MQTT', value: h.mqtt && h.mqtt.connected ? 'Connected' : (h.mqtt && h.mqtt.enabled ? 'Disconnected' : 'Off'),
+      sub: h.mqtt && h.mqtt.connected ? 'Publishing to ' + h.mqtt.host : (h.mqtt && h.mqtt.last_error ? h.mqtt.last_error : (h.mqtt && h.mqtt.enabled ? 'Connecting to ' + h.mqtt.host : 'No broker configured')), icon: 'wifi' },
     { label: 'Auto Print', value: h.auto_print_enabled ? 'On' : 'Off', sub: h.auto_print_enabled ? 'Scheduler active' : 'Disabled', icon: 'clock' },
     { label: 'Discovery', value: h.discovery.printer_count, sub: 'Found on network', icon: 'search' },
   ];
@@ -1659,11 +1660,35 @@ function buildPrinters() {
     container.innerHTML = '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">Loading...</p></div>';
     return;
   }
+
+  // Add Printer button
+  var addRow = el('div', '', '<button class="btn btn-primary" id="printers-add-btn" style="margin-bottom:16px">+ Add Printer</button>');
+  container.appendChild(addRow);
+  document.getElementById('printers-add-btn').onclick = function() {
+    // Switch to config tab printers section
+    document.querySelector('[data-view="config"]').click();
+    setTimeout(function() {
+      var sec = document.getElementById('cfg-sec-printers');
+      if (sec) { sec.classList.remove('collapsed'); sec.scrollIntoView({ behavior: 'smooth' }); }
+      var addBtn = document.getElementById('cfg-add-printer');
+      if (addBtn) addBtn.click();
+    }, 200);
+  };
+
+  if (!state.health.printers.length) {
+    container.innerHTML += '<div class="card" style="opacity:1;transform:none"><p style="color:var(--text-secondary)">No printers configured. Click "Add Printer" or add one from the Discovery tab.</p></div>';
+    return;
+  }
+
   state.health.printers.forEach(function(p) {
     var card = el('div', 'card');
     var opts = (state.health.supported_templates || []).map(function(t) {
       return '<option value="' + escHtml(t) + '"' + (t === p.template ? ' selected' : '') + '>' + escHtml(t.replace(/_/g, ' ')) + '</option>';
     }).join('');
+
+    var origEnabled = p.enabled;
+    var origCadence = Math.round(p.cadence_hours / 24);
+    var origTemplate = p.template;
 
     card.innerHTML =
       '<div class="printer-card-header">' +
@@ -1681,19 +1706,31 @@ function buildPrinters() {
       '</div>' +
       '<div class="control-row">' +
         '<label><input type="checkbox" class="p-enabled"' + (p.enabled ? ' checked' : '') + '> Enabled</label>' +
-        '<label>Cadence <input type="number" class="p-cadence" value="' + Math.round(p.cadence_hours / 24) + '" min="1"> days</label>' +
+        '<label>Cadence <input type="number" class="p-cadence" value="' + origCadence + '" min="1"> days</label>' +
         '<select class="p-template">' + opts + '</select>' +
       '</div>' +
       '<div class="btn-row">' +
-        '<button class="btn btn-primary btn-save">Save</button>' +
-        '<button class="btn btn-secondary btn-print-now">Print Now</button>' +
-        '<button class="btn btn-ghost btn-force">Force</button>' +
-        '<button class="btn btn-ghost btn-poll">Poll</button>' +
+        '<button class="btn btn-primary btn-save" disabled>Save</button>' +
+        '<button class="btn btn-secondary btn-print-now" title="Print a keepalive page only if one is due based on the cadence schedule">Print if Due</button>' +
+        '<button class="btn btn-ghost btn-force" title="Print a keepalive page immediately regardless of schedule">Force Print</button>' +
+        '<button class="btn btn-ghost btn-poll" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts">Poll Status</button>' +
       '</div>';
 
     var pid = p.printer_id;
+    var saveBtn = card.querySelector('.btn-save');
 
-    card.querySelector('.btn-save').onclick = async function() {
+    // Track changes to enable Save
+    function checkDirty() {
+      var dirty = card.querySelector('.p-enabled').checked !== origEnabled ||
+        parseInt(card.querySelector('.p-cadence').value, 10) !== origCadence ||
+        card.querySelector('.p-template').value !== origTemplate;
+      saveBtn.disabled = !dirty;
+    }
+    card.querySelector('.p-enabled').addEventListener('change', checkDirty);
+    card.querySelector('.p-cadence').addEventListener('input', checkDirty);
+    card.querySelector('.p-template').addEventListener('change', checkDirty);
+
+    saveBtn.onclick = async function() {
       var enabled = card.querySelector('.p-enabled').checked;
       var cadence = (parseInt(card.querySelector('.p-cadence').value, 10) || 7) * 24;
       var template = card.querySelector('.p-template').value;
@@ -1793,12 +1830,23 @@ function buildDiscovery() {
           '<option value="inkjet"' + (typeVal === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
           '<option value="laser"' + (typeVal === 'laser' ? ' selected' : '') + '>laser</option>' +
         '</select></td>';
+    var displayUri = p.uri || '';
+    var printerCell = '<td style="min-width:180px"><div style="font-weight:600;margin-bottom:2px">' + escHtml(p.printer_name) + '</div>' +
+      '<div class="mono" style="font-size:11px;opacity:.7">' + escHtml(displayUri) + '</div></td>';
+    var ippsCell = '<td>';
+    if (p.ipps_available) {
+      var checked = (p.suggested_config && p.suggested_config.printer_uri && p.suggested_config.printer_uri.startsWith('ipps://')) ? ' checked' : '';
+      ippsCell += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px"><input type="checkbox" class="disc-ipps-toggle" data-disc-idx="' + idx + '"' + checked + '> IPPS</label>';
+    } else {
+      ippsCell += '<span style="opacity:.4;font-size:12px">\u2014</span>';
+    }
+    ippsCell += '</td>';
     return '<tr>' +
-      '<td style="font-weight:500">' + escHtml(p.printer_name) + '</td>' +
+      printerCell +
       '<td>' + escHtml(p.printer_make_and_model || '\u2014') + '</td>' +
-      '<td class="mono">' + escHtml(p.host) + '</td>' +
       '<td>' + escHtml(p.printer_state || '\u2014') + '</td>' +
       typeCell +
+      ippsCell +
       '<td>' + (p.reachable ? '<span class="pill pill-green">Online</span>' : '<span class="pill pill-red">Offline</span>') + '</td>' +
       '<td>' + configCell + '</td>' +
     '</tr>';
@@ -1808,7 +1856,7 @@ function buildDiscovery() {
     '<div class="card-title">Discovered Printers</div>' +
     '<div style="overflow-x:auto">' +
       '<table class="disc-table">' +
-        '<thead><tr><th>Name</th><th>Model</th><th>Host</th><th>State</th><th>Type</th><th>Status</th><th>Config</th></tr></thead>' +
+        '<thead><tr><th>Printer</th><th>Model</th><th>State</th><th>Type</th><th>Secure</th><th>Status</th><th>Config</th></tr></thead>' +
         '<tbody>' + tableRows + '</tbody>' +
       '</table>' +
     '</div>'
@@ -1826,6 +1874,16 @@ function buildDiscovery() {
     });
   });
 
+  tableCard.querySelectorAll('.disc-ipps-toggle').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var idx = parseInt(cb.getAttribute('data-disc-idx'), 10);
+      var p = d.printers[idx];
+      if (p && p.suggested_config) {
+        p.suggested_config.printer_uri = cb.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+      }
+    });
+  });
+
   tableCard.querySelectorAll('.disc-add-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var idx = parseInt(btn.getAttribute('data-disc-idx'), 10);
@@ -1838,15 +1896,16 @@ function buildDiscovery() {
           p.suggested_config.printer_type = typeSelect.value;
           p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
         }
+        var ippsToggle = tableCard.querySelector('.disc-ipps-toggle[data-disc-idx="' + idx + '"]');
+        if (ippsToggle) {
+          p.suggested_config.printer_uri = ippsToggle.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+        }
         var cfgResp = await requestJson('config');
         var opts = cfgResp.options || {};
         if (!Array.isArray(opts.printers)) opts.printers = [];
         opts.printers.push(p.suggested_config);
         await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-        var restartBtn = document.getElementById('cfg-restart');
-        var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
-        if (restartBtn) msg += ' Use the Restart button to apply.';
-        showToast(msg);
+        showToast('Added ' + p.printer_name + ' to config.');
         refreshAll();
       } catch (e) {
         btn.disabled = false;
@@ -1915,12 +1974,13 @@ function makeTextareaField(key, label, desc) {
   '</div>';
 }
 
-function makeSection(id, title, bodyHtml, collapsed, desc) {
+function makeSection(id, title, bodyHtml, collapsed, desc, summary) {
   return '<div class="cfg-section' + (collapsed ? ' collapsed' : '') + '" id="cfg-sec-' + id + '">' +
     '<div class="cfg-section-header">' +
       '<div>' +
         '<span class="cfg-section-title">' + escHtml(title) + '</span>' +
-        (desc ? '<div class="cfg-section-desc">' + escHtml(desc) + '<a href="#" onclick="event.preventDefault();event.stopPropagation();document.querySelector(\'[data-view=help]\').click()">Learn more</a></div>' : '') +
+        (summary ? '<span class="cfg-section-summary" id="cfg-summary-' + id + '" style="margin-left:8px;font-size:12px;opacity:.6"></span>' : '') +
+        (desc ? '<div class="cfg-section-desc">' + escHtml(desc) + ' <a href="#" onclick="event.preventDefault();event.stopPropagation();document.querySelector(\'[data-view=help]\').click()">Learn more</a></div>' : '') +
       '</div>' +
       '<span class="cfg-section-chevron">&#9660;</span>' +
     '</div>' +
@@ -1953,10 +2013,11 @@ function buildPrinterCard(index, collapsed) {
 
 function buildConfigForm() {
   var formView = document.getElementById('config-form-view');
+  var isSupervisor = state.health && state.health.is_supervisor;
 
   // Section 1: Printers
   var printersBody = '<div id="cfg-printers-list"></div>' +
-    '<button class="btn btn-secondary" id="cfg-add-printer" style="margin-top:8px">Add Printer</button>';
+    '<button class="btn btn-secondary" id="cfg-add-printer" style="margin-top:8px">+ Add Printer</button>';
 
   // Section 2: Scheduling
   var schedBody =
@@ -1980,33 +2041,55 @@ function buildConfigForm() {
     makeTextField('weather_entity', 'Default Weather Entity', '') +
     makeTextareaField('entity_ids', 'Default Entity IDs', 'One entity ID per line');
 
-  // Section 5: MQTT
-  var mqttBody =
-    makeToggleField('mqtt.enabled', 'Enable MQTT', '') +
-    makeTextField('mqtt.host', 'Host', 'Defaults to core-mosquitto') +
-    makeNumberField('mqtt.port', 'Port', '', 1, 65535, '') +
-    makeTextField('mqtt.username', 'Username', '') +
-    makeTextField('mqtt.password', 'Password', '', 'password') +
-    makeTextField('mqtt.discovery_prefix', 'Discovery Prefix', '') +
-    makeTextField('mqtt.topic_prefix', 'Topic Prefix', '') +
-    makeToggleField('mqtt.retain', 'Retain Messages', '') +
-    makeToggleField('mqtt.tls', 'Use TLS', '') +
-    makeTextField('mqtt.client_id', 'Client ID', '');
+  // Section 5: MQTT (Supervisor installs)
+  var mqttBody, mqttDesc;
+  if (isSupervisor) {
+    mqttBody =
+      makeToggleField('mqtt.enabled', 'Enable MQTT', '') +
+      makeTextField('mqtt.discovery_prefix', 'Discovery Prefix', '') +
+      makeTextField('mqtt.topic_prefix', 'Topic Prefix', '') +
+      makeToggleField('mqtt.retain', 'Retain Messages', '') +
+      makeTextField('mqtt.client_id', 'Client ID', '');
+    mqttDesc = 'Exposes printers as Home Assistant devices via the Mosquitto broker. Connection settings are auto-detected from the Supervisor MQTT service.';
+  } else {
+    mqttBody =
+      makeToggleField('mqtt.enabled', 'Enable MQTT', '') +
+      makeTextField('mqtt.host', 'Host', 'e.g. core-mosquitto or your broker address') +
+      makeNumberField('mqtt.port', 'Port', '', 1, 65535, '') +
+      makeTextField('mqtt.username', 'Username', '') +
+      makeTextField('mqtt.password', 'Password', '', 'password') +
+      makeTextField('mqtt.discovery_prefix', 'Discovery Prefix', '') +
+      makeTextField('mqtt.topic_prefix', 'Topic Prefix', '') +
+      makeToggleField('mqtt.retain', 'Retain Messages', '') +
+      makeToggleField('mqtt.tls', 'Use TLS', '') +
+      makeTextField('mqtt.client_id', 'Client ID', '');
+    mqttDesc = 'Exposes printers as Home Assistant devices via MQTT discovery. Configure your broker connection details below.';
+  }
 
-  // Section 6: Integration
-  var intBody =
-    makeTextField('ha_url', 'Home Assistant URL', 'For non-Supervisor installs') +
-    makeTextField('ha_token', 'Home Assistant Token', '', 'password') +
-    makeTextField('addon_page_url', 'Add-on Page URL', 'URL for printed QR code') +
-    makeTextField('auth_token', 'API Auth Token', 'Bearer token for API callers', 'password');
+  // Section 6: Integration (non-Supervisor installs)
+  var intBody, intDesc;
+  if (isSupervisor) {
+    intBody =
+      '<div class="cfg-field"><div class="cfg-field-desc" style="padding:8px 0;opacity:.7">Running as a Supervisor add-on \u2014 Home Assistant connection is handled automatically. API auth and add-on URL can be configured in the advanced (JSON) editor if needed.</div></div>' +
+      makeTextField('addon_page_url', 'Add-on Page URL', 'URL for printed QR code (auto-detected if blank)') +
+      makeTextField('auth_token', 'API Auth Token', 'Optional bearer token for API callers', 'password');
+    intDesc = 'Home Assistant connection is managed by the Supervisor.';
+  } else {
+    intBody =
+      makeTextField('ha_url', 'Home Assistant URL', 'e.g. http://homeassistant:8123') +
+      makeTextField('ha_token', 'Long-Lived Access Token', '', 'password') +
+      makeTextField('addon_page_url', 'Add-on Page URL', 'URL for printed QR code') +
+      makeTextField('auth_token', 'API Auth Token', 'Optional bearer token for API callers', 'password');
+    intDesc = 'Connect to Home Assistant for entity data in printed templates. Required for non-Supervisor installs.';
+  }
 
   formView.innerHTML =
-    makeSection('printers', 'Printers', printersBody, false, 'Define your printers with individual URIs, types, and print schedules.') +
-    makeSection('scheduling', 'Scheduling', schedBody, true, 'Controls the auto-print scheduler and IPP polling frequency.') +
-    makeSection('discovery', 'Discovery', discBody, true, 'Network scanning for printers via mDNS/DNS-SD.') +
-    makeSection('templates', 'Templates & Content', tplBody, true, 'Default template and content settings for printed pages.') +
-    makeSection('mqtt', 'MQTT', mqttBody, true, 'Home Assistant device discovery via MQTT broker.') +
-    makeSection('integration', 'Integration', intBody, true, 'Home Assistant connection and API authentication.');
+    makeSection('printers', 'Printers', printersBody, false, 'Define your printers with individual URIs, types, and print schedules.', true) +
+    makeSection('scheduling', 'Scheduling', schedBody, true, 'Controls the auto-print scheduler and IPP polling frequency.', true) +
+    makeSection('discovery', 'Discovery', discBody, true, 'Network scanning for printers via mDNS/DNS-SD.', true) +
+    makeSection('templates', 'Templates & Content', tplBody, true, 'Default template and content settings for printed pages.', false) +
+    makeSection('mqtt', 'MQTT', mqttBody, true, mqttDesc, true) +
+    makeSection('integration', 'Integration', intBody, true, intDesc, false);
 
   // Bind section toggles
   formView.querySelectorAll('.cfg-section-header').forEach(function(hdr) {
@@ -2019,6 +2102,27 @@ function buildConfigForm() {
   document.getElementById('cfg-add-printer').addEventListener('click', function() {
     addPrinterCard({});
   });
+}
+
+function updateConfigSummaries() {
+  var h = state.health;
+  var c = state.config;
+  if (!h) return;
+  // Printers
+  var ps = document.getElementById('cfg-summary-printers');
+  if (ps) ps.textContent = h.printer_count + ' printer' + (h.printer_count !== 1 ? 's' : '');
+  // Scheduling
+  var ss = document.getElementById('cfg-summary-scheduling');
+  if (ss) ss.textContent = h.auto_print_enabled ? 'Active' : 'Disabled';
+  // Discovery
+  var ds = document.getElementById('cfg-summary-discovery');
+  if (ds) {
+    var disc = h.discovery || {};
+    ds.textContent = disc.enabled !== false ? (disc.printer_count || 0) + ' found' : 'Disabled';
+  }
+  // MQTT
+  var ms = document.getElementById('cfg-summary-mqtt');
+  if (ms) ms.textContent = h.mqtt_enabled ? 'Connected' : 'Disabled';
 }
 
 function addPrinterCard(printerData, collapsed) {
@@ -2215,35 +2319,38 @@ function serializeForm() {
   var eids = getFieldValue(formView, 'entity_ids');
   if (eids && eids.length) config.entity_ids = eids;
 
-  // MQTT
-  config.mqtt = {};
-  config.mqtt.enabled = getFieldValue(formView, 'mqtt.enabled');
+  // MQTT - merge with existing config to preserve fields hidden in Supervisor mode
+  config.mqtt = Object.assign({}, (configRawObj && configRawObj.mqtt) || {});
+  var mqttEnabled = getFieldValue(formView, 'mqtt.enabled');
+  if (mqttEnabled !== undefined) config.mqtt.enabled = mqttEnabled;
   var mh = getFieldValue(formView, 'mqtt.host');
-  if (mh) config.mqtt.host = mh;
+  if (mh !== undefined) config.mqtt.host = mh;
   var mp = getFieldValue(formView, 'mqtt.port');
   if (mp !== undefined) config.mqtt.port = mp;
   var mu = getFieldValue(formView, 'mqtt.username');
-  if (mu) config.mqtt.username = mu;
+  if (mu !== undefined) config.mqtt.username = mu;
   var mpw = getFieldValue(formView, 'mqtt.password');
-  if (mpw) config.mqtt.password = mpw;
+  if (mpw !== undefined) config.mqtt.password = mpw;
   var mdp = getFieldValue(formView, 'mqtt.discovery_prefix');
-  if (mdp) config.mqtt.discovery_prefix = mdp;
+  if (mdp !== undefined) config.mqtt.discovery_prefix = mdp;
   var mtp = getFieldValue(formView, 'mqtt.topic_prefix');
-  if (mtp) config.mqtt.topic_prefix = mtp;
-  config.mqtt.retain = getFieldValue(formView, 'mqtt.retain');
-  config.mqtt.tls = getFieldValue(formView, 'mqtt.tls');
+  if (mtp !== undefined) config.mqtt.topic_prefix = mtp;
+  var mr = getFieldValue(formView, 'mqtt.retain');
+  if (mr !== undefined) config.mqtt.retain = mr;
+  var mt = getFieldValue(formView, 'mqtt.tls');
+  if (mt !== undefined) config.mqtt.tls = mt;
   var mci = getFieldValue(formView, 'mqtt.client_id');
-  if (mci) config.mqtt.client_id = mci;
+  if (mci !== undefined) config.mqtt.client_id = mci;
 
-  // Integration
+  // Integration - preserve existing values for hidden fields
   var haUrl = getFieldValue(formView, 'ha_url');
-  if (haUrl) config.ha_url = haUrl;
+  if (haUrl !== undefined) config.ha_url = haUrl; else if (configRawObj.ha_url) config.ha_url = configRawObj.ha_url;
   var haToken = getFieldValue(formView, 'ha_token');
-  if (haToken) config.ha_token = haToken;
+  if (haToken !== undefined) config.ha_token = haToken; else if (configRawObj.ha_token) config.ha_token = configRawObj.ha_token;
   var apUrl = getFieldValue(formView, 'addon_page_url');
-  if (apUrl) config.addon_page_url = apUrl;
+  if (apUrl !== undefined) config.addon_page_url = apUrl;
   var at = getFieldValue(formView, 'auth_token');
-  if (at) config.auth_token = at;
+  if (at !== undefined) config.auth_token = at;
 
   return config;
 }
@@ -2359,58 +2466,78 @@ function buildCards() {
     return;
   }
 
-  state.health.printers.forEach(function(p) {
-    var card = el('div', 'card');
-    var styleOpts = CARD_STYLES.map(function(s) {
-      return '<option value="' + escHtml(s.value) + '">' + escHtml(s.label) + '</option>';
-    }).join('');
+  var card = el('div', 'card');
+  var styleOpts = CARD_STYLES.map(function(s) {
+    return '<option value="' + escHtml(s.value) + '">' + escHtml(s.label) + '</option>';
+  }).join('');
 
-    card.innerHTML =
-      '<div class="yaml-card-header">' +
-        '<div class="printer-name">' + escHtml(p.name) + '</div>' +
-        '<select class="yaml-style-select">' + styleOpts + '</select>' +
+  var printerChecks = state.health.printers.map(function(p) {
+    return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer">' +
+      '<input type="checkbox" class="cards-printer-cb" value="' + escHtml(p.printer_id) + '" checked> ' +
+      escHtml(p.name) +
+    '</label>';
+  }).join('');
+
+  card.innerHTML =
+    '<div class="card-title">Lovelace Card Generator</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-bottom:12px">' +
+      '<div>' +
+        '<div style="font-size:12px;font-weight:500;margin-bottom:4px;opacity:.7">Card Style</div>' +
+        '<select class="yaml-style-select" style="min-width:160px">' + styleOpts + '</select>' +
       '</div>' +
-      '<div class="yaml-block">Loading...</div>' +
-      '<button class="btn btn-secondary btn-copy-yaml">Copy YAML</button>';
+      '<div>' +
+        '<div style="font-size:12px;font-weight:500;margin-bottom:4px;opacity:.7">Include Printers</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px 16px">' + printerChecks + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="yaml-block" style="min-height:120px">Loading...</div>' +
+    '<button class="btn btn-secondary btn-copy-yaml" style="margin-top:8px">Copy YAML</button>';
 
-    var pid = p.printer_id;
-    var yamlBlock = card.querySelector('.yaml-block');
-    var styleSelect = card.querySelector('.yaml-style-select');
-    var copyBtn = card.querySelector('.btn-copy-yaml');
+  var yamlBlock = card.querySelector('.yaml-block');
+  var styleSelect = card.querySelector('.yaml-style-select');
+  var copyBtn = card.querySelector('.btn-copy-yaml');
+  var checkboxes = card.querySelectorAll('.cards-printer-cb');
 
-    function loadCard(style) {
-      yamlBlock.textContent = 'Loading...';
-      requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style))
-        .then(function(resp) {
-          yamlBlock.textContent = resp.lovelace_yaml || '# No YAML returned';
-        })
-        .catch(function(e) {
-          yamlBlock.textContent = '# Error: ' + e.message;
-        });
+  function loadCards() {
+    var style = styleSelect.value;
+    var ids = [];
+    checkboxes.forEach(function(cb) { if (cb.checked) ids.push(cb.value); });
+    if (!ids.length) {
+      yamlBlock.textContent = '# Select at least one printer';
+      return;
     }
+    yamlBlock.textContent = 'Loading...';
+    requestJson('cards?style=' + encodeURIComponent(style) + '&printers=' + encodeURIComponent(ids.join(',')))
+      .then(function(resp) {
+        yamlBlock.textContent = resp.lovelace_yaml || '# No YAML returned';
+      })
+      .catch(function(e) {
+        yamlBlock.textContent = '# Error: ' + e.message;
+      });
+  }
 
-    styleSelect.onchange = function() { loadCard(styleSelect.value); };
-    loadCard('full');
+  styleSelect.onchange = loadCards;
+  checkboxes.forEach(function(cb) { cb.onchange = loadCards; });
+  loadCards();
 
-    copyBtn.onclick = function() {
-      var text = yamlBlock.textContent;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function() {
-          showToast('YAML copied to clipboard');
-        });
-      } else {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
+  copyBtn.onclick = function() {
+    var text = yamlBlock.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
         showToast('YAML copied to clipboard');
-      }
-    };
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('YAML copied to clipboard');
+    }
+  };
 
-    container.appendChild(card);
-  });
+  container.appendChild(card);
 }
 
 /* ── Templates View ─────────────────────────────────────── */
@@ -2680,12 +2807,14 @@ async function refreshAll() {
       // Auto-load config on first run
       try {
         var cfgResp = await requestJson('config');
-        configRawObj = cfgResp.options || {};
+        state.config = cfgResp.options || {};
+        configRawObj = state.config;
         var textarea = document.getElementById('config-textarea');
         if (textarea) textarea.value = JSON.stringify(configRawObj, null, 2);
         populateForm(configRawObj);
       } catch (e) { /* config load is optional */ }
     }
+    updateConfigSummaries();
 
     requestAnimationFrame(function() {
       requestAnimationFrame(function() { animateCards(); });

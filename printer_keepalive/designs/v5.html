@@ -642,6 +642,9 @@ body{
 
   <!-- PRINTERS -->
   <section class="view" id="view-printers">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+      <button class="ha-btn" id="btnAddPrinterNav" title="Add a new printer via the Config tab">ADD PRINTER</button>
+    </div>
     <div id="printerCards"></div>
   </section>
 
@@ -654,7 +657,7 @@ body{
         <button class="ha-btn" id="btnRescan">RESCAN</button>
       </div>
       <table class="disc-table" id="discTable">
-        <thead><tr><th>Name</th><th>Model</th><th>Host</th><th>State</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+        <thead><tr><th>Printer</th><th>Model</th><th>State</th><th>Type</th><th>Secure</th><th>Status</th><th>Action</th></tr></thead>
         <tbody id="discBody"></tbody>
       </table>
     </div>
@@ -687,7 +690,7 @@ body{
       <!-- Section 1: Printers -->
       <div class="cfg-section" id="cfgSectionPrinters">
         <div class="cfg-section-header">
-          <span class="cfg-section-title">Printers</span>
+          <span class="cfg-section-title">Printers <span class="cfg-section-summary" id="cfgSummaryPrinters" style="font-size:12px;color:var(--secondary-text-color);font-weight:400;margin-left:8px;"></span></span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="cfg-section-desc">Define your printers with individual URIs, types, and print schedules. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
@@ -700,7 +703,7 @@ body{
       <!-- Section 2: Scheduling -->
       <div class="cfg-section" id="cfgSectionScheduling">
         <div class="cfg-section-header">
-          <span class="cfg-section-title">Scheduling</span>
+          <span class="cfg-section-title">Scheduling <span class="cfg-section-summary" id="cfgSummaryScheduling" style="font-size:12px;color:var(--secondary-text-color);font-weight:400;margin-left:8px;"></span></span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="cfg-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
@@ -730,7 +733,7 @@ body{
       <!-- Section 3: Discovery -->
       <div class="cfg-section" id="cfgSectionDiscovery">
         <div class="cfg-section-header">
-          <span class="cfg-section-title">Discovery</span>
+          <span class="cfg-section-title">Discovery <span class="cfg-section-summary" id="cfgSummaryDiscovery" style="font-size:12px;color:var(--secondary-text-color);font-weight:400;margin-left:8px;"></span></span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="cfg-section-desc">Network scanning for printers via mDNS/DNS-SD. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
@@ -820,80 +823,11 @@ body{
       <!-- Section 5: MQTT -->
       <div class="cfg-section" id="cfgSectionMqtt">
         <div class="cfg-section-header">
-          <span class="cfg-section-title">MQTT</span>
+          <span class="cfg-section-title">MQTT <span class="cfg-section-summary" id="cfgSummaryMqtt" style="font-size:12px;color:var(--secondary-text-color);font-weight:400;margin-left:8px;"></span></span>
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="cfg-section-desc">Home Assistant device discovery via MQTT broker. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
-        <div class="cfg-section-body">
-          <div class="cfg-toggle-row">
-            <div>
-              <div class="cfg-toggle-label">MQTT Enabled</div>
-              <div class="cfg-toggle-desc">Enable MQTT integration for Home Assistant discovery</div>
-            </div>
-            <label class="toggle"><input type="checkbox" id="cfgMqttEnabled"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="cfg-field-row" style="margin-top:12px;">
-            <div class="cfg-field">
-              <label class="cfg-field-label">Host</label>
-              <input type="text" class="cfg-input" id="cfgMqttHost" placeholder="core-mosquitto">
-              <div class="cfg-field-desc">MQTT broker hostname</div>
-            </div>
-            <div class="cfg-field">
-              <label class="cfg-field-label">Port</label>
-              <input type="number" class="cfg-input cfg-number" id="cfgMqttPort" placeholder="1883">
-              <div class="cfg-field-desc">MQTT broker port</div>
-            </div>
-          </div>
-          <div class="cfg-field-row">
-            <div class="cfg-field">
-              <label class="cfg-field-label">Username</label>
-              <input type="text" class="cfg-input" id="cfgMqttUsername" placeholder="mqtt_user">
-              <div class="cfg-field-desc">MQTT authentication username</div>
-            </div>
-            <div class="cfg-field">
-              <label class="cfg-field-label">Password</label>
-              <input type="password" class="cfg-input" id="cfgMqttPassword" placeholder="mqtt_password">
-              <div class="cfg-field-desc">MQTT authentication password</div>
-            </div>
-          </div>
-          <div class="cfg-field-row">
-            <div class="cfg-field">
-              <label class="cfg-field-label">Discovery Prefix</label>
-              <input type="text" class="cfg-input" id="cfgMqttDiscoveryPrefix" placeholder="homeassistant">
-              <div class="cfg-field-desc">MQTT discovery topic prefix</div>
-            </div>
-            <div class="cfg-field">
-              <label class="cfg-field-label">Topic Prefix</label>
-              <input type="text" class="cfg-input" id="cfgMqttTopicPrefix" placeholder="printer_keepalive">
-              <div class="cfg-field-desc">MQTT topic prefix for this add-on</div>
-            </div>
-          </div>
-          <div class="cfg-field-row">
-            <div class="cfg-field">
-              <div class="cfg-toggle-row">
-                <div>
-                  <div class="cfg-toggle-label">Retain</div>
-                  <div class="cfg-toggle-desc">Retain MQTT messages</div>
-                </div>
-                <label class="toggle"><input type="checkbox" id="cfgMqttRetain"><span class="toggle-slider"></span></label>
-              </div>
-            </div>
-            <div class="cfg-field">
-              <div class="cfg-toggle-row">
-                <div>
-                  <div class="cfg-toggle-label">TLS</div>
-                  <div class="cfg-toggle-desc">Use TLS for MQTT connection</div>
-                </div>
-                <label class="toggle"><input type="checkbox" id="cfgMqttTls"><span class="toggle-slider"></span></label>
-              </div>
-            </div>
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-field-label">Client ID</label>
-            <input type="text" class="cfg-input" id="cfgMqttClientId" placeholder="printer_keepalive">
-            <div class="cfg-field-desc">MQTT client identifier</div>
-          </div>
-        </div>
+        <div class="cfg-section-body" id="cfgMqttBody"></div>
       </div>
 
       <!-- Section 6: Integration -->
@@ -903,28 +837,7 @@ body{
           <svg class="cfg-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="cfg-section-desc">Home Assistant connection and API authentication. <a href="#" onclick="switchToTab('help');return false;">Learn more</a></div>
-        <div class="cfg-section-body">
-          <div class="cfg-field">
-            <label class="cfg-field-label">Home Assistant URL</label>
-            <input type="text" class="cfg-input" id="cfgHaUrl" placeholder="http://homeassistant.local:8123">
-            <div class="cfg-field-desc">URL of your Home Assistant instance</div>
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-field-label">Home Assistant Token</label>
-            <input type="password" class="cfg-input" id="cfgHaToken" placeholder="Long-lived access token">
-            <div class="cfg-field-desc">Long-lived access token for HA API</div>
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-field-label">Add-on Page URL</label>
-            <input type="text" class="cfg-input" id="cfgAddonPageUrl" placeholder="/hassio/ingress/...">
-            <div class="cfg-field-desc">Ingress URL for this add-on</div>
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-field-label">Auth Token</label>
-            <input type="password" class="cfg-input" id="cfgAuthToken" placeholder="Add-on auth token">
-            <div class="cfg-field-desc">Bearer token for add-on API authentication</div>
-          </div>
-        </div>
+        <div class="cfg-section-body" id="cfgIntegrationBody"></div>
       </div>
     </div>
 
@@ -1143,7 +1056,11 @@ function renderSysInfo() {
 // ── Printers View ──
 function renderPrinterCards() {
   if (!state.health || !state.health.printers || !state.health.printers.length) {
-    document.getElementById('printerCards').innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured.</div></div>';
+    document.getElementById('printerCards').innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:16px 0;text-align:center;">' +
+      '<div style="font-size:16px;margin-bottom:8px;">No printers configured</div>' +
+      '<div style="font-size:13px;margin-bottom:12px;">Add printers in the Config tab or discover them on the network via the Discovery tab.</div>' +
+      '<button class="ha-btn" onclick="switchToTab(\'config\')">GO TO CONFIG</button>' +
+    '</div></div>';
     return;
   }
   var templates = state.health.supported_templates || [];
@@ -1177,23 +1094,55 @@ function renderPrinterCards() {
         '<div class="control-group"><label class="control-label">Template</label><select class="control-select pc-template">' + templateOpts + '</select></div>' +
       '</div>' +
       '<div class="btn-row">' +
-        '<button class="ha-btn pc-save">SAVE SETTINGS</button>' +
-        '<button class="ha-btn pc-print">PRINT</button>' +
-        '<button class="ha-btn warn pc-force">FORCE PRINT</button>' +
-        '<button class="ha-btn pc-poll">POLL</button>' +
+        '<button class="ha-btn pc-save" disabled>SAVE SETTINGS</button>' +
+        '<button class="ha-btn pc-print" title="Print a keepalive page only if one is due based on the cadence schedule">PRINT IF DUE</button>' +
+        '<button class="ha-btn warn pc-force" title="Print a keepalive page immediately regardless of schedule">FORCE PRINT</button>' +
+        '<button class="ha-btn pc-poll" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts">POLL STATUS</button>' +
       '</div>' +
     '</div>';
   }).join('');
 
-  // Bind actions
+  // Bind actions and change tracking
   document.querySelectorAll('.printer-card').forEach(function(card) {
     var pid = card.dataset.printerId;
-    card.querySelector('.pc-save').addEventListener('click', function() { printerSave(pid, card); });
+    var enabledEl = card.querySelector('.pc-enabled');
+    var cadenceEl = card.querySelector('.pc-cadence');
+    var templateEl = card.querySelector('.pc-template');
+    var saveBtn = card.querySelector('.pc-save');
+
+    // Track original values
+    var origEnabled = enabledEl.checked;
+    var origCadence = cadenceEl.value;
+    var origTemplate = templateEl.value;
+
+    function checkDirty() {
+      var dirty = enabledEl.checked !== origEnabled ||
+                  cadenceEl.value !== origCadence ||
+                  templateEl.value !== origTemplate;
+      saveBtn.disabled = !dirty;
+    }
+
+    enabledEl.addEventListener('change', checkDirty);
+    cadenceEl.addEventListener('input', checkDirty);
+    templateEl.addEventListener('change', checkDirty);
+
+    saveBtn.addEventListener('click', function() { printerSave(pid, card); });
     card.querySelector('.pc-print').addEventListener('click', function() { printerPrint(pid, card, false); });
     card.querySelector('.pc-force').addEventListener('click', function() { printerPrint(pid, card, true); });
     card.querySelector('.pc-poll').addEventListener('click', function() { printerPoll(pid); });
   });
 }
+
+// ── Add Printer Nav Button ──
+document.getElementById('btnAddPrinterNav').addEventListener('click', function() {
+  switchToTab('config');
+  // Expand the printers section if collapsed
+  var sec = document.getElementById('cfgSectionPrinters');
+  if (sec && sec.classList.contains('collapsed')) sec.classList.remove('collapsed');
+  // Scroll to add printer button
+  var addBtn = document.getElementById('btnAddPrinter');
+  if (addBtn) { addBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }); addBtn.click(); }
+});
 
 // ── Printer Actions ──
 async function printerSave(pid, card) {
@@ -1266,15 +1215,23 @@ function renderDiscovery() {
           '<option value="inkjet"' + (typeVal === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
           '<option value="laser"' + (typeVal === 'laser' ? ' selected' : '') + '>laser</option>' +
         '</select></td>';
+    var ippsCell = '<td>';
+    if (p.ipps_available) {
+      var checked = (p.suggested_config && p.suggested_config.printer_uri && p.suggested_config.printer_uri.indexOf('ipps://') === 0) ? ' checked' : '';
+      ippsCell += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px"><input type="checkbox" class="disc-ipps-toggle" data-disc-idx="' + idx + '"' + checked + '> IPPS</label>';
+    } else {
+      ippsCell += '<span style="opacity:.4;font-size:12px">\u2014</span>';
+    }
+    ippsCell += '</td>';
     var configCell = p.already_configured
       ? '<span class="chip info">Configured</span>'
       : '<button class="ha-btn disc-add-btn" data-disc-idx="' + idx + '" style="padding:2px 10px;font-size:12px;min-height:0;line-height:1.6;">ADD</button>';
     return '<tr>' +
-      '<td style="font-weight:500">' + esc(p.printer_name) + '</td>' +
+      '<td style="min-width:180px"><div style="font-weight:600;margin-bottom:2px">' + esc(p.printer_name) + '</div><div style="font-size:11px;opacity:.6;font-family:monospace">' + esc(p.uri || '') + '</div></td>' +
       '<td>' + esc(p.printer_make_and_model || '\u2014') + '</td>' +
-      '<td>' + esc(p.host || '') + '</td>' +
       '<td>' + esc(p.printer_state || '\u2014') + '</td>' +
       typeCell +
+      ippsCell +
       '<td><span class="chip ' + rCls + '">' + (p.reachable ? 'Online' : 'Offline') + '</span></td>' +
       '<td>' + configCell + '</td>' +
     '</tr>';
@@ -1287,6 +1244,16 @@ function renderDiscovery() {
       if (p && p.suggested_config) {
         p.suggested_config.printer_type = sel.value;
         p.suggested_config.cadence_hours = sel.value === 'laser' ? 720 : 168;
+      }
+    });
+  });
+
+  document.querySelectorAll('.disc-ipps-toggle').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var idx = parseInt(cb.getAttribute('data-disc-idx'), 10);
+      var p = (state.discovery.printers || [])[idx];
+      if (p && p.suggested_config) {
+        p.suggested_config.printer_uri = cb.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
       }
     });
   });
@@ -1304,15 +1271,16 @@ function renderDiscovery() {
           p.suggested_config.printer_type = typeSelect.value;
           p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
         }
+        var ippsToggle = document.querySelector('.disc-ipps-toggle[data-disc-idx="' + idx + '"]');
+        if (ippsToggle) {
+          p.suggested_config.printer_uri = ippsToggle.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+        }
         var cfgResp = await requestJson('config');
         var opts = cfgResp.options || {};
         if (!Array.isArray(opts.printers)) opts.printers = [];
         opts.printers.push(p.suggested_config);
         await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-        var restartBtn = document.getElementById('btnConfigRestart');
-        var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
-        if (restartBtn) msg += ' Use the RESTART button to apply.';
-        showToast(msg, 'ok');
+        showToast('Added ' + p.printer_name + ' to config.', 'ok');
         refreshAll();
       } catch (e) {
         showToast('Add failed: ' + e.message, 'err');
@@ -1360,6 +1328,152 @@ document.querySelectorAll('.cfg-section-header').forEach(function(header) {
   });
 });
 
+// ── Context-Aware MQTT & Integration Sections ──
+function renderContextAwareSections(cfg) {
+  if (!cfg) cfg = {};
+  var mqtt = cfg.mqtt || {};
+  var isSupervisor = state.health && state.health.is_supervisor;
+
+  // MQTT section
+  var mqttHtml =
+    '<div class="cfg-toggle-row">' +
+      '<div><div class="cfg-toggle-label">MQTT Enabled</div>' +
+      '<div class="cfg-toggle-desc">Enable MQTT integration for Home Assistant discovery</div></div>' +
+      '<label class="toggle"><input type="checkbox" id="cfgMqttEnabled"><span class="toggle-slider"></span></label>' +
+    '</div>';
+
+  if (isSupervisor) {
+    mqttHtml +=
+      '<div class="cfg-field-desc" style="margin-top:12px;padding:8px 12px;background:var(--primary-color-light);border-radius:8px;">' +
+        'Running as a Home Assistant add-on. MQTT broker connection is auto-configured via the Supervisor API. Host, port, username, password, and TLS settings are managed automatically.' +
+      '</div>';
+  } else {
+    mqttHtml +=
+      '<div class="cfg-field-row" style="margin-top:12px;">' +
+        '<div class="cfg-field"><label class="cfg-field-label">Host</label>' +
+        '<input type="text" class="cfg-input" id="cfgMqttHost" placeholder="core-mosquitto">' +
+        '<div class="cfg-field-desc">MQTT broker hostname</div></div>' +
+        '<div class="cfg-field"><label class="cfg-field-label">Port</label>' +
+        '<input type="number" class="cfg-input cfg-number" id="cfgMqttPort" placeholder="1883">' +
+        '<div class="cfg-field-desc">MQTT broker port</div></div>' +
+      '</div>' +
+      '<div class="cfg-field-row">' +
+        '<div class="cfg-field"><label class="cfg-field-label">Username</label>' +
+        '<input type="text" class="cfg-input" id="cfgMqttUsername" placeholder="mqtt_user">' +
+        '<div class="cfg-field-desc">MQTT authentication username</div></div>' +
+        '<div class="cfg-field"><label class="cfg-field-label">Password</label>' +
+        '<input type="password" class="cfg-input" id="cfgMqttPassword" placeholder="mqtt_password">' +
+        '<div class="cfg-field-desc">MQTT authentication password</div></div>' +
+      '</div>' +
+      '<div class="cfg-field-row">' +
+        '<div class="cfg-field"><div class="cfg-toggle-row">' +
+          '<div><div class="cfg-toggle-label">TLS</div>' +
+          '<div class="cfg-toggle-desc">Use TLS for MQTT connection</div></div>' +
+          '<label class="toggle"><input type="checkbox" id="cfgMqttTls"><span class="toggle-slider"></span></label>' +
+        '</div></div>' +
+        '<div class="cfg-field"></div>' +
+      '</div>';
+  }
+
+  // Common MQTT fields (shown in both modes)
+  mqttHtml +=
+    '<div class="cfg-field-row" style="margin-top:12px;">' +
+      '<div class="cfg-field"><label class="cfg-field-label">Discovery Prefix</label>' +
+      '<input type="text" class="cfg-input" id="cfgMqttDiscoveryPrefix" placeholder="homeassistant">' +
+      '<div class="cfg-field-desc">MQTT discovery topic prefix</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Topic Prefix</label>' +
+      '<input type="text" class="cfg-input" id="cfgMqttTopicPrefix" placeholder="printer_keepalive">' +
+      '<div class="cfg-field-desc">MQTT topic prefix for this add-on</div></div>' +
+    '</div>' +
+    '<div class="cfg-field-row">' +
+      '<div class="cfg-field"><div class="cfg-toggle-row">' +
+        '<div><div class="cfg-toggle-label">Retain</div>' +
+        '<div class="cfg-toggle-desc">Retain MQTT messages</div></div>' +
+        '<label class="toggle"><input type="checkbox" id="cfgMqttRetain"><span class="toggle-slider"></span></label>' +
+      '</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Client ID</label>' +
+      '<input type="text" class="cfg-input" id="cfgMqttClientId" placeholder="printer_keepalive">' +
+      '<div class="cfg-field-desc">MQTT client identifier</div></div>' +
+    '</div>';
+
+  document.getElementById('cfgMqttBody').innerHTML = mqttHtml;
+
+  // Re-set MQTT values after re-rendering
+  setChecked('cfgMqttEnabled', mqtt.enabled);
+  if (!isSupervisor) {
+    setVal('cfgMqttHost', mqtt.host);
+    setVal('cfgMqttPort', mqtt.port);
+    setVal('cfgMqttUsername', mqtt.username);
+    setVal('cfgMqttPassword', mqtt.password);
+    setChecked('cfgMqttTls', mqtt.tls);
+  }
+  setVal('cfgMqttDiscoveryPrefix', mqtt.discovery_prefix);
+  setVal('cfgMqttTopicPrefix', mqtt.topic_prefix);
+  setChecked('cfgMqttRetain', mqtt.retain);
+  setVal('cfgMqttClientId', mqtt.client_id);
+
+  // Integration section
+  var intHtml = '';
+  if (isSupervisor) {
+    intHtml +=
+      '<div class="cfg-field-desc" style="margin-bottom:16px;padding:8px 12px;background:var(--primary-color-light);border-radius:8px;">' +
+        'Running as a Home Assistant add-on. The HA connection is established automatically via the Supervisor API. Only the ingress URL and optional auth token are needed.' +
+      '</div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Add-on Page URL</label>' +
+      '<input type="text" class="cfg-input" id="cfgAddonPageUrl" placeholder="/hassio/ingress/...">' +
+      '<div class="cfg-field-desc">Ingress URL for this add-on</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Auth Token</label>' +
+      '<input type="password" class="cfg-input" id="cfgAuthToken" placeholder="Add-on auth token">' +
+      '<div class="cfg-field-desc">Bearer token for add-on API authentication</div></div>';
+  } else {
+    intHtml +=
+      '<div class="cfg-field"><label class="cfg-field-label">Home Assistant URL</label>' +
+      '<input type="text" class="cfg-input" id="cfgHaUrl" placeholder="http://homeassistant.local:8123">' +
+      '<div class="cfg-field-desc">URL of your Home Assistant instance</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Home Assistant Token</label>' +
+      '<input type="password" class="cfg-input" id="cfgHaToken" placeholder="Long-lived access token">' +
+      '<div class="cfg-field-desc">Long-lived access token for HA API</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Add-on Page URL</label>' +
+      '<input type="text" class="cfg-input" id="cfgAddonPageUrl" placeholder="/hassio/ingress/...">' +
+      '<div class="cfg-field-desc">Ingress URL for this add-on</div></div>' +
+      '<div class="cfg-field"><label class="cfg-field-label">Auth Token</label>' +
+      '<input type="password" class="cfg-input" id="cfgAuthToken" placeholder="Add-on auth token">' +
+      '<div class="cfg-field-desc">Bearer token for add-on API authentication</div></div>';
+  }
+
+  document.getElementById('cfgIntegrationBody').innerHTML = intHtml;
+
+  // Re-set Integration values after re-rendering
+  if (!isSupervisor) {
+    setVal('cfgHaUrl', cfg.ha_url);
+    setVal('cfgHaToken', cfg.ha_token);
+  }
+  setVal('cfgAddonPageUrl', cfg.addon_page_url);
+  setVal('cfgAuthToken', cfg.auth_token);
+}
+
+// ── Update Section Summaries ──
+function updateSectionSummaries(cfg) {
+  if (!cfg) cfg = {};
+  var printerCount = (cfg.printers || []).length;
+  var el;
+  el = document.getElementById('cfgSummaryPrinters');
+  if (el) el.textContent = printerCount + ' printer(s)';
+  el = document.getElementById('cfgSummaryScheduling');
+  if (el) el.textContent = cfg.auto_print_enabled ? 'Active' : 'Disabled';
+  el = document.getElementById('cfgSummaryDiscovery');
+  if (el) {
+    if (cfg.discovery_enabled) {
+      var discCount = (state.discovery && state.discovery.printer_count) || 0;
+      el.textContent = discCount + ' found';
+    } else {
+      el.textContent = 'Disabled';
+    }
+  }
+  el = document.getElementById('cfgSummaryMqtt');
+  if (el) el.textContent = (cfg.mqtt && cfg.mqtt.enabled) ? 'Connected' : 'Disabled';
+}
+
 // ── Populate Form from Config ──
 function populateForm(cfg) {
   if (!cfg) cfg = {};
@@ -1380,25 +1494,13 @@ function populateForm(cfg) {
   setVal('cfgWeatherEntity', cfg.weather_entity);
   var eids = cfg.entity_ids;
   setVal('cfgEntityIds', Array.isArray(eids) ? eids.join('\n') : (eids || ''));
-  // MQTT
-  var mqtt = cfg.mqtt || {};
-  setChecked('cfgMqttEnabled', mqtt.enabled);
-  setVal('cfgMqttHost', mqtt.host);
-  setVal('cfgMqttPort', mqtt.port);
-  setVal('cfgMqttUsername', mqtt.username);
-  setVal('cfgMqttPassword', mqtt.password);
-  setVal('cfgMqttDiscoveryPrefix', mqtt.discovery_prefix);
-  setVal('cfgMqttTopicPrefix', mqtt.topic_prefix);
-  setChecked('cfgMqttRetain', mqtt.retain);
-  setChecked('cfgMqttTls', mqtt.tls);
-  setVal('cfgMqttClientId', mqtt.client_id);
-  // Integration
-  setVal('cfgHaUrl', cfg.ha_url);
-  setVal('cfgHaToken', cfg.ha_token);
-  setVal('cfgAddonPageUrl', cfg.addon_page_url);
-  setVal('cfgAuthToken', cfg.auth_token);
+  // MQTT and Integration are rendered dynamically by renderContextAwareSections
   // Printers
   renderPrinterForms(cfg.printers || []);
+  // Context-aware MQTT/Integration
+  renderContextAwareSections(cfg);
+  // Section summaries
+  updateSectionSummaries(cfg);
 }
 
 function setVal(id, val) {
@@ -1648,57 +1750,69 @@ function buildCards() {
   }
   var styles = ['full_dashboard', 'compact', 'glance', 'status_only', 'controls_only'];
   var styleLabels = { full_dashboard: 'Full Dashboard', compact: 'Compact', glance: 'Glance', status_only: 'Status Only', controls_only: 'Controls Only' };
-  container.innerHTML = state.health.printers.map(function(p) {
-    var pid = p.printer_id;
-    var styleOpts = styles.map(function(s) {
-      return '<option value="' + s + '">' + esc(styleLabels[s]) + '</option>';
-    }).join('');
-    return '<div class="card-gen-card" data-card-pid="' + esc(pid) + '">' +
-      '<div class="card-gen-header">' + esc(p.name) + '</div>' +
-      '<div class="card-gen-controls">' +
-        '<label>Style</label>' +
-        '<select class="control-select cg-style">' + styleOpts + '</select>' +
-        '<button class="ha-btn cg-generate">GENERATE</button>' +
-        '<button class="ha-btn cg-copy" style="display:none;">COPY YAML</button>' +
-      '</div>' +
-      '<div class="yaml-block cg-yaml" style="display:none;"></div>' +
-    '</div>';
+  var styleOpts = styles.map(function(s) {
+    return '<option value="' + s + '">' + esc(styleLabels[s]) + '</option>';
   }).join('');
 
-  container.querySelectorAll('.card-gen-card').forEach(function(card) {
-    var pid = card.dataset.cardPid;
-    var styleEl = card.querySelector('.cg-style');
-    var yamlEl = card.querySelector('.cg-yaml');
-    var copyBtn = card.querySelector('.cg-copy');
-    card.querySelector('.cg-generate').addEventListener('click', async function() {
-      try {
-        var style = styleEl.value;
-        var resp = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
-        yamlEl.textContent = resp.lovelace_yaml || '# No YAML returned';
-        yamlEl.style.display = 'block';
-        copyBtn.style.display = 'inline-block';
-      } catch (e) {
-        yamlEl.textContent = '# Error: ' + e.message;
-        yamlEl.style.display = 'block';
-        copyBtn.style.display = 'none';
-      }
-    });
-    copyBtn.addEventListener('click', function() {
-      var text = yamlEl.textContent;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function() {
-          showToast('YAML copied to clipboard', 'ok');
-        });
-      } else {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
+  var printerCheckboxes = state.health.printers.map(function(p) {
+    return '<label style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:13px;cursor:pointer;">' +
+      '<input type="checkbox" class="cg-printer-cb" value="' + esc(p.printer_id) + '" checked> ' + esc(p.name) +
+    '</label>';
+  }).join('');
+
+  container.innerHTML =
+    '<div class="card-gen-card">' +
+      '<div class="card-gen-header">Generate Lovelace Card</div>' +
+      '<div class="card-gen-controls">' +
+        '<label>Style</label>' +
+        '<select class="control-select" id="cgStyleSelect">' + styleOpts + '</select>' +
+      '</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<div style="font-size:12px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Printers</div>' +
+        '<div id="cgPrinterChecks">' + printerCheckboxes + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:4px;margin-bottom:12px;">' +
+        '<button class="ha-btn" id="cgGenerate">GENERATE</button>' +
+        '<button class="ha-btn" id="cgCopy" style="display:none;">COPY YAML</button>' +
+      '</div>' +
+      '<div class="yaml-block" id="cgYaml" style="display:none;"></div>' +
+    '</div>';
+
+  document.getElementById('cgGenerate').addEventListener('click', async function() {
+    var style = document.getElementById('cgStyleSelect').value;
+    var checks = document.querySelectorAll('.cg-printer-cb:checked');
+    var ids = [];
+    checks.forEach(function(cb) { ids.push(cb.value); });
+    if (!ids.length) { showToast('Select at least one printer', 'err'); return; }
+    var yamlEl = document.getElementById('cgYaml');
+    var copyBtn = document.getElementById('cgCopy');
+    try {
+      var resp = await requestJson('cards?style=' + encodeURIComponent(style) + '&printers=' + encodeURIComponent(ids.join(',')));
+      yamlEl.textContent = resp.lovelace_yaml || '# No YAML returned';
+      yamlEl.style.display = 'block';
+      copyBtn.style.display = 'inline-block';
+    } catch (e) {
+      yamlEl.textContent = '# Error: ' + e.message;
+      yamlEl.style.display = 'block';
+      copyBtn.style.display = 'none';
+    }
+  });
+
+  document.getElementById('cgCopy').addEventListener('click', function() {
+    var text = document.getElementById('cgYaml').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() {
         showToast('YAML copied to clipboard', 'ok');
-      }
-    });
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('YAML copied to clipboard', 'ok');
+    }
   });
 }
 

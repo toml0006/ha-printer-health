@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.2
+
+- Config sections now show summaries when collapsed (printer count, scheduler status, discovery count, MQTT status).
+- MQTT and Integration config sections are now context-aware: Supervisor installs hide auto-detected connection fields; non-Supervisor installs show full HA connection configuration.
+- Printers tab: Save button only enables when settings have changed; buttons renamed for clarity (Print if Due, Force Print, Poll Status) with tooltips explaining each action.
+- Printers tab: Added "Add Printer" button for quick access to printer configuration.
+- Cards tab: Simplified to a single YAML output with card style picker and printer checkboxes for multi-printer card generation.
+- Added `GET /cards` endpoint supporting multi-printer Lovelace card generation with `?style=` and `?printers=` parameters.
+- Discovery now defaults suggested printer name to the make/model when available.
+- Added `is_supervisor` flag to health endpoint for UI context detection.
+
+## 0.5.1
+
+- Deduplicated ipp/ipps discovery entries: printers reachable on both protocols now appear as a single row.
+- Added IPPS toggle in discovery table so users can choose secure printing before adding.
+- Discovery table now shows printer name prominently with IPP URI underneath instead of separate name/host columns.
+
 ## 0.4.2
 
 - Added "Add" button in discovery table to add discovered printers to config with one click.

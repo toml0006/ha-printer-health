@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.5.2"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -1696,9 +1696,9 @@ def _run_discovery_scan() -> tuple[list[dict[str, Any]], str, float]:
             except Exception:  # noqa: BLE001
                 pass
 
-    discovered: list[dict[str, Any]] = []
+    # First pass: build per-service entries keyed by host+port+resource for dedup
+    raw_entries: list[dict[str, Any]] = []
     seen_uris: set[str] = set()
-    used_ids: set[str] = set()
 
     for service in sorted(raw_services, key=lambda item: (str(item.get("service_name", "")), str(item.get("service_type", "")))):
         properties = service.get("properties", {})
@@ -1731,13 +1731,83 @@ def _run_discovery_scan() -> tuple[list[dict[str, Any]], str, float]:
             continue
         seen_uris.add(uri)
 
+        # Dedup key: host+port+resource (ignoring scheme)
+        resource_path = _resource_path(rp)
+        dedup_key = f"{host}:{port}{resource_path}"
+
         label = _service_label(str(service.get("service_name", "")), properties)
         attrs, error = query_ipp_attributes(uri, timeout_seconds=DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS)
         printer_name = str(attrs.get("printer-name", "")).strip() or label
         model = str(attrs.get("printer-make-and-model", "")).strip() or str(properties.get("ty", "")).strip()
         printer_type_guess = infer_printer_type_from_text(printer_name, model)
 
-        printer_id = slugify(printer_name)
+        raw_entries.append({
+            "dedup_key": dedup_key,
+            "service_name": str(service.get("service_name", "")),
+            "service_type": service_type,
+            "secure": secure,
+            "host": host,
+            "addresses": addresses,
+            "port": port,
+            "uri": uri,
+            "reachable": not bool(error),
+            "error": error or "",
+            "printer_name": printer_name,
+            "printer_make_and_model": model,
+            "printer_state": normalize_state_name(attrs.get("printer-state", "unknown")),
+            "printer_type_guess": printer_type_guess,
+        })
+
+    # Second pass: merge ipp/ipps entries for the same physical printer
+    merged: dict[str, dict[str, Any]] = {}
+    for entry in raw_entries:
+        key = entry["dedup_key"]
+        if key not in merged:
+            merged[key] = {
+                "service_name": entry["service_name"],
+                "host": entry["host"],
+                "addresses": entry["addresses"],
+                "port": entry["port"],
+                "ipp_uri": "",
+                "ipps_uri": "",
+                "ipps_available": False,
+                "reachable": entry["reachable"],
+                "error": entry["error"],
+                "printer_name": entry["printer_name"],
+                "printer_make_and_model": entry["printer_make_and_model"],
+                "printer_state": entry["printer_state"],
+                "printer_type_guess": entry["printer_type_guess"],
+            }
+        m = merged[key]
+        if entry["secure"]:
+            m["ipps_uri"] = entry["uri"]
+            m["ipps_available"] = True
+        else:
+            m["ipp_uri"] = entry["uri"]
+        # Prefer reachable status from either protocol
+        if entry["reachable"]:
+            m["reachable"] = True
+            m["error"] = ""
+        # Prefer non-empty name/model from either protocol
+        if entry["printer_name"] and (not m["printer_name"] or m["printer_name"] == m["service_name"]):
+            m["printer_name"] = entry["printer_name"]
+        if entry["printer_make_and_model"] and not m["printer_make_and_model"]:
+            m["printer_make_and_model"] = entry["printer_make_and_model"]
+
+    # Third pass: build final discovered list
+    discovered: list[dict[str, Any]] = []
+    used_ids: set[str] = set()
+
+    for m in merged.values():
+        # Default URI is ipp; user can toggle to ipps
+        uri = m["ipp_uri"] or m["ipps_uri"]
+        printer_name = m["printer_name"]
+        model = m["printer_make_and_model"]
+        printer_type_guess = m["printer_type_guess"]
+        # Use model as the friendly name if available, else fall back to printer_name
+        suggested_name = model or printer_name
+
+        printer_id = slugify(suggested_name or printer_name)
         if printer_id in used_ids:
             suffix = 2
             while f"{printer_id}_{suffix}" in used_ids:
@@ -1747,27 +1817,28 @@ def _run_discovery_scan() -> tuple[list[dict[str, Any]], str, float]:
 
         parsed_uri = urlparse(uri)
         host_match = parsed_uri.hostname.lower() if parsed_uri.hostname else ""
-        already_configured = uri in configured_uris or (host_match in configured_hosts if host_match else False)
+        already_configured = uri in configured_uris or m.get("ipps_uri", "") in configured_uris or (host_match in configured_hosts if host_match else False)
 
         discovered.append(
             {
-                "service_name": str(service.get("service_name", "")),
-                "service_type": service_type,
-                "secure": secure,
-                "host": host,
-                "addresses": addresses,
-                "port": port,
+                "service_name": m["service_name"],
+                "host": m["host"],
+                "addresses": m["addresses"],
+                "port": m["port"],
                 "uri": uri,
-                "reachable": not bool(error),
-                "error": error or "",
+                "ipp_uri": m["ipp_uri"],
+                "ipps_uri": m["ipps_uri"],
+                "ipps_available": m["ipps_available"],
+                "reachable": m["reachable"],
+                "error": m["error"],
                 "printer_name": printer_name,
-                "printer_make_and_model": model,
-                "printer_state": normalize_state_name(attrs.get("printer-state", "unknown")),
+                "printer_make_and_model": m["printer_make_and_model"],
+                "printer_state": m["printer_state"],
                 "printer_type_guess": printer_type_guess,
                 "already_configured": already_configured,
                 "suggested_config": {
                     "id": printer_id,
-                    "name": printer_name,
+                    "name": suggested_name,
                     "printer_uri": uri,
                     "printer_type": printer_type_guess,
                     "enabled": True,
@@ -2393,11 +2464,28 @@ def _lovelace_controls(pid: str, name: str) -> str:
     ])
 
 
+def generate_multi_printer_card_yaml(printers: list[PrinterConfig], style: str = "full") -> str:
+    """Generate a single Lovelace card YAML covering multiple printers."""
+    if not printers:
+        return "# No printers selected"
+    if len(printers) == 1:
+        return generate_lovelace_card_yaml(printers[0], style)
+    parts = ["type: vertical-stack", "cards:"]
+    for printer in printers:
+        card_yaml = generate_lovelace_card_yaml(printer, style)
+        lines = card_yaml.split("\n")
+        for i, line in enumerate(lines):
+            parts.append(f"  - {line}" if i == 0 else f"    {line}")
+    return "\n".join(parts)
+
+
 class MqttBridge:
     def __init__(self, config: MqttConfig) -> None:
         self.config = config
         self.client: mqtt.Client | None = None
         self.started = False
+        self.connected = False
+        self.last_error = ""
 
     def status_topic(self) -> str:
         return f"{self.config.topic_prefix}/status"
@@ -2763,9 +2851,14 @@ class MqttBridge:
 
     def _on_connect(self, client: mqtt.Client, userdata: Any, flags: dict[str, Any], rc: int) -> None:
         if rc != 0:
-            log(f"MQTT connect failed with rc={rc}")
+            rc_names = {1: "incorrect protocol", 2: "invalid client id", 3: "server unavailable", 4: "bad credentials", 5: "not authorized"}
+            log(f"MQTT connect failed: rc={rc} ({rc_names.get(rc, 'unknown')})")
+            self.connected = False
+            self.last_error = f"Connection refused: {rc_names.get(rc, f'rc={rc}')}"
             return
-        log("MQTT connected.")
+        log(f"MQTT connected to {self.config.host}:{self.config.port}.")
+        self.connected = True
+        self.last_error = ""
         client.subscribe(f"{self.config.topic_prefix}/+/set/#")
         client.subscribe("homeassistant/status")
         self._publish(self.status_topic(), "online", retain=True)
@@ -2773,6 +2866,9 @@ class MqttBridge:
         self.publish_all_states()
 
     def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
+        self.connected = False
+        if rc != 0:
+            self.last_error = f"Unexpected disconnect (rc={rc})"
         log(f"MQTT disconnected rc={rc}")
 
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
@@ -2790,7 +2886,10 @@ class MqttBridge:
         if self.started:
             return
         if not self.config.enabled:
-            log("MQTT discovery disabled or incomplete MQTT config.")
+            if not self.config.host:
+                log("MQTT disabled: no broker host configured. Install the Mosquitto broker add-on or set mqtt.host manually.")
+            else:
+                log("MQTT discovery disabled in configuration.")
             return
 
         client = mqtt.Client(client_id=self.config.client_id)
@@ -2878,6 +2977,15 @@ def global_payload() -> dict[str, Any]:
         "auto_print_enabled": AUTO_PRINT_ENABLED,
         "status_poll_interval_seconds": STATUS_POLL_INTERVAL_SECONDS,
         "mqtt_enabled": MQTT_BRIDGE.started,
+        "mqtt": {
+            "enabled": MQTT_BRIDGE.config.enabled,
+            "started": MQTT_BRIDGE.started,
+            "connected": MQTT_BRIDGE.connected,
+            "host": MQTT_BRIDGE.config.host or "(none)",
+            "port": MQTT_BRIDGE.config.port,
+            "last_error": MQTT_BRIDGE.last_error,
+        },
+        "is_supervisor": bool(SUPERVISOR_TOKEN),
         "discovery": discovery_summary,
         "printer_count": len(printers),
         "supported_templates": list(SUPPORTED_TEMPLATES),
@@ -4708,6 +4816,29 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "ok": True,
                     "templates": list(SUPPORTED_TEMPLATES),
                     "maintenance_guidance": MAINTENANCE_GUIDANCE,
+                },
+            )
+            return
+
+        if path == "/cards":
+            style = query.get("style", ["full"])[0]
+            if style not in LOVELACE_CARD_STYLES:
+                style = "full"
+            printer_ids = query.get("printers", [])
+            if printer_ids:
+                ids = [pid.strip() for raw in printer_ids for pid in raw.split(",") if pid.strip()]
+                selected = [p for p in PRINTERS if p.printer_id in ids]
+            else:
+                selected = list(PRINTERS)
+            yaml_out = generate_multi_printer_card_yaml(selected, style)
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "style": style,
+                    "styles_available": list(LOVELACE_CARD_STYLES),
+                    "printer_ids": [p.printer_id for p in selected],
+                    "lovelace_yaml": yaml_out,
                 },
             )
             return

@@ -714,6 +714,33 @@ textarea.cfg-input { resize: vertical; min-height: 80px; line-height: 1.5; font-
   line-height: 1.5;
 }
 .cfg-section-desc .help-link { font-size: 11px; margin-left: 6px; }
+
+/* ── Config section summary badges ── */
+.cfg-section-summary {
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  margin-left: auto; padding: 2px 10px; border-radius: 10px;
+  background: var(--badge-bg); white-space: nowrap;
+}
+
+/* ── Cards tab printer checkbox list ── */
+.cards-printer-checks { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.cards-printer-checks label {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500;
+  cursor: pointer; color: var(--text-secondary);
+}
+.cards-printer-checks input[type="checkbox"] { accent-color: #7c3aed; }
+
+/* ── Printers empty state ── */
+.printers-empty {
+  text-align: center; padding: 60px 20px; color: var(--text-muted);
+}
+.printers-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.printers-empty-text { font-size: 14px; margin-bottom: 16px; }
+
+/* ── Add Printer button (printers view) ── */
+.add-printer-top-btn {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px;
+}
 </style>
 </head>
 <body>
@@ -1012,6 +1039,31 @@ function renderPrinters() {
   var root = document.getElementById('view-printers');
   root.innerHTML = '';
   if (!state.health) { root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Loading...</p>'; return; }
+
+  // Add Printer button at top
+  root.append(h('button', {className:'btn-glass primary add-printer-top-btn', onClick: function() {
+    switchToTab('config');
+    setTimeout(function() {
+      var sec = document.getElementById('cfgSecPrinters');
+      if (sec) { sec.classList.add('open'); sec.scrollIntoView({behavior:'smooth'}); }
+    }, 100);
+  }}, '+ Add Printer'));
+
+  if (!state.health.printers || !state.health.printers.length) {
+    var empty = h('div', {className:'printers-empty glass'});
+    empty.append(h('div', {className:'printers-empty-icon', innerHTML:'&#128424;'}));
+    empty.append(h('div', {className:'printers-empty-text'}, 'No printers configured yet.'));
+    empty.append(h('button', {className:'btn-glass primary', onClick: function() {
+      switchToTab('config');
+      setTimeout(function() {
+        var sec = document.getElementById('cfgSecPrinters');
+        if (sec) { sec.classList.add('open'); sec.scrollIntoView({behavior:'smooth'}); }
+      }, 100);
+    }}, 'Go to Config to add a printer'));
+    root.append(empty);
+    return;
+  }
+
   var templates = state.health.supported_templates || [];
   var grid = h('div', {className:'printer-cards'});
   state.health.printers.forEach(function(p) {
@@ -1039,15 +1091,36 @@ function renderPrinters() {
 
     // Settings section
     var settingsWrap = h('div', {style:'margin-bottom:14px; display:none'});
+    var origEnabled = !!p.enabled;
+    var origCadence = String(Math.round(p.cadence_hours / 24));
+    var origTemplate = p.template || '';
     var enabledCheck = h('input', {type:'checkbox', style:'margin-right:6px'});
     if (p.enabled) enabledCheck.checked = true;
-    var cadenceInput = h('input', {type:'number', className:'auth-input', value:String(Math.round(p.cadence_hours / 24)), style:'width:80px; display:inline-block; margin:6px 8px 6px 0'});
+    var cadenceInput = h('input', {type:'number', className:'auth-input', value:origCadence, style:'width:80px; display:inline-block; margin:6px 8px 6px 0'});
     var templateSelect = h('select', {className:'design-select', style:'margin:6px 0'});
     templates.forEach(function(t) {
       var opt = h('option', {value:t}, t);
       if (t === p.template) opt.selected = true;
       templateSelect.append(opt);
     });
+    var saveBtn = h('button', {className:'btn-glass primary', style:'font-size:11px;padding:6px 14px', disabled:'disabled', onClick: function() {
+      requestJson('printers/' + p.printer_id + '/settings', {
+        method: 'POST',
+        body: JSON.stringify({enabled: enabledCheck.checked, cadence_hours: (parseInt(cadenceInput.value, 10) || 7) * 24, template: templateSelect.value})
+      }).then(function() { showToast('Settings saved for ' + p.name, 'success'); refreshAll(); })
+        .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+    }}, 'Save Settings');
+
+    function checkSettingsChanged() {
+      var changed = enabledCheck.checked !== origEnabled ||
+        cadenceInput.value !== origCadence ||
+        templateSelect.value !== origTemplate;
+      saveBtn.disabled = !changed;
+    }
+    enabledCheck.addEventListener('change', checkSettingsChanged);
+    cadenceInput.addEventListener('input', checkSettingsChanged);
+    templateSelect.addEventListener('change', checkSettingsChanged);
+
     settingsWrap.append(
       h('div', {style:'margin-bottom:8px'},
         h('label', {style:'font-size:12px;font-weight:600;display:block;margin-bottom:4px'}, 'Settings')
@@ -1057,30 +1130,22 @@ function renderPrinters() {
       cadenceInput,
       h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Template'),
       templateSelect,
-      h('div', {style:'margin-top:8px'},
-        h('button', {className:'btn-glass primary', style:'font-size:11px;padding:6px 14px', onClick: function() {
-          requestJson('printers/' + p.printer_id + '/settings', {
-            method: 'POST',
-            body: JSON.stringify({enabled: enabledCheck.checked, cadence_hours: (parseInt(cadenceInput.value, 10) || 7) * 24, template: templateSelect.value})
-          }).then(function() { showToast('Settings saved for ' + p.name, 'success'); refreshAll(); })
-            .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
-        }}, 'Save Settings')
-      )
+      h('div', {style:'margin-top:8px'}, saveBtn)
     );
 
     var actions = h('div', {className:'pc-actions'});
 
-    // Print if needed
-    actions.append(h('button', {className:'btn-glass primary', onClick: function() {
+    // Print if Due
+    actions.append(h('button', {className:'btn-glass primary', title:'Print a keepalive page only if one is due based on the cadence schedule', onClick: function() {
       requestJson('printers/' + p.printer_id + '/print', {
         method: 'POST',
         body: JSON.stringify({template: p.template, force: false})
       }).then(function() { showToast('Print requested for ' + p.name, 'success'); refreshAll(); })
         .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
-    }}, 'Print If Needed'));
+    }}, 'Print if Due'));
 
-    // Force print
-    actions.append(h('button', {className:'btn-glass', onClick: function() {
+    // Force Print
+    actions.append(h('button', {className:'btn-glass', title:'Print a keepalive page immediately regardless of schedule', onClick: function() {
       requestJson('printers/' + p.printer_id + '/print', {
         method: 'POST',
         body: JSON.stringify({template: p.template, force: true})
@@ -1088,14 +1153,14 @@ function renderPrinters() {
         .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
     }}, 'Force Print'));
 
-    // Poll now
-    actions.append(h('button', {className:'btn-glass', onClick: function() {
+    // Poll Status
+    actions.append(h('button', {className:'btn-glass', title:'Query the printer\'s IPP attributes to refresh status, ink levels, and job counts', onClick: function() {
       requestJson('printers/' + p.printer_id + '/poll', {
         method: 'POST',
         body: JSON.stringify({})
       }).then(function() { showToast('Poll sent to ' + p.name, 'success'); refreshAll(); })
         .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
-    }}, 'Poll Now'));
+    }}, 'Poll Status'));
 
     // Configure toggle
     actions.append(h('button', {className:'btn-glass', onClick: function() {
@@ -1147,8 +1212,8 @@ function renderDiscovery() {
   var table = h('table', {className:'disc-table'});
   var thead = h('thead');
   thead.append(h('tr', null,
-    h('th', null, 'Name'), h('th', null, 'Model'), h('th', null, 'Host'), h('th', null, 'State'), h('th', null, 'Type'),
-    h('th', null, 'Reachable'), h('th', null, 'Action')
+    h('th', null, 'Printer'), h('th', null, 'Model'), h('th', null, 'State'), h('th', null, 'Type'),
+    h('th', null, 'Secure'), h('th', null, 'Reachable'), h('th', null, 'Action')
   ));
   table.append(thead);
   var tbody = h('tbody');
@@ -1170,13 +1235,16 @@ function renderDiscovery() {
               p.suggested_config.printer_type = typeSelect.value;
               p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
             }
+            var ippsToggle = panel.querySelector('.disc-ipps-toggle[data-disc-idx="' + idx + '"]');
+            if (ippsToggle) {
+              p.suggested_config.printer_uri = ippsToggle.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+            }
             var cfgResp = await requestJson('config');
             var opts = cfgResp.options || {};
             if (!Array.isArray(opts.printers)) opts.printers = [];
             opts.printers.push(p.suggested_config);
             await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-            var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
-            showToast(msg, 'success');
+            showToast('Added ' + p.printer_name + ' to config.', 'success');
             refreshAll();
           } catch (err) {
             showToast('Failed to add: ' + err.message, 'error');
@@ -1208,12 +1276,32 @@ function renderDiscovery() {
       typeTd.append(sel);
     }
 
+    var ippsTd = h('td', null);
+    if (p.ipps_available) {
+      var ippsCb = h('input', {type:'checkbox', className:'disc-ipps-toggle', 'data-disc-idx': String(idx)});
+      if (p.suggested_config && p.suggested_config.printer_uri && p.suggested_config.printer_uri.indexOf('ipps://') === 0) ippsCb.checked = true;
+      ippsCb.addEventListener('change', function() {
+        if (p.suggested_config) {
+          p.suggested_config.printer_uri = ippsCb.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+        }
+      });
+      var ippsLabel = h('label', {style:'display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px'});
+      ippsLabel.append(ippsCb, 'IPPS');
+      ippsTd.append(ippsLabel);
+    } else {
+      ippsTd.innerHTML = '<span style="opacity:.4;font-size:12px">\u2014</span>';
+    }
+
+    var printerTd = h('td', {style:'min-width:180px'});
+    printerTd.innerHTML = '<div style="font-weight:600;margin-bottom:2px">' + esc(p.printer_name) + '</div>' +
+      '<div class="uri" style="font-size:11px;opacity:.7">' + esc(p.uri || '') + '</div>';
+
     tbody.append(h('tr', null,
-      h('td', {style:'font-weight:600'}, p.printer_name),
+      printerTd,
       h('td', null, p.printer_make_and_model || '\u2014'),
-      h('td', {className:'uri'}, p.host || ''),
       h('td', null, p.printer_state || '\u2014'),
       typeTd,
+      ippsTd,
       h('td', {innerHTML: '<span class="reach-dot '+(p.reachable?'yes':'no')+'"></span>'+(p.reachable?'Yes':'No')}),
       actionTd
     ));
@@ -1296,11 +1384,15 @@ function makeTextareaField(label, key, value, hint) {
   return makeField(label, ta, hint);
 }
 
-function makeSection(title, color, id, content, openByDefault, description) {
+function makeSection(title, color, id, content, openByDefault, description, summary) {
   var sec = h('div', {className: 'cfg-section' + (openByDefault ? ' open' : ''), id: id});
   var header = h('div', {className: 'cfg-section-header'});
   header.append(h('span', {className: 'cfg-section-dot', style: 'background:' + color}));
   header.append(h('span', {className: 'cfg-section-title'}, title));
+  if (summary) {
+    var summaryId = 'cfg-summary-' + id.replace(/^cfgSec/, '').toLowerCase();
+    header.append(h('span', {className: 'cfg-section-summary', id: summaryId}));
+  }
   header.append(h('span', {className: 'cfg-section-chevron', innerHTML: '&#9660;'}));
   header.addEventListener('click', function() { sec.classList.toggle('open'); });
   sec.append(header);
@@ -1552,7 +1644,7 @@ function renderConfig(configData) {
     });
     container.append(addBtn);
     body.append(container);
-  }, true, 'Define your printers with individual URIs, types, and print schedules.'));
+  }, true, 'Define your printers with individual URIs, types, and print schedules.', true));
 
   // Section 2: Scheduling
   formView.append(makeSection('Scheduling', '#7c3aed', 'cfgSecScheduling', function(body) {
@@ -1576,7 +1668,7 @@ function renderConfig(configData) {
     grid.append(makeField('Failure Retry', retryWrap, '1 - 1440 minutes'));
 
     body.append(grid);
-  }, false, 'Controls the auto-print scheduler and IPP polling frequency.'));
+  }, false, 'Controls the auto-print scheduler and IPP polling frequency.', true));
 
   // Section 3: Discovery
   formView.append(makeSection('Discovery', '#06b6d4', 'cfgSecDiscovery', function(body) {
@@ -1612,7 +1704,7 @@ function renderConfig(configData) {
     grid.append(ippsWrap);
 
     body.append(grid);
-  }, false, 'Network scanning for printers via mDNS/DNS-SD.'));
+  }, false, 'Network scanning for printers via mDNS/DNS-SD.', true));
 
   // Section 4: Templates & Content
   formView.append(makeSection('Templates & Content', '#ffc107', 'cfgSecTemplates', function(body) {
@@ -1634,6 +1726,7 @@ function renderConfig(configData) {
   }, false, 'Default template and content settings for printed pages.'));
 
   // Section 5: MQTT
+  var isSupervisor = !!(state.health && state.health.is_supervisor);
   formView.append(makeSection('MQTT', '#3b82f6', 'cfgSecMqtt', function(body) {
     var mqtt = c.mqtt || {};
     var grid = h('div', {className: 'cfg-grid'});
@@ -1646,13 +1739,28 @@ function renderConfig(configData) {
     meWrap.append(meRow);
     grid.append(meWrap);
 
-    grid.append(makeField('Host', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.host', value: mqtt.host||'', placeholder:'core-mosquitto'}), null));
+    if (isSupervisor) {
+      grid.append(h('div', {className:'cfg-field cfg-grid-full'},
+        h('div', {className:'cfg-field-hint', style:'color:var(--text-muted);font-style:italic'},
+          'Running as a Supervisor add-on \u2014 MQTT host, port, username, password, and TLS are auto-detected from the Mosquitto broker service.'
+        )
+      ));
+    } else {
+      grid.append(makeField('Host', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.host', value: mqtt.host||'', placeholder:'core-mosquitto'}), null));
+      var portInp = h('input', {type:'number', className:'cfg-input', 'data-key':'mqtt.port', value: mqtt.port!=null ? String(mqtt.port) : ''});
+      grid.append(makeField('Port', portInp, null));
+      grid.append(makeField('Username', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.username', value: mqtt.username||'', placeholder:'mqtt_user'}), null));
+      grid.append(makeField('Password', h('input', {type:'password', className:'cfg-input', 'data-key':'mqtt.password', value: mqtt.password||'', placeholder:'••••••'}), null));
 
-    var portInp = h('input', {type:'number', className:'cfg-input', 'data-key':'mqtt.port', value: mqtt.port!=null ? String(mqtt.port) : ''});
-    grid.append(makeField('Port', portInp, null));
+      var tlsWrap = h('div', {className:'cfg-field'});
+      var tlsRow = h('div', {className:'cfg-toggle'});
+      var tlsTrack = makeToggle(!!mqtt.tls);
+      tlsTrack.setAttribute('data-key', 'mqtt.tls');
+      tlsRow.append(tlsTrack); tlsRow.append(h('span', {className:'cfg-toggle-label'}, 'TLS'));
+      tlsWrap.append(tlsRow);
+      grid.append(tlsWrap);
+    }
 
-    grid.append(makeField('Username', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.username', value: mqtt.username||'', placeholder:'mqtt_user'}), null));
-    grid.append(makeField('Password', h('input', {type:'password', className:'cfg-input', 'data-key':'mqtt.password', value: mqtt.password||'', placeholder:'••••••'}), null));
     grid.append(makeField('Discovery Prefix', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.discovery_prefix', value: mqtt.discovery_prefix||'', placeholder:'homeassistant'}), null));
     grid.append(makeField('Topic Prefix', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.topic_prefix', value: mqtt.topic_prefix||'', placeholder:'printer_keepalive'}), null));
 
@@ -1664,26 +1772,33 @@ function renderConfig(configData) {
     retWrap.append(retRow);
     grid.append(retWrap);
 
-    var tlsWrap = h('div', {className:'cfg-field'});
-    var tlsRow = h('div', {className:'cfg-toggle'});
-    var tlsTrack = makeToggle(!!mqtt.tls);
-    tlsTrack.setAttribute('data-key', 'mqtt.tls');
-    tlsRow.append(tlsTrack); tlsRow.append(h('span', {className:'cfg-toggle-label'}, 'TLS'));
-    tlsWrap.append(tlsRow);
-    grid.append(tlsWrap);
-
     grid.append(makeField('Client ID', h('input', {type:'text', className:'cfg-input', 'data-key':'mqtt.client_id', value: mqtt.client_id||'', placeholder:'printer_keepalive'}), null, 'cfg-grid-full'));
 
     body.append(grid);
-  }, false, 'Home Assistant device discovery via MQTT broker.'));
+  }, false, 'Home Assistant device discovery via MQTT broker.', true));
 
   // Section 6: Integration
   formView.append(makeSection('Integration', '#ec4899', 'cfgSecIntegration', function(body) {
     var grid = h('div', {className: 'cfg-grid'});
-    grid.append(makeField('HA URL', h('input', {type:'text', className:'cfg-input', 'data-key':'ha_url', value: c.ha_url||'', placeholder:'http://homeassistant.local:8123'}), null));
-    grid.append(makeField('HA Token', h('input', {type:'password', className:'cfg-input', 'data-key':'ha_token', value: c.ha_token||'', placeholder:'Long-lived access token'}), null));
-    grid.append(makeField('Add-on Page URL', h('input', {type:'text', className:'cfg-input', 'data-key':'addon_page_url', value: c.addon_page_url||'', placeholder:'URL for add-on web page'}), null));
-    grid.append(makeField('Auth Token', h('input', {type:'password', className:'cfg-input', 'data-key':'auth_token', value: c.auth_token||'', placeholder:'Bearer auth token'}), null));
+    if (isSupervisor) {
+      grid.append(h('div', {className:'cfg-field cfg-grid-full'},
+        h('div', {className:'cfg-field-hint', style:'color:var(--text-muted);font-style:italic'},
+          'Running as a Supervisor add-on \u2014 Home Assistant connection is handled automatically.'
+        )
+      ));
+      grid.append(makeField('Add-on Page URL', h('input', {type:'text', className:'cfg-input', 'data-key':'addon_page_url', value: c.addon_page_url||'', placeholder:'URL for add-on web page'}), null));
+      grid.append(makeField('Auth Token', h('input', {type:'password', className:'cfg-input', 'data-key':'auth_token', value: c.auth_token||'', placeholder:'Bearer auth token'}), null));
+    } else {
+      grid.append(h('div', {className:'cfg-field cfg-grid-full'},
+        h('div', {className:'cfg-field-hint', style:'color:var(--text-muted);font-style:italic'},
+          'Connect to Home Assistant for entity data. Required for non-Supervisor installs.'
+        )
+      ));
+      grid.append(makeField('HA URL', h('input', {type:'text', className:'cfg-input', 'data-key':'ha_url', value: c.ha_url||'', placeholder:'http://homeassistant.local:8123'}), null));
+      grid.append(makeField('HA Token', h('input', {type:'password', className:'cfg-input', 'data-key':'ha_token', value: c.ha_token||'', placeholder:'Long-lived access token'}), null));
+      grid.append(makeField('Add-on Page URL', h('input', {type:'text', className:'cfg-input', 'data-key':'addon_page_url', value: c.addon_page_url||'', placeholder:'URL for add-on web page'}), null));
+      grid.append(makeField('Auth Token', h('input', {type:'password', className:'cfg-input', 'data-key':'auth_token', value: c.auth_token||'', placeholder:'Bearer auth token'}), null));
+    }
     body.append(grid);
   }, false, 'Home Assistant connection and API authentication.'));
 
@@ -1748,6 +1863,26 @@ function renderConfig(configData) {
   });
 }
 
+/* ── Config summaries ── */
+function updateConfigSummaries() {
+  if (!state.health) return;
+  var d = state.health;
+  var elPrinters = document.getElementById('cfg-summary-printers');
+  if (elPrinters) elPrinters.textContent = d.printer_count + ' printer(s)';
+  var elScheduling = document.getElementById('cfg-summary-scheduling');
+  if (elScheduling) elScheduling.textContent = d.auto_print_enabled ? 'Active' : 'Disabled';
+  var elDiscovery = document.getElementById('cfg-summary-discovery');
+  if (elDiscovery) {
+    if (d.discovery && d.discovery.enabled) {
+      elDiscovery.textContent = (d.discovery.printer_count || 0) + ' found';
+    } else {
+      elDiscovery.textContent = 'Disabled';
+    }
+  }
+  var elMqtt = document.getElementById('cfg-summary-mqtt');
+  if (elMqtt) elMqtt.textContent = d.mqtt_enabled ? 'Connected' : 'Disabled';
+}
+
 /* ── Switch to tab programmatically ── */
 function switchToTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1779,49 +1914,62 @@ function buildCards() {
     h('span', {className: 'dot', style: 'background:#8b5cf6'}), 'Lovelace Card YAML'
   );
   root.append(title);
-  var grid = h('div', {className: 'cards-grid'});
-  state.health.printers.forEach(function(p) {
-    var card = h('div', {className: 'card-item glass'});
-    var headerRow = h('div', {className: 'card-item-header'},
-      h('span', {className: 'pc-status-dot ' + p.health_status}),
-      p.name
-    );
-    card.append(headerRow);
 
-    var selectRow = h('div', {style: 'margin-bottom:12px; display:flex; align-items:center; gap:10px'});
-    selectRow.append(h('label', {style: 'font-size:12px; font-weight:600; color:var(--text-secondary)'}, 'Style:'));
-    var sel = h('select', {className: 'card-style-select'});
-    CARD_STYLES.forEach(function(s) {
-      sel.append(h('option', {value: s}, CARD_STYLE_LABELS[s] || s));
-    });
-    selectRow.append(sel);
-    card.append(selectRow);
+  var card = h('div', {className: 'card-item glass'});
 
-    var yamlWrap = h('div', {className: 'yaml-block'});
-    var pre = h('pre', null, 'Loading...');
-    var copyBtn = h('button', {className: 'yaml-copy-btn', onClick: function() {
-      navigator.clipboard.writeText(pre.textContent).then(function() {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(function() { copyBtn.textContent = 'Copy YAML'; }, 1500);
-      });
-    }}, 'Copy YAML');
-    yamlWrap.append(pre, copyBtn);
-    card.append(yamlWrap);
-
-    function fetchCardYaml() {
-      var style = sel.value;
-      pre.textContent = 'Loading...';
-      requestJson('printers/' + p.printer_id + '/card?style=' + style)
-        .then(function(data) { pre.textContent = data.lovelace_yaml || '# No YAML returned'; })
-        .catch(function(err) { pre.textContent = '# Error: ' + err.message; });
-    }
-
-    sel.addEventListener('change', fetchCardYaml);
-    fetchCardYaml();
-
-    grid.append(card);
+  // Style selector
+  var selectRow = h('div', {style: 'margin-bottom:16px; display:flex; align-items:center; gap:10px'});
+  selectRow.append(h('label', {style: 'font-size:12px; font-weight:600; color:var(--text-secondary)'}, 'Card Style:'));
+  var styleSel = h('select', {className: 'card-style-select'});
+  CARD_STYLES.forEach(function(s) {
+    styleSel.append(h('option', {value: s}, CARD_STYLE_LABELS[s] || s));
   });
-  root.append(grid);
+  selectRow.append(styleSel);
+  card.append(selectRow);
+
+  // Printer checkboxes
+  var checksWrap = h('div', {className: 'cards-printer-checks'});
+  var printerChecks = [];
+  state.health.printers.forEach(function(p) {
+    var cb = h('input', {type: 'checkbox', value: p.printer_id});
+    cb.checked = true;
+    cb.addEventListener('change', fetchCardsYaml);
+    printerChecks.push(cb);
+    checksWrap.append(h('label', null, cb, p.name));
+  });
+  card.append(checksWrap);
+
+  // YAML output
+  var yamlWrap = h('div', {className: 'yaml-block'});
+  var pre = h('pre', null, 'Loading...');
+  var copyBtn = h('button', {className: 'yaml-copy-btn', onClick: function() {
+    navigator.clipboard.writeText(pre.textContent).then(function() {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(function() { copyBtn.textContent = 'Copy YAML'; }, 1500);
+    });
+  }}, 'Copy YAML');
+  yamlWrap.append(pre, copyBtn);
+  card.append(yamlWrap);
+
+  function fetchCardsYaml() {
+    var style = styleSel.value;
+    var selectedIds = printerChecks
+      .filter(function(cb) { return cb.checked; })
+      .map(function(cb) { return cb.value; });
+    if (!selectedIds.length) {
+      pre.textContent = '# Select at least one printer';
+      return;
+    }
+    pre.textContent = 'Loading...';
+    requestJson('cards?style=' + encodeURIComponent(style) + '&printers=' + encodeURIComponent(selectedIds.join(',')))
+      .then(function(data) { pre.textContent = data.lovelace_yaml || data.yaml || '# No YAML returned'; })
+      .catch(function(err) { pre.textContent = '# Error: ' + err.message; });
+  }
+
+  styleSel.addEventListener('change', fetchCardsYaml);
+  fetchCardsYaml();
+
+  root.append(card);
 }
 
 /* ── Build Templates tab ── */
@@ -2078,6 +2226,7 @@ async function refreshAll() {
     if (!state.configLoaded) {
       loadConfig();
     }
+    updateConfigSummaries();
   } catch(err) {
     showToast('Refresh error: ' + err.message, 'error');
   } finally {

@@ -247,8 +247,12 @@ If `auth_token` is configured, enter it in the dashboard session field to enable
   - List printer payloads.
 - `GET /printers/<printer_id>`
   - One printer payload.
+- `GET /cards`
+  - Returns a Lovelace YAML snippet covering multiple printers.
+  - Optional `?style=` parameter: `full`, `compact`, `glance`, `status`, `controls`.
+  - Optional `?printers=` parameter: comma-separated printer IDs (defaults to all).
 - `GET /printers/<printer_id>/card`
-  - Returns a Lovelace YAML snippet for a printer health/control card.
+  - Returns a Lovelace YAML snippet for a single printer health/control card.
   - Optional `?style=` parameter: `full`, `compact`, `glance`, `status`, `controls`.
 - `GET /printers/<printer_id>/preview`
   - Returns a rendered template image as JPEG.

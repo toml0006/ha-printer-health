@@ -420,6 +420,32 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 }
 .cfg-section-desc a:hover{text-shadow:0 0 6px var(--glow-cyan);border-bottom-color:var(--cyan);}
 
+/* Config section summary badges */
+.cfg-section-summary{
+  font-size:.65rem;color:var(--dim);font-weight:400;margin-left:8px;letter-spacing:.05em;
+}
+
+/* Printer empty state */
+.printer-empty{
+  text-align:center;padding:40px 20px;color:var(--dim);font-size:.85rem;
+}
+.printer-empty-hint{font-size:.75rem;margin-top:8px;color:var(--border);}
+
+/* Add printer button (printers view) */
+.btn-add-printer-view{
+  font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;
+  letter-spacing:.1em;padding:10px 20px;border:1px dashed var(--cyan);
+  background:transparent;color:var(--cyan);border-radius:3px;cursor:pointer;
+  transition:all .2s;margin-bottom:16px;
+}
+.btn-add-printer-view:hover{background:rgba(0,240,255,.05);box-shadow:0 0 12px var(--glow-cyan);}
+
+/* Cards unified block */
+.cards-unified{margin-bottom:16px;}
+.cards-printer-checks{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;font-size:.8rem;}
+.cards-printer-checks label{color:var(--dim);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.cards-printer-checks input{accent-color:var(--cyan);}
+
 /* Light mode toggle */
 .theme-toggle{
   font-family:inherit;font-size:.7rem;background:none;border:1px solid var(--border);
@@ -530,6 +556,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 
   <!-- PRINTERS -->
   <section class="view" id="view-printers">
+    <button class="btn-add-printer-view" id="btnAddPrinterView" title="Add a new printer to your configuration">[ + ADD_PRINTER ]</button>
     <div id="printerCards"></div>
   </section>
 
@@ -545,7 +572,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
     <div class="card boot-hidden">
       <div class="card-title">&gt; <span>DISCOVERED_PRINTERS</span></div>
       <table class="disc-table" id="discTable">
-        <thead><tr><th>Printer</th><th>Model</th><th>Host</th><th>State</th><th>Type</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Printer</th><th>Model</th><th>State</th><th>Type</th><th>Secure</th><th>Status</th><th></th></tr></thead>
         <tbody id="discBody"></tbody>
       </table>
     </div>
@@ -555,7 +582,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
   <section class="view" id="view-cards">
     <div class="card boot-hidden">
       <div class="card-title">&gt; <span>LOVELACE_CARDS</span></div>
-      <div id="cardsContainer"></div>
+      <div id="cardsContainer" class="cards-unified"></div>
     </div>
   </section>
 
@@ -581,7 +608,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 
       <!-- Section 1: Printers -->
       <div class="cfg-section boot-hidden">
-        <div class="cfg-section-title">&gt; PRINTERS</div>
+        <div class="cfg-section-title">&gt; PRINTERS <span class="cfg-section-summary" id="cfgSummaryPrinters"></span></div>
         <div class="cfg-section-desc">Define your printers with individual URIs, types, and print schedules. <a onclick="switchToTab('help')">Learn more</a></div>
         <div id="cfgPrinterList"></div>
         <button class="btn-add-printer" id="btnAddPrinter">[ ADD_PRINTER ]</button>
@@ -589,7 +616,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 
       <!-- Section 2: Scheduling -->
       <div class="cfg-section boot-hidden">
-        <div class="cfg-section-title">&gt; SCHEDULING</div>
+        <div class="cfg-section-title">&gt; SCHEDULING <span class="cfg-section-summary" id="cfgSummaryScheduling"></span></div>
         <div class="cfg-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgAutoPrint"><span class="toggle-track"></span></label>
@@ -609,7 +636,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 
       <!-- Section 3: Discovery -->
       <div class="cfg-section boot-hidden">
-        <div class="cfg-section-title">&gt; DISCOVERY</div>
+        <div class="cfg-section-title">&gt; DISCOVERY <span class="cfg-section-summary" id="cfgSummaryDiscovery"></span></div>
         <div class="cfg-section-desc">Network scanning for printers via mDNS/DNS-SD. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgDiscoveryEnabled"><span class="toggle-track"></span></label>
@@ -676,31 +703,33 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       </div>
 
       <!-- Section 5: MQTT -->
-      <div class="cfg-section boot-hidden">
-        <div class="cfg-section-title">&gt; MQTT</div>
-        <div class="cfg-section-desc">Home Assistant device discovery via MQTT broker. <a onclick="switchToTab('help')">Learn more</a></div>
+      <div class="cfg-section boot-hidden" id="cfgSectionMqtt">
+        <div class="cfg-section-title">&gt; MQTT <span class="cfg-section-summary" id="cfgSummaryMqtt"></span></div>
+        <div class="cfg-section-desc" id="cfgMqttDesc">Home Assistant device discovery via MQTT broker. <a onclick="switchToTab('help')">Learn more</a></div>
         <div class="cfg-toggle">
           <label class="toggle-switch"><input type="checkbox" id="cfgMqttEnabled"><span class="toggle-track"></span></label>
           <span class="cfg-toggle-label">MQTT.ENABLED</span>
         </div>
-        <div class="cfg-row">
-          <div class="cfg-field">
-            <label class="cfg-label">MQTT.HOST</label>
-            <input type="text" class="cfg-input" id="cfgMqttHost" placeholder="core-mosquitto">
+        <div id="cfgMqttFullFields">
+          <div class="cfg-row">
+            <div class="cfg-field">
+              <label class="cfg-label">MQTT.HOST</label>
+              <input type="text" class="cfg-input" id="cfgMqttHost" placeholder="core-mosquitto">
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">MQTT.PORT</label>
+              <input type="number" class="cfg-input" id="cfgMqttPort" placeholder="1883">
+            </div>
           </div>
-          <div class="cfg-field">
-            <label class="cfg-label">MQTT.PORT</label>
-            <input type="number" class="cfg-input" id="cfgMqttPort" placeholder="1883">
-          </div>
-        </div>
-        <div class="cfg-row">
-          <div class="cfg-field">
-            <label class="cfg-label">MQTT.USERNAME</label>
-            <input type="text" class="cfg-input" id="cfgMqttUsername" placeholder="">
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-label">MQTT.PASSWORD</label>
-            <input type="password" class="cfg-input" id="cfgMqttPassword" placeholder="">
+          <div class="cfg-row">
+            <div class="cfg-field">
+              <label class="cfg-label">MQTT.USERNAME</label>
+              <input type="text" class="cfg-input" id="cfgMqttUsername" placeholder="">
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">MQTT.PASSWORD</label>
+              <input type="password" class="cfg-input" id="cfgMqttPassword" placeholder="">
+            </div>
           </div>
         </div>
         <div class="cfg-row">
@@ -718,7 +747,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
             <label class="toggle-switch"><input type="checkbox" id="cfgMqttRetain"><span class="toggle-track"></span></label>
             <span class="cfg-toggle-label">MQTT.RETAIN</span>
           </div>
-          <div class="cfg-toggle">
+          <div class="cfg-toggle" id="cfgMqttTlsWrap">
             <label class="toggle-switch"><input type="checkbox" id="cfgMqttTls"><span class="toggle-track"></span></label>
             <span class="cfg-toggle-label">MQTT.TLS</span>
           </div>
@@ -730,10 +759,10 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
       </div>
 
       <!-- Section 6: Integration -->
-      <div class="cfg-section boot-hidden">
+      <div class="cfg-section boot-hidden" id="cfgSectionIntegration">
         <div class="cfg-section-title">&gt; INTEGRATION</div>
-        <div class="cfg-section-desc">Home Assistant connection and API authentication. <a onclick="switchToTab('help')">Learn more</a></div>
-        <div class="cfg-row">
+        <div class="cfg-section-desc" id="cfgIntegrationDesc">Home Assistant connection and API authentication. <a onclick="switchToTab('help')">Learn more</a></div>
+        <div id="cfgIntegrationHaFields" class="cfg-row">
           <div class="cfg-field">
             <label class="cfg-label">HA_URL</label>
             <input type="text" class="cfg-input" id="cfgHaUrl" placeholder="http://homeassistant.local:8123">
@@ -963,9 +992,13 @@ function renderLog(){
 
 // ── Printers View ──
 function renderPrinterCards(){
-  if (!state.health || !state.health.printers) { document.getElementById('printerCards').innerHTML=''; return; }
+  var container = document.getElementById('printerCards');
+  if (!state.health || !state.health.printers || state.health.printers.length === 0) {
+    container.innerHTML='<div class="printer-empty">&gt; No printers configured.<div class="printer-empty-hint">Use the [ + ADD_PRINTER ] button above or the Discovery tab to get started.</div></div>';
+    return;
+  }
   var templates = state.health.supported_templates || [];
-  document.getElementById('printerCards').innerHTML=state.health.printers.map(function(p){
+  container.innerHTML=state.health.printers.map(function(p){
     var st=p.health_status==='ok'?'ok':p.health_status==='warning'?'warn':'err';
     var stTag=st==='ok'?'[OK]':st==='warn'?'[WARN]':'[ERR]';
     var lines=[
@@ -979,7 +1012,10 @@ function renderPrinterCards(){
       {label:'ENABLED',value:p.enabled?'YES':'NO',cls:p.enabled?'ok':'err'},
     ];
     var templateOpts = templates.map(function(t){ return '<option value="'+esc(t)+'"'+(t===p.template?' selected':'')+'>'+esc(t)+'</option>'; }).join('');
-    return '<div class="printer-card boot-hidden" data-printer-id="'+esc(p.printer_id)+'">'+
+    var origEnabled = p.enabled ? 'true' : 'false';
+    var origCadence = String(Math.round((p.cadence_hours||0)/24));
+    var origTemplate = p.template || '';
+    return '<div class="printer-card boot-hidden" data-printer-id="'+esc(p.printer_id)+'" data-orig-enabled="'+origEnabled+'" data-orig-cadence="'+esc(origCadence)+'" data-orig-template="'+esc(origTemplate)+'">'+
       '<div class="printer-card-header"><div style="display:flex;align-items:center;gap:10px"><span class="dot '+st+'"></span><span class="printer-card-name">'+esc(p.name)+'</span></div><span class="printer-card-status tag '+st+'">'+stTag+'</span></div>'+
       '<div class="printer-card-readout">'+lines.map(function(l){var dLen=Math.max(2,20-l.label.length);return '<div class="readout-line"><span class="readout-prefix">&gt;</span><span class="readout-label">'+esc(l.label)+'</span><span class="readout-dots">'+dots(dLen)+'</span><span class="readout-value '+l.cls+'">'+esc(String(l.value))+'</span></div>';}).join('')+'</div>'+
       '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.8rem;">'+
@@ -988,23 +1024,47 @@ function renderPrinterCards(){
         '<label style="color:var(--dim);cursor:pointer;"><input type="checkbox" class="pc-enabled" '+(p.enabled?'checked':'')+' style="margin-right:4px;">ENABLED</label>'+
       '</div>'+
       '<div class="printer-card-actions">'+
-        '<button class="btn pc-save">[ SAVE ]</button>'+
-        '<button class="btn pc-print">[ PRINT ]</button>'+
-        '<button class="btn danger pc-force">[ FORCE ]</button>'+
-        '<button class="btn pc-poll">[ POLL ]</button>'+
+        '<button class="btn pc-save" disabled>[ SAVE ]</button>'+
+        '<button class="btn pc-print" title="Print a keepalive page only if one is due based on the cadence schedule">[ PRINT IF DUE ]</button>'+
+        '<button class="btn danger pc-force" title="Print a keepalive page immediately regardless of schedule">[ FORCE PRINT ]</button>'+
+        '<button class="btn pc-poll" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts">[ POLL STATUS ]</button>'+
       '</div>'+
     '</div>';
   }).join('');
 
-  // Bind printer card actions
+  // Bind printer card actions + change tracking for Save
   document.querySelectorAll('.printer-card').forEach(function(card){
     var pid = card.dataset.printerId;
-    card.querySelector('.pc-save').addEventListener('click', function(){ printerSave(pid, card); });
+    var saveBtn = card.querySelector('.pc-save');
+    var templateEl = card.querySelector('.pc-template');
+    var cadenceEl = card.querySelector('.pc-cadence');
+    var enabledEl = card.querySelector('.pc-enabled');
+    var origEnabled = card.dataset.origEnabled === 'true';
+    var origCadence = card.dataset.origCadence;
+    var origTemplate = card.dataset.origTemplate;
+
+    function checkDirty(){
+      var dirty = (templateEl.value !== origTemplate) ||
+                  (cadenceEl.value !== origCadence) ||
+                  (enabledEl.checked !== origEnabled);
+      saveBtn.disabled = !dirty;
+    }
+    templateEl.addEventListener('change', checkDirty);
+    cadenceEl.addEventListener('input', checkDirty);
+    enabledEl.addEventListener('change', checkDirty);
+
+    saveBtn.addEventListener('click', function(){ printerSave(pid, card); });
     card.querySelector('.pc-print').addEventListener('click', function(){ printerPrint(pid, card, false); });
     card.querySelector('.pc-force').addEventListener('click', function(){ printerPrint(pid, card, true); });
     card.querySelector('.pc-poll').addEventListener('click', function(){ printerPoll(pid); });
   });
 }
+
+// ── Add Printer button (Printers view) ──
+document.getElementById('btnAddPrinterView').addEventListener('click', function(){
+  switchToTab(document.querySelector('.tab[data-view="view-config"]'));
+  setTimeout(function(){ setConfigMode('form'); addPrinterFormCard({}); showToast('New printer card added in Config form', 'ok'); }, 200);
+});
 
 // ── Printer actions ──
 async function printerSave(pid, card) {
@@ -1070,8 +1130,16 @@ function renderDiscovery(){
         +'<option value="inkjet"'+(typeVal==='inkjet'?' selected':'')+'>INKJET</option>'
         +'<option value="laser"'+(typeVal==='laser'?' selected':'')+'>LASER</option>'
         +'</select></td>';
+    var ippsCell='<td>';
+    if(p.ipps_available){
+      var chk=(p.suggested_config&&p.suggested_config.printer_uri&&p.suggested_config.printer_uri.indexOf('ipps://')===0)?' checked':'';
+      ippsCell+='<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-family:inherit"><input type="checkbox" class="disc-ipps-toggle" data-disc-idx="'+i+'"'+chk+'> IPPS</label>';
+    } else {
+      ippsCell+='<span style="opacity:.4">\u2014</span>';
+    }
+    ippsCell+='</td>';
     var actionCol=p.already_configured?'<span class="tag ok">[CONFIGURED]</span>':'<button class="btn btn-add-disc" data-idx="'+i+'" data-disc-idx="'+i+'" style="padding:2px 10px;font-size:11px;line-height:1.4">[ ADD ]</button>';
-    return '<tr><td style="color:var(--bright);font-weight:600">'+esc(p.printer_name)+'</td><td>'+esc(p.printer_make_and_model||'\u2014')+'</td><td>'+esc(p.host||'')+'</td><td>'+esc(p.printer_state||'\u2014')+'</td>'+typeCell+'<td><span class="tag '+rCls+'">'+(p.reachable?'[ONLINE]':'[OFFLINE]')+'</span></td><td>'+actionCol+'</td></tr>';
+    return '<tr><td style="min-width:180px"><div style="color:var(--bright);font-weight:600">'+esc(p.printer_name)+'</div><div style="font-size:10px;opacity:.5;font-family:inherit">'+esc(p.uri||'')+'</div></td><td>'+esc(p.printer_make_and_model||'\u2014')+'</td><td>'+esc(p.printer_state||'\u2014')+'</td>'+typeCell+ippsCell+'<td><span class="tag '+rCls+'">'+(p.reachable?'[ONLINE]':'[OFFLINE]')+'</span></td><td>'+actionCol+'</td></tr>';
   }).join('');
 
   document.querySelectorAll('.disc-type-select').forEach(function(sel){
@@ -1081,6 +1149,16 @@ function renderDiscovery(){
       if(p&&p.suggested_config){
         p.suggested_config.printer_type=sel.value;
         p.suggested_config.cadence_hours=sel.value==='laser'?720:168;
+      }
+    });
+  });
+
+  document.querySelectorAll('.disc-ipps-toggle').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      var idx=parseInt(cb.getAttribute('data-disc-idx'));
+      var p=printers[idx];
+      if(p&&p.suggested_config){
+        p.suggested_config.printer_uri=cb.checked?(p.ipps_uri||p.uri):(p.ipp_uri||p.uri);
       }
     });
   });
@@ -1096,15 +1174,16 @@ function renderDiscovery(){
           p.suggested_config.printer_type=typeSelect.value;
           p.suggested_config.cadence_hours=typeSelect.value==='laser'?720:168;
         }
+        var ippsToggle=document.querySelector('.disc-ipps-toggle[data-disc-idx="'+idx+'"]');
+        if(ippsToggle){
+          p.suggested_config.printer_uri=ippsToggle.checked?(p.ipps_uri||p.uri):(p.ipp_uri||p.uri);
+        }
         var cfgResp=await requestJson('config');
         var opts=cfgResp.options||{};
         if(!Array.isArray(opts.printers)) opts.printers=[];
         opts.printers.push(p.suggested_config);
         await requestJson('config',{method:'POST',body:JSON.stringify({options:opts})});
-        var restartBtn=document.getElementById('btnFormRestart')||document.getElementById('btnConfigRestart');
-        var msg='Added '+p.printer_name+' to config. Restart the add-on to apply.';
-        if(restartBtn) msg+=' Use the RESTART button to apply.';
-        showToast(msg,'ok');
+        showToast('Added '+p.printer_name+' to config.','ok');
         refreshAll();
       } catch(e){ showToast('Add failed: '+e.message,'err'); }
     });
@@ -1180,6 +1259,12 @@ function populateForm(cfg) {
 
   // Printers
   renderPrinterFormCards(cfg.printers || []);
+
+  // Update section summaries
+  updateCfgSummaries(cfg);
+
+  // Apply context-aware field visibility
+  applySupervisorContext();
 }
 
 function setVal(id, v) { var el = document.getElementById(id); if (el) el.value = (v !== undefined && v !== null) ? v : ''; }
@@ -1187,6 +1272,57 @@ function setChecked(id, v) { var el = document.getElementById(id); if (el) el.ch
 function getVal(id) { var el = document.getElementById(id); return el ? el.value : ''; }
 function getChecked(id) { var el = document.getElementById(id); return el ? el.checked : false; }
 function getNum(id) { var v = getVal(id); return v !== '' ? Number(v) : undefined; }
+
+// ── Config Section Summaries ──
+function updateCfgSummaries(cfg) {
+  var printerCount = (cfg.printers || []).length;
+  var el;
+  el = document.getElementById('cfgSummaryPrinters');
+  if (el) el.textContent = '// ' + printerCount + ' printer(s)';
+  el = document.getElementById('cfgSummaryScheduling');
+  if (el) el.textContent = '// ' + (cfg.auto_print_enabled ? 'Active' : 'Disabled');
+  el = document.getElementById('cfgSummaryDiscovery');
+  if (el) {
+    if (cfg.discovery_enabled) {
+      var found = (state.health && state.health.discovery) ? (state.health.discovery.printer_count || 0) : 0;
+      el.textContent = '// ' + found + ' found';
+    } else {
+      el.textContent = '// Disabled';
+    }
+  }
+  el = document.getElementById('cfgSummaryMqtt');
+  if (el) {
+    var mqttOn = cfg.mqtt && cfg.mqtt.enabled;
+    el.textContent = '// ' + (mqttOn ? 'Connected' : 'Disabled');
+  }
+}
+
+// ── Context-aware MQTT / Integration fields ──
+function applySupervisorContext() {
+  var isSupervisor = state.health && state.health.is_supervisor;
+  var mqttFull = document.getElementById('cfgMqttFullFields');
+  var mqttTlsWrap = document.getElementById('cfgMqttTlsWrap');
+  var mqttDesc = document.getElementById('cfgMqttDesc');
+  var integrationHa = document.getElementById('cfgIntegrationHaFields');
+  var integrationDesc = document.getElementById('cfgIntegrationDesc');
+
+  if (isSupervisor) {
+    // Supervisor: hide MQTT host/port/username/password/tls
+    if (mqttFull) mqttFull.style.display = 'none';
+    if (mqttTlsWrap) mqttTlsWrap.style.display = 'none';
+    if (mqttDesc) mqttDesc.innerHTML = 'Auto-configured via local Supervisor Mosquitto broker. <a onclick="switchToTab(\'help\')">Learn more</a>';
+    // Supervisor: hide ha_url/ha_token, show note
+    if (integrationHa) integrationHa.style.display = 'none';
+    if (integrationDesc) integrationDesc.innerHTML = 'Running as Supervisor add-on &mdash; HA connection is automatic. <a onclick="switchToTab(\'help\')">Learn more</a>';
+  } else {
+    // Non-Supervisor: show all fields
+    if (mqttFull) mqttFull.style.display = '';
+    if (mqttTlsWrap) mqttTlsWrap.style.display = '';
+    if (mqttDesc) mqttDesc.innerHTML = 'Home Assistant device discovery via MQTT broker. <a onclick="switchToTab(\'help\')">Learn more</a>';
+    if (integrationHa) integrationHa.style.display = '';
+    if (integrationDesc) integrationDesc.innerHTML = 'Home Assistant connection and API authentication. <a onclick="switchToTab(\'help\')">Learn more</a>';
+  }
+}
 
 // ── Serialize Form to config object ──
 function serializeForm() {
@@ -1358,9 +1494,9 @@ function switchToTab(name) {
   });
 }
 
-// ── Cards View ──
-var cardStyles = ['full_dashboard','compact','glance','status_only','controls_only'];
-var cardStyleLabels = {full_dashboard:'Full Dashboard',compact:'Compact',glance:'Glance',status_only:'Status Only',controls_only:'Controls Only'};
+// ── Cards View (unified) ──
+var cardStyles = ['full','compact','glance','status','controls'];
+var cardStyleLabels = {full:'Full Dashboard',compact:'Compact',glance:'Glance',status:'Status Only',controls:'Controls Only'};
 var cardYamlCache = {};
 
 function buildCards() {
@@ -1369,59 +1505,63 @@ function buildCards() {
     container.innerHTML = '<div style="color:var(--dim);font-size:.82rem;">&gt; No printers configured.</div>';
     return;
   }
-  container.innerHTML = state.health.printers.map(function(p) {
-    var pid = p.printer_id;
-    var styleOpts = cardStyles.map(function(s){
-      return '<option value="'+esc(s)+'">'+esc(cardStyleLabels[s]||s)+'</option>';
-    }).join('');
-    return '<div class="card-gen-block" data-card-pid="'+esc(pid)+'">' +
-      '<div class="card-gen-name">'+esc(p.name)+'</div>' +
-      '<div class="card-gen-controls">' +
-        '<label>STYLE: <select class="design-select cg-style" style="margin-left:4px;">'+styleOpts+'</select></label>' +
-        '<button class="btn cg-fetch">[ GENERATE ]</button>' +
-        '<button class="btn cg-copy" style="display:none;">[ COPY YAML ]</button>' +
-      '</div>' +
-      '<div class="yaml-block cg-yaml" style="display:none;"></div>' +
-    '</div>';
+  var printers = state.health.printers;
+  var styleOpts = cardStyles.map(function(s){
+    return '<option value="'+esc(s)+'">'+esc(cardStyleLabels[s]||s)+'</option>';
+  }).join('');
+  var printerChecks = printers.map(function(p){
+    return '<label><input type="checkbox" class="cg-printer-cb" value="'+esc(p.printer_id)+'" checked> '+esc(p.name)+'</label>';
   }).join('');
 
-  container.querySelectorAll('.card-gen-block').forEach(function(block){
-    var pid = block.dataset.cardPid;
-    var styleEl = block.querySelector('.cg-style');
-    var fetchBtn = block.querySelector('.cg-fetch');
-    var copyBtn = block.querySelector('.cg-copy');
-    var yamlEl = block.querySelector('.cg-yaml');
+  container.innerHTML =
+    '<div class="card-gen-block">' +
+      '<div class="card-gen-name">LOVELACE CARD GENERATOR</div>' +
+      '<div class="card-gen-controls">' +
+        '<label>STYLE: <select class="design-select" id="cgStyleSelect" style="margin-left:4px;">'+styleOpts+'</select></label>' +
+        '<button class="btn" id="cgFetchBtn">[ GENERATE ]</button>' +
+        '<button class="btn" id="cgCopyBtn" style="display:none;">[ COPY YAML ]</button>' +
+      '</div>' +
+      '<div class="cards-printer-checks" id="cgPrinterChecks">' + printerChecks + '</div>' +
+      '<div class="yaml-block" id="cgYamlBlock" style="display:none;"></div>' +
+    '</div>';
 
-    fetchBtn.addEventListener('click', async function(){
-      var style = styleEl.value;
-      fetchBtn.disabled = true;
-      fetchBtn.textContent = '[ LOADING... ]';
-      try {
-        var data = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
-        var yaml = data.lovelace_yaml || '# No YAML returned';
-        yamlEl.textContent = yaml;
-        yamlEl.style.display = 'block';
-        copyBtn.style.display = 'inline-block';
-        cardYamlCache[pid] = yaml;
-      } catch(e) {
-        yamlEl.textContent = '# Error: ' + e.message;
-        yamlEl.style.display = 'block';
-      } finally {
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = '[ GENERATE ]';
-      }
-    });
+  var styleEl = document.getElementById('cgStyleSelect');
+  var fetchBtn = document.getElementById('cgFetchBtn');
+  var copyBtn = document.getElementById('cgCopyBtn');
+  var yamlEl = document.getElementById('cgYamlBlock');
 
-    copyBtn.addEventListener('click', function(){
-      var yaml = cardYamlCache[pid] || yamlEl.textContent;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(yaml).then(function(){
-          showToast('YAML copied to clipboard', 'ok');
-        }).catch(function(){ showToast('Copy failed', 'err'); });
-      } else {
-        showToast('Clipboard not available', 'err');
-      }
-    });
+  fetchBtn.addEventListener('click', async function(){
+    var style = styleEl.value;
+    var checked = [];
+    document.querySelectorAll('.cg-printer-cb:checked').forEach(function(cb){ checked.push(cb.value); });
+    if (checked.length === 0) { showToast('Select at least one printer', 'err'); return; }
+    fetchBtn.disabled = true;
+    fetchBtn.textContent = '[ LOADING... ]';
+    try {
+      var data = await requestJson('cards?style=' + encodeURIComponent(style) + '&printers=' + encodeURIComponent(checked.join(',')));
+      var yaml = data.lovelace_yaml || '# No YAML returned';
+      yamlEl.textContent = yaml;
+      yamlEl.style.display = 'block';
+      copyBtn.style.display = 'inline-block';
+      cardYamlCache._unified = yaml;
+    } catch(e) {
+      yamlEl.textContent = '# Error: ' + e.message;
+      yamlEl.style.display = 'block';
+    } finally {
+      fetchBtn.disabled = false;
+      fetchBtn.textContent = '[ GENERATE ]';
+    }
+  });
+
+  copyBtn.addEventListener('click', function(){
+    var yaml = cardYamlCache._unified || yamlEl.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(yaml).then(function(){
+        showToast('YAML copied to clipboard', 'ok');
+      }).catch(function(){ showToast('Copy failed', 'err'); });
+    } else {
+      showToast('Clipboard not available', 'err');
+    }
   });
 }
 

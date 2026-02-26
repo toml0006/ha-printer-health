@@ -609,6 +609,69 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     color: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .config-section-summary {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    opacity: 0.7;
+  }
+
+  .config-supervisor-note {
+    padding: 10px 14px;
+    border: 2px dashed var(--black);
+    background: #f5f5e8;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .no-printers-msg {
+    text-align: center;
+    padding: 40px 20px;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+  }
+
+  .no-printers-msg .btn {
+    margin-top: 16px;
+  }
+
+  .printer-checkbox-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .printer-checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border: 2px solid var(--black);
+    background: var(--white);
+    transition: background 0.1s;
+  }
+
+  .printer-checkbox-list label:has(input:checked) {
+    background: var(--yellow);
   }
 
   .config-section-body {
@@ -1354,6 +1417,10 @@
   <!-- ==================== PRINTERS ==================== -->
   <div class="view" id="view-printers">
     <div class="section-title">Managed Printers</div>
+    <div style="margin-bottom:18px">
+      <button class="btn btn-yellow" onclick="switchToTab('config');document.getElementById('printer-config-cards').scrollIntoView({behavior:'smooth'})">+ Add Printer</button>
+    </div>
+    <div id="printer-cards-wrapper"></div>
     <div class="printer-cards" id="printer-cards"></div>
   </div>
 
@@ -1370,11 +1437,11 @@
         <table>
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Printer</th>
               <th>Model</th>
-              <th>Host</th>
               <th>State</th>
               <th>Type</th>
+              <th>Secure</th>
               <th>Reachable</th>
               <th>Action</th>
             </tr>
@@ -1412,7 +1479,7 @@
 
       <!-- Section 1: Printers -->
       <div class="config-section">
-        <div class="config-section-header" style="background: var(--yellow);">Printers</div>
+        <div class="config-section-header" style="background: var(--yellow);"><span>Printers</span><span class="config-section-summary" id="summary-printers"></span></div>
         <div class="config-section-desc">Define your printers with individual URIs, types, and print schedules. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="printer-config-cards" id="printer-config-cards"></div>
@@ -1422,7 +1489,7 @@
 
       <!-- Section 2: Scheduling -->
       <div class="config-section">
-        <div class="config-section-header" style="background: #90CAF9;">Scheduling</div>
+        <div class="config-section-header" style="background: #90CAF9;"><span>Scheduling</span><span class="config-section-summary" id="summary-scheduling"></span></div>
         <div class="config-section-desc">Controls the auto-print scheduler and IPP polling frequency. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field">
@@ -1449,7 +1516,7 @@
 
       <!-- Section 3: Discovery -->
       <div class="config-section">
-        <div class="config-section-header" style="background: var(--coral); color: var(--white);">Discovery</div>
+        <div class="config-section-header" style="background: var(--coral); color: var(--white);"><span>Discovery</span><span class="config-section-summary" id="summary-discovery"></span></div>
         <div class="config-section-desc">Network scanning for printers via mDNS/DNS-SD. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
         <div class="config-section-body">
           <div class="config-field">
@@ -1529,9 +1596,9 @@
 
       <!-- Section 5: MQTT -->
       <div class="config-section">
-        <div class="config-section-header" style="background: #CE93D8;">MQTT</div>
+        <div class="config-section-header" style="background: #CE93D8;"><span>MQTT</span><span class="config-section-summary" id="summary-mqtt"></span></div>
         <div class="config-section-desc">Home Assistant device discovery via MQTT broker. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
-        <div class="config-section-body">
+        <div class="config-section-body" id="mqtt-section-body">
           <div class="config-field">
             <div class="toggle-wrap">
               <label class="toggle-switch">
@@ -1541,24 +1608,40 @@
               <span class="toggle-label-text">MQTT Enabled</span>
             </div>
           </div>
-          <div class="config-field-row">
-            <div class="config-field">
-              <label class="config-field-label">Host</label>
-              <input type="text" class="config-field-input" data-key="mqtt.host" placeholder="core-mosquitto">
-            </div>
-            <div class="config-field">
-              <label class="config-field-label">Port</label>
-              <input type="number" class="config-field-input" data-key="mqtt.port" placeholder="1883">
-            </div>
+          <div class="mqtt-supervisor-note config-supervisor-note" style="display:none">
+            MQTT host, port, username, password, and TLS are auto-detected from the Supervisor Mosquitto broker service.
           </div>
-          <div class="config-field-row">
-            <div class="config-field">
-              <label class="config-field-label">Username</label>
-              <input type="text" class="config-field-input" data-key="mqtt.username">
+          <div class="mqtt-manual-fields">
+            <div class="config-field-row">
+              <div class="config-field">
+                <label class="config-field-label">Host</label>
+                <input type="text" class="config-field-input" data-key="mqtt.host" placeholder="core-mosquitto">
+              </div>
+              <div class="config-field">
+                <label class="config-field-label">Port</label>
+                <input type="number" class="config-field-input" data-key="mqtt.port" placeholder="1883">
+              </div>
             </div>
-            <div class="config-field">
-              <label class="config-field-label">Password</label>
-              <input type="password" class="config-field-input" data-key="mqtt.password">
+            <div class="config-field-row">
+              <div class="config-field">
+                <label class="config-field-label">Username</label>
+                <input type="text" class="config-field-input" data-key="mqtt.username">
+              </div>
+              <div class="config-field">
+                <label class="config-field-label">Password</label>
+                <input type="password" class="config-field-input" data-key="mqtt.password">
+              </div>
+            </div>
+            <div class="config-field-row">
+              <div class="config-field">
+                <div class="toggle-wrap" style="margin-top:8px">
+                  <label class="toggle-switch">
+                    <input type="checkbox" data-key="mqtt.tls">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label-text">TLS</span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="config-field-row">
@@ -1581,15 +1664,6 @@
                 <span class="toggle-label-text">Retain</span>
               </div>
             </div>
-            <div class="config-field">
-              <div class="toggle-wrap" style="margin-top:8px">
-                <label class="toggle-switch">
-                  <input type="checkbox" data-key="mqtt.tls">
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label-text">TLS</span>
-              </div>
-            </div>
           </div>
           <div class="config-field" style="margin-top:18px">
             <label class="config-field-label">Client ID</label>
@@ -1602,15 +1676,20 @@
       <div class="config-section">
         <div class="config-section-header" style="background: #FFB74D;">Integration</div>
         <div class="config-section-desc">Home Assistant connection and API authentication. <a class="help-link" onclick="switchToTab('help')">Learn more</a></div>
-        <div class="config-section-body">
-          <div class="config-field-row">
-            <div class="config-field">
-              <label class="config-field-label">HA URL</label>
-              <input type="text" class="config-field-input" data-key="ha_url" placeholder="http://homeassistant.local:8123">
-            </div>
-            <div class="config-field">
-              <label class="config-field-label">HA Token</label>
-              <input type="password" class="config-field-input" data-key="ha_token">
+        <div class="config-section-body" id="integration-section-body">
+          <div class="integration-supervisor-note config-supervisor-note" style="display:none">
+            HA URL and token are auto-detected via the Supervisor API. Only add-on page URL and auth token need to be configured.
+          </div>
+          <div class="integration-manual-fields">
+            <div class="config-field-row">
+              <div class="config-field">
+                <label class="config-field-label">HA URL</label>
+                <input type="text" class="config-field-input" data-key="ha_url" placeholder="http://homeassistant.local:8123">
+              </div>
+              <div class="config-field">
+                <label class="config-field-label">HA Token</label>
+                <input type="password" class="config-field-input" data-key="ha_token">
+              </div>
             </div>
           </div>
           <div class="config-field-row">
@@ -1833,14 +1912,31 @@ var stripeColors = ['var(--blue)', 'var(--coral)', 'var(--mint)'];
 
 function renderPrinters(health) {
   var printerCards = document.getElementById('printer-cards');
+  var wrapper = document.getElementById('printer-cards-wrapper');
   printerCards.innerHTML = '';
-  (health.printers || []).forEach(function(p, i) {
+  wrapper.innerHTML = '';
+  var printers = health.printers || [];
+  if (printers.length === 0) {
+    wrapper.innerHTML = '<div class="no-printers-msg">No printers configured yet.<br><button class="btn btn-yellow" onclick="switchToTab(\'config\');document.getElementById(\'printer-config-cards\').scrollIntoView({behavior:\'smooth\'})">+ Add Your First Printer</button></div>';
+    return;
+  }
+  var templates = health.supported_templates || ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid'];
+  printers.forEach(function(p, i) {
     var card = document.createElement('div');
     card.className = 'printer-card';
     var overdue = p.next_keepalive_due_at && new Date(p.next_keepalive_due_at).getTime() < Date.now();
     var pid = esc(p.printer_id);
     var pname = esc(p.name);
-    var tmpl = esc(p.template || '');
+    var tmpl = p.template || '';
+    var origEnabled = p.enabled !== false;
+    var origCadence = p.cadence_hours;
+    var origTemplate = tmpl;
+    var cardId = 'pcard-' + i;
+
+    var templateOptions = templates.map(function(t) {
+      return '<option value="' + esc(t) + '"' + (t === tmpl ? ' selected' : '') + '>' + esc(t) + '</option>';
+    }).join('');
+
     card.innerHTML =
       '<div class="printer-card-stripe" style="background:' + stripeColors[i % stripeColors.length] + '"></div>' +
       '<div class="printer-card-head">' +
@@ -1852,20 +1948,37 @@ function renderPrinters(health) {
           '<div><div class="meta-label">Printer ID</div><div class="meta-value">' + pid + '</div></div>' +
           '<div><div class="meta-label">State</div><div class="meta-value">' + esc(p.printer_state) + '</div></div>' +
           '<div><div class="meta-label">URI</div><div class="meta-value">' + esc(p.printer_uri) + '</div></div>' +
-          '<div><div class="meta-label">Template</div><div class="meta-value">' + tmpl + '</div></div>' +
-          '<div><div class="meta-label">Cadence</div><div class="meta-value">' + esc(Math.round(p.cadence_hours / 24) + ' days') + '</div></div>' +
-          '<div><div class="meta-label">Keepalive Needed</div><div class="meta-value" style="' + (p.keepalive_needed ? 'color:var(--coral);font-weight:700' : '') + '">' + (p.keepalive_needed ? 'YES' : 'No') + '</div></div>' +
+          '<div><div class="meta-label">Template</div><div class="meta-value"><select class="config-field-input" id="' + cardId + '-tpl" style="max-width:180px;padding:4px 28px 4px 8px;font-size:12px">' + templateOptions + '</select></div></div>' +
+          '<div><div class="meta-label">Cadence (hours)</div><div class="meta-value"><input type="number" class="config-field-input" id="' + cardId + '-cadence" value="' + esc(String(origCadence)) + '" min="1" style="max-width:120px;padding:4px 8px;font-size:12px"></div></div>' +
+          '<div><div class="meta-label">Enabled</div><div class="meta-value"><label class="toggle-switch" style="width:44px;height:24px"><input type="checkbox" id="' + cardId + '-enabled"' + (origEnabled ? ' checked' : '') + '><span class="toggle-slider" style="border-width:2px"></span></label></div></div>' +
           '<div><div class="meta-label">Last Print</div><div class="meta-value">' + esc(timeAgo(p.last_print_at)) + '</div></div>' +
           '<div><div class="meta-label">Next Due</div><div class="meta-value" style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</div></div>' +
         '</div>' +
       '</div>' +
       '<div class="printer-card-actions">' +
-        '<button class="btn btn-yellow" onclick="doPrint(\'' + pid + '\',\'' + tmpl + '\',false)">Print Now</button>' +
-        '<button class="btn btn-coral" onclick="doPrint(\'' + pid + '\',\'' + tmpl + '\',true)">Force Print</button>' +
-        '<button class="btn btn-blue" onclick="doPoll(\'' + pid + '\')">Poll</button>' +
-        '<button class="btn btn-mint" onclick="doSaveSettings(\'' + pid + '\',' + (p.enabled ? 'true' : 'false') + ',' + p.cadence_hours + ',\'' + tmpl + '\')">Save Settings</button>' +
+        '<button class="btn btn-yellow" title="Print a keepalive page only if one is due based on the cadence schedule" onclick="doPrint(\'' + pid + '\',document.getElementById(\'' + cardId + '-tpl\').value,false)">Print if Due</button>' +
+        '<button class="btn btn-coral" title="Print a keepalive page immediately regardless of schedule" onclick="doPrint(\'' + pid + '\',document.getElementById(\'' + cardId + '-tpl\').value,true)">Force Print</button>' +
+        '<button class="btn btn-blue" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts" onclick="doPoll(\'' + pid + '\')">Poll Status</button>' +
+        '<button class="btn btn-mint" id="' + cardId + '-save" disabled onclick="doSaveSettings(\'' + pid + '\',document.getElementById(\'' + cardId + '-enabled\').checked,Number(document.getElementById(\'' + cardId + '-cadence\').value),document.getElementById(\'' + cardId + '-tpl\').value)">Save Settings</button>' +
       '</div>';
     printerCards.appendChild(card);
+
+    // Track changes to enable/disable the Save button
+    var enabledEl = document.getElementById(cardId + '-enabled');
+    var cadenceEl = document.getElementById(cardId + '-cadence');
+    var tplEl = document.getElementById(cardId + '-tpl');
+    var saveBtn = document.getElementById(cardId + '-save');
+
+    function checkDirty() {
+      var dirty = (enabledEl.checked !== origEnabled) ||
+                  (Number(cadenceEl.value) !== origCadence) ||
+                  (tplEl.value !== origTemplate);
+      saveBtn.disabled = !dirty;
+    }
+
+    enabledEl.addEventListener('change', checkDirty);
+    cadenceEl.addEventListener('input', checkDirty);
+    tplEl.addEventListener('change', checkDirty);
   });
 }
 
@@ -1900,12 +2013,20 @@ function renderDiscovery(discovery) {
           '<option value="inkjet"' + (typeVal === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
           '<option value="laser"' + (typeVal === 'laser' ? ' selected' : '') + '>laser</option>' +
         '</select></td>';
+    var ippsCell = '<td>';
+    if (p.ipps_available) {
+      var checked = (p.suggested_config && p.suggested_config.printer_uri && p.suggested_config.printer_uri.indexOf('ipps://') === 0) ? ' checked' : '';
+      ippsCell += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:700"><input type="checkbox" class="disc-ipps-toggle" data-disc-idx="' + idx + '"' + checked + '> IPPS</label>';
+    } else {
+      ippsCell += '<span style="opacity:.4">\u2014</span>';
+    }
+    ippsCell += '</td>';
     tr.innerHTML =
-      '<td class="printer-name">' + esc(p.printer_name) + '</td>' +
+      '<td style="min-width:180px"><div class="printer-name">' + esc(p.printer_name) + '</div><div style="font-size:11px;opacity:.6;font-family:monospace">' + esc(p.uri || '') + '</div></td>' +
       '<td>' + esc(p.printer_make_and_model || '\u2014') + '</td>' +
-      '<td>' + esc(p.host || '') + '</td>' +
       '<td>' + esc(p.printer_state || '\u2014') + '</td>' +
       typeCell +
+      ippsCell +
       '<td><span class="badge ' + (p.reachable ? 'badge-green' : 'badge-red') + '">' + (p.reachable ? 'Online' : 'Offline') + '</span></td>' +
       '<td></td>';
 
@@ -1916,6 +2037,16 @@ function renderDiscovery(discovery) {
         if (p.suggested_config) {
           p.suggested_config.printer_type = typeSel.value;
           p.suggested_config.cadence_hours = typeSel.value === 'laser' ? 720 : 168;
+        }
+      });
+    }
+
+    // IPPS toggle handler
+    var ippsCb = tr.querySelector('.disc-ipps-toggle');
+    if (ippsCb) {
+      ippsCb.addEventListener('change', function() {
+        if (p.suggested_config) {
+          p.suggested_config.printer_uri = ippsCb.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
         }
       });
     }
@@ -1936,13 +2067,16 @@ function renderDiscovery(discovery) {
             p.suggested_config.printer_type = typeSelect.value;
             p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
           }
+          var ippsToggle = dtbody.querySelector('.disc-ipps-toggle[data-disc-idx="' + idx + '"]');
+          if (ippsToggle) {
+            p.suggested_config.printer_uri = ippsToggle.checked ? (p.ipps_uri || p.uri) : (p.ipp_uri || p.uri);
+          }
           var cfgResp = await requestJson('config');
           var opts = cfgResp.options || {};
           if (!Array.isArray(opts.printers)) opts.printers = [];
           opts.printers.push(p.suggested_config);
           await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-          var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
-          showToast(msg);
+          showToast('Added ' + p.printer_name + ' to config.');
           refreshAll();
         } catch (err) {
           showToast('Failed to add printer: ' + err.message, true);
@@ -2329,21 +2463,42 @@ var cardStyleLabels = {
 };
 var cardYamlCache = {};
 
-async function fetchCardYaml(pid, style, codeEl) {
-  var cacheKey = pid + ':' + style;
+async function fetchUnifiedCardYaml(style, printerIds, codeEl) {
+  var cacheKey = style + ':' + printerIds.join(',');
   if (cardYamlCache[cacheKey]) {
     codeEl.textContent = cardYamlCache[cacheKey];
     return;
   }
   codeEl.textContent = 'Loading...';
   try {
-    var data = await requestJson('printers/' + encodeURIComponent(pid) + '/card?style=' + encodeURIComponent(style));
+    var data = await requestJson('cards?style=' + encodeURIComponent(style) + '&printers=' + encodeURIComponent(printerIds.join(',')));
     var yaml = data.lovelace_yaml || '# No YAML returned';
     cardYamlCache[cacheKey] = yaml;
     codeEl.textContent = yaml;
   } catch (err) {
     codeEl.textContent = '# Error: ' + err.message;
   }
+}
+
+function getSelectedCardPrinters() {
+  var checkboxes = document.querySelectorAll('#cards-printer-checkboxes input[type="checkbox"]');
+  var ids = [];
+  checkboxes.forEach(function(cb) {
+    if (cb.checked) ids.push(cb.value);
+  });
+  return ids;
+}
+
+function refreshCardYaml() {
+  var styleEl = document.getElementById('unified-card-style');
+  var codeEl = document.getElementById('unified-card-yaml');
+  if (!styleEl || !codeEl) return;
+  var ids = getSelectedCardPrinters();
+  if (ids.length === 0) {
+    codeEl.textContent = '# Select at least one printer';
+    return;
+  }
+  fetchUnifiedCardYaml(styleEl.value, ids, codeEl);
 }
 
 function buildCards(health) {
@@ -2354,42 +2509,43 @@ function buildCards(health) {
     grid.innerHTML = '<p style="opacity:.5;font-weight:700;text-transform:uppercase;letter-spacing:1px">No printers configured.</p>';
     return;
   }
-  printers.forEach(function(p, i) {
-    var pid = p.printer_id;
-    var color = stripeColors[i % stripeColors.length];
-    var card = document.createElement('div');
-    card.className = 'card-gen';
 
-    var optionsHtml = cardStyles.map(function(s) {
-      return '<option value="' + s + '">' + esc(cardStyleLabels[s]) + '</option>';
-    }).join('');
+  var card = document.createElement('div');
+  card.className = 'card-gen';
+  card.style.maxWidth = '100%';
+  card.style.gridColumn = '1 / -1';
 
-    var selectId = 'card-style-' + pid;
-    var codeId = 'card-yaml-' + pid;
+  var optionsHtml = cardStyles.map(function(s) {
+    return '<option value="' + s + '">' + esc(cardStyleLabels[s]) + '</option>';
+  }).join('');
 
-    card.innerHTML =
-      '<div style="height:8px;background:' + color + '"></div>' +
-      '<div class="card-gen-header"><h3 style="color:' + color + '">' + esc(p.name) + '</h3></div>' +
-      '<div class="card-gen-body">' +
-        '<label class="config-field-label" style="margin-bottom:8px">Card Style</label>' +
-        '<select class="card-style-select" id="' + selectId + '">' + optionsHtml + '</select>' +
-        '<div class="yaml-block" id="' + codeId + '">Loading...</div>' +
-        '<button class="btn-copy-yaml" onclick="copyCardYaml(\'' + esc(codeId) + '\')">Copy YAML</button>' +
-      '</div>';
+  var checkboxesHtml = printers.map(function(p) {
+    return '<label><input type="checkbox" value="' + esc(p.printer_id) + '" checked> ' + esc(p.name) + '</label>';
+  }).join('');
 
-    grid.appendChild(card);
+  card.innerHTML =
+    '<div style="height:8px;background:var(--blue)"></div>' +
+    '<div class="card-gen-header"><h3>Lovelace Card Generator</h3></div>' +
+    '<div class="card-gen-body">' +
+      '<label class="config-field-label" style="margin-bottom:8px">Card Style</label>' +
+      '<select class="card-style-select" id="unified-card-style">' + optionsHtml + '</select>' +
+      '<label class="config-field-label" style="margin-bottom:8px">Printers</label>' +
+      '<div class="printer-checkbox-list" id="cards-printer-checkboxes">' + checkboxesHtml + '</div>' +
+      '<div class="yaml-block" id="unified-card-yaml">Loading...</div>' +
+      '<button class="btn-copy-yaml" onclick="copyCardYaml(\'unified-card-yaml\')">Copy YAML</button>' +
+    '</div>';
 
-    var selectEl = document.getElementById(selectId);
-    var codeEl = document.getElementById(codeId);
+  grid.appendChild(card);
 
-    // Fetch initial
-    fetchCardYaml(pid, selectEl.value, codeEl);
+  var styleEl = document.getElementById('unified-card-style');
+  styleEl.addEventListener('change', refreshCardYaml);
 
-    // Re-fetch on change
-    selectEl.addEventListener('change', function() {
-      fetchCardYaml(pid, selectEl.value, codeEl);
-    });
+  document.querySelectorAll('#cards-printer-checkboxes input[type="checkbox"]').forEach(function(cb) {
+    cb.addEventListener('change', refreshCardYaml);
   });
+
+  // Fetch initial
+  refreshCardYaml();
 }
 
 function copyCardYaml(codeId) {
@@ -2614,6 +2770,52 @@ function toggleHelpCollapse(header) {
   if (body) body.classList.toggle('open');
 }
 
+/* ===== Config summaries & Supervisor context ===== */
+function updateConfigSummaries() {
+  var h = state.health;
+  // Printers summary
+  var printerCount = document.querySelectorAll('#printer-config-cards .printer-config-card').length;
+  var sumPrinters = document.getElementById('summary-printers');
+  if (sumPrinters) sumPrinters.textContent = printerCount + ' printer(s)';
+
+  // Scheduling summary
+  var autoEl = document.querySelector('[data-key="auto_print_enabled"]');
+  var sumSched = document.getElementById('summary-scheduling');
+  if (sumSched) sumSched.textContent = (autoEl && autoEl.checked) ? 'Active' : 'Disabled';
+
+  // Discovery summary
+  var discEl = document.querySelector('[data-key="discovery_enabled"]');
+  var discCount = (h && h.discovery) ? (h.discovery.printer_count || 0) : 0;
+  var sumDisc = document.getElementById('summary-discovery');
+  if (sumDisc) {
+    if (discEl && discEl.checked) {
+      sumDisc.textContent = discCount + ' found';
+    } else {
+      sumDisc.textContent = 'Disabled';
+    }
+  }
+
+  // MQTT summary
+  var mqttEl = document.querySelector('[data-key="mqtt.enabled"]');
+  var sumMqtt = document.getElementById('summary-mqtt');
+  if (sumMqtt) sumMqtt.textContent = (mqttEl && mqttEl.checked) ? 'Connected' : 'Disabled';
+}
+
+function updateSupervisorContext() {
+  var isSupervisor = state.health && state.health.is_supervisor;
+  // MQTT: hide host/port/username/password/tls in Supervisor mode
+  var mqttManual = document.querySelector('.mqtt-manual-fields');
+  var mqttNote = document.querySelector('.mqtt-supervisor-note');
+  if (mqttManual) mqttManual.style.display = isSupervisor ? 'none' : '';
+  if (mqttNote) mqttNote.style.display = isSupervisor ? '' : 'none';
+
+  // Integration: hide ha_url/ha_token in Supervisor mode
+  var intManual = document.querySelector('.integration-manual-fields');
+  var intNote = document.querySelector('.integration-supervisor-note');
+  if (intManual) intManual.style.display = isSupervisor ? 'none' : '';
+  if (intNote) intNote.style.display = isSupervisor ? '' : 'none';
+}
+
 /* ===== Refresh all data ===== */
 async function refreshDiscovery() {
   try {
@@ -2656,6 +2858,9 @@ async function refreshAll() {
       console.error('Config fetch error:', err);
     }
   }
+
+  updateSupervisorContext();
+  updateConfigSummaries();
 
   state.refreshInFlight = false;
 }
