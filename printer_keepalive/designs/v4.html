@@ -972,7 +972,7 @@ function renderPrinterCards(){
       {label:'URI',value:p.printer_uri||'',cls:''},
       {label:'STATE',value:(p.printer_state||'').toUpperCase(),cls:st},
       {label:'TEMPLATE',value:p.template||'',cls:'cyan'},
-      {label:'CADENCE',value:(p.cadence_hours||0)+'h',cls:'cyan'},
+      {label:'CADENCE',value:Math.round((p.cadence_hours||0)/24)+' days',cls:'cyan'},
       {label:'LAST_PRINT',value:relTime(p.last_print_at),cls:''},
       {label:'NEXT_DUE',value:relTime(p.next_keepalive_due_at),cls:p.next_keepalive_due_at&&new Date(p.next_keepalive_due_at)<Date.now()?'warn':'ok'},
       {label:'KEEPALIVE_NEEDED',value:p.keepalive_needed?'YES':'NO',cls:p.keepalive_needed?'warn':'ok'},
@@ -984,7 +984,7 @@ function renderPrinterCards(){
       '<div class="printer-card-readout">'+lines.map(function(l){var dLen=Math.max(2,20-l.label.length);return '<div class="readout-line"><span class="readout-prefix">&gt;</span><span class="readout-label">'+esc(l.label)+'</span><span class="readout-dots">'+dots(dLen)+'</span><span class="readout-value '+l.cls+'">'+esc(String(l.value))+'</span></div>';}).join('')+'</div>'+
       '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.8rem;">'+
         '<label style="color:var(--dim);">TEMPLATE: <select class="design-select pc-template" style="margin-left:4px;">'+templateOpts+'</select></label>'+
-        '<label style="color:var(--dim);">CADENCE_H: <input type="number" class="auth-input pc-cadence" style="width:60px;padding:4px 6px;" value="'+(p.cadence_hours||0)+'" min="1"></label>'+
+        '<label style="color:var(--dim);">CADENCE_D: <input type="number" class="auth-input pc-cadence" style="width:60px;padding:4px 6px;" value="'+Math.round((p.cadence_hours||0)/24)+'" min="1"></label>'+
         '<label style="color:var(--dim);cursor:pointer;"><input type="checkbox" class="pc-enabled" '+(p.enabled?'checked':'')+' style="margin-right:4px;">ENABLED</label>'+
       '</div>'+
       '<div class="printer-card-actions">'+
@@ -1010,7 +1010,7 @@ function renderPrinterCards(){
 async function printerSave(pid, card) {
   try {
     var template = card.querySelector('.pc-template').value;
-    var cadence = parseInt(card.querySelector('.pc-cadence').value, 10) || 168;
+    var cadence = (parseInt(card.querySelector('.pc-cadence').value, 10) || 7) * 24;
     var enabled = card.querySelector('.pc-enabled').checked;
     await requestJson('printers/' + encodeURIComponent(pid) + '/settings', {
       method: 'POST',
@@ -1293,7 +1293,7 @@ function addPrinterFormCard(p) {
     '<div class="cfg-row-3">' +
       '<div class="cfg-field"><label class="cfg-label">ID</label><input type="text" class="cfg-input pf-id" value="'+esc(p.id||'')+'" placeholder="auto-generated"></div>' +
       '<div class="cfg-field"><label class="cfg-label">PRINTER_TYPE</label><select class="cfg-input pf-type">'+typeOpts+'</select></div>' +
-      '<div class="cfg-field"><label class="cfg-label">CADENCE_HOURS</label><input type="number" class="cfg-input pf-cadence" value="'+(p.cadence_hours||168)+'" min="1" max="720"></div>' +
+      '<div class="cfg-field"><label class="cfg-label">CADENCE_DAYS</label><input type="number" class="cfg-input pf-cadence" value="'+Math.round((p.cadence_hours||168)/24)+'" min="1" max="30"></div>' +
     '</div>' +
     '<div class="cfg-row">' +
       '<div class="cfg-field"><label class="cfg-label">TEMPLATE</label><select class="cfg-input pf-template">'+templateOpts+'</select></div>' +
@@ -1332,7 +1332,7 @@ function serializePrinterCards() {
     var id = card.querySelector('.pf-id').value.trim();
     if (id) p.id = id;
     p.printer_type = card.querySelector('.pf-type').value;
-    p.cadence_hours = parseInt(card.querySelector('.pf-cadence').value, 10) || 168;
+    p.cadence_hours = (parseInt(card.querySelector('.pf-cadence').value, 10) || 7) * 24;
     p.template = card.querySelector('.pf-template').value;
     p.enabled = card.querySelector('.pf-enabled').checked;
     var we = card.querySelector('.pf-weather').value.trim();

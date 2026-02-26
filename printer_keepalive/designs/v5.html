@@ -1152,7 +1152,7 @@ function renderPrinterCards() {
     var stats = [
       { label: 'State', value: p.printer_state || 'unknown' },
       { label: 'Template', value: p.template || '--' },
-      { label: 'Cadence', value: (p.cadence_hours || 0) + 'h' },
+      { label: 'Cadence', value: Math.round((p.cadence_hours || 0) / 24) + ' days' },
       { label: 'Enabled', value: p.enabled ? 'Yes' : 'No' },
       { label: 'Last Print', value: relTime(p.last_print_at) },
       { label: 'Next Due', value: relTime(p.next_keepalive_due_at) },
@@ -1173,7 +1173,7 @@ function renderPrinterCards() {
       }).join('') + '</div>' +
       '<div class="controls-section">' +
         '<div class="control-group"><label class="control-label">Enabled</label><label class="toggle"><input type="checkbox" class="pc-enabled"' + (p.enabled ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' +
-        '<div class="control-group"><label class="control-label">Cadence (h)</label><input type="number" class="control-input pc-cadence" style="width:70px;" value="' + (p.cadence_hours || 0) + '" min="1"></div>' +
+        '<div class="control-group"><label class="control-label">Cadence (days)</label><input type="number" class="control-input pc-cadence" style="width:70px;" value="' + Math.round((p.cadence_hours || 0) / 24) + '" min="1"></div>' +
         '<div class="control-group"><label class="control-label">Template</label><select class="control-select pc-template">' + templateOpts + '</select></div>' +
       '</div>' +
       '<div class="btn-row">' +
@@ -1199,7 +1199,7 @@ function renderPrinterCards() {
 async function printerSave(pid, card) {
   try {
     var template = card.querySelector('.pc-template').value;
-    var cadence = parseInt(card.querySelector('.pc-cadence').value, 10) || 168;
+    var cadence = (parseInt(card.querySelector('.pc-cadence').value, 10) || 7) * 24;
     var enabled = card.querySelector('.pc-enabled').checked;
     await requestJson('printers/' + encodeURIComponent(pid) + '/settings', {
       method: 'POST', body: JSON.stringify({ enabled: enabled, cadence_hours: cadence, template: template })
@@ -1551,9 +1551,9 @@ function addPrinterForm(p) {
         '</div>' +
       '</div>' +
       '<div class="cfg-field">' +
-        '<label class="cfg-field-label">Cadence (hours)</label>' +
-        '<input type="number" class="cfg-input cfg-number pf-cadence" value="' + (p.cadence_hours || '') + '" min="1" max="720" placeholder="168">' +
-        '<div class="cfg-field-desc">Print interval in hours (1-720)</div>' +
+        '<label class="cfg-field-label">Cadence (days)</label>' +
+        '<input type="number" class="cfg-input cfg-number pf-cadence" value="' + (p.cadence_hours ? Math.round(p.cadence_hours / 24) : '') + '" min="1" max="30" placeholder="7">' +
+        '<div class="cfg-field-desc">Print interval in days (1-30)</div>' +
       '</div>' +
     '</div>' +
     '<div class="cfg-field-row">' +
@@ -1613,7 +1613,7 @@ function serializePrinterForms() {
     p.printer_type = card.querySelector('.pf-type').value;
     p.enabled = card.querySelector('.pf-enabled').checked;
     var cadence = card.querySelector('.pf-cadence').value;
-    if (cadence !== '') p.cadence_hours = Number(cadence);
+    if (cadence !== '') p.cadence_hours = Number(cadence) * 24;
     p.template = card.querySelector('.pf-template').value;
     var we = card.querySelector('.pf-weather').value.trim();
     if (we) p.weather_entity = we;

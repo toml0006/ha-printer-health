@@ -1790,7 +1790,7 @@ function renderDashboard(health) {
       '<td class="printer-name">' + esc(p.name) + '</td>' +
       '<td>' + esc(p.printer_state) + '</td>' +
       '<td><span class="template-pill" style="padding:2px 8px">' + esc(p.template) + '</span></td>' +
-      '<td>' + esc(p.cadence_hours + 'h') + '</td>' +
+      '<td>' + esc(Math.round(p.cadence_hours / 24) + ' days') + '</td>' +
       '<td>' + esc(timeAgo(p.last_print_at)) + '</td>' +
       '<td style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</td>';
     htbody.appendChild(tr);
@@ -1853,7 +1853,7 @@ function renderPrinters(health) {
           '<div><div class="meta-label">State</div><div class="meta-value">' + esc(p.printer_state) + '</div></div>' +
           '<div><div class="meta-label">URI</div><div class="meta-value">' + esc(p.printer_uri) + '</div></div>' +
           '<div><div class="meta-label">Template</div><div class="meta-value">' + tmpl + '</div></div>' +
-          '<div><div class="meta-label">Cadence</div><div class="meta-value">' + esc(p.cadence_hours + 'h') + '</div></div>' +
+          '<div><div class="meta-label">Cadence</div><div class="meta-value">' + esc(Math.round(p.cadence_hours / 24) + ' days') + '</div></div>' +
           '<div><div class="meta-label">Keepalive Needed</div><div class="meta-value" style="' + (p.keepalive_needed ? 'color:var(--coral);font-weight:700' : '') + '">' + (p.keepalive_needed ? 'YES' : 'No') + '</div></div>' +
           '<div><div class="meta-label">Last Print</div><div class="meta-value">' + esc(timeAgo(p.last_print_at)) + '</div></div>' +
           '<div><div class="meta-label">Next Due</div><div class="meta-value" style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</div></div>' +
@@ -2071,8 +2071,8 @@ function buildPrinterCard(printer, index) {
           '</div>' +
         '</div>' +
         '<div class="config-field">' +
-          '<label class="config-field-label">Cadence (hours)</label>' +
-          '<input type="number" class="config-field-input" data-printer-key="cadence_hours" value="' + esc(String(printer.cadence_hours || '')) + '" min="1" max="720">' +
+          '<label class="config-field-label">Cadence (days)</label>' +
+          '<input type="number" class="config-field-input" data-printer-key="cadence_hours" value="' + esc(String(printer.cadence_hours ? Math.round(printer.cadence_hours / 24) : '')) + '" min="1" max="30">' +
         '</div>' +
       '</div>' +
       '<div class="config-field-row">' +
@@ -2205,7 +2205,7 @@ function serializeForm() {
       if (el.type === 'checkbox') {
         val = el.checked;
       } else if (el.type === 'number') {
-        val = el.value !== '' ? Number(el.value) : undefined;
+        val = el.value !== '' ? ((key === 'cadence_hours') ? Number(el.value) * 24 : Number(el.value)) : undefined;
       } else if (key === 'entity_ids') {
         val = el.value.trim() ? el.value.trim().split('\n').map(function(s) { return s.trim(); }).filter(Boolean) : [];
       } else {

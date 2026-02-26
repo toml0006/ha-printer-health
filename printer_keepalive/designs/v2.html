@@ -1025,7 +1025,7 @@ function renderPrinters() {
     var stats = h('div', {className:'pc-stats'});
     [
       { l: 'Template', v: p.template },
-      { l: 'Cadence', v: p.cadence_hours + 'h' },
+      { l: 'Cadence', v: Math.round(p.cadence_hours / 24) + ' days' },
       { l: 'Last Print', v: timeAgo(p.last_print_at) },
       { l: 'Next Due', v: timeUntil(p.next_keepalive_due_at) },
     ].forEach(function(s) {
@@ -1041,7 +1041,7 @@ function renderPrinters() {
     var settingsWrap = h('div', {style:'margin-bottom:14px; display:none'});
     var enabledCheck = h('input', {type:'checkbox', style:'margin-right:6px'});
     if (p.enabled) enabledCheck.checked = true;
-    var cadenceInput = h('input', {type:'number', className:'auth-input', value:String(p.cadence_hours), style:'width:80px; display:inline-block; margin:6px 8px 6px 0'});
+    var cadenceInput = h('input', {type:'number', className:'auth-input', value:String(Math.round(p.cadence_hours / 24)), style:'width:80px; display:inline-block; margin:6px 8px 6px 0'});
     var templateSelect = h('select', {className:'design-select', style:'margin:6px 0'});
     templates.forEach(function(t) {
       var opt = h('option', {value:t}, t);
@@ -1053,7 +1053,7 @@ function renderPrinters() {
         h('label', {style:'font-size:12px;font-weight:600;display:block;margin-bottom:4px'}, 'Settings')
       ),
       h('div', {style:'display:flex;align-items:center;gap:4px;margin-bottom:6px;font-size:12px'}, enabledCheck, 'Enabled'),
-      h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Cadence (hours)'),
+      h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Cadence (days)'),
       cadenceInput,
       h('div', {style:'font-size:11px;color:var(--text-muted);margin-bottom:4px'}, 'Template'),
       templateSelect,
@@ -1061,7 +1061,7 @@ function renderPrinters() {
         h('button', {className:'btn-glass primary', style:'font-size:11px;padding:6px 14px', onClick: function() {
           requestJson('printers/' + p.printer_id + '/settings', {
             method: 'POST',
-            body: JSON.stringify({enabled: enabledCheck.checked, cadence_hours: parseInt(cadenceInput.value, 10), template: templateSelect.value})
+            body: JSON.stringify({enabled: enabledCheck.checked, cadence_hours: (parseInt(cadenceInput.value, 10) || 7) * 24, template: templateSelect.value})
           }).then(function() { showToast('Settings saved for ' + p.name, 'success'); refreshAll(); })
             .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
         }}, 'Save Settings')
@@ -1362,9 +1362,9 @@ function buildPrinterCard(printer, index, container) {
   grid.append(enWrap);
 
   // Cadence
-  var cadInp = h('input', {type:'number', className:'cfg-input', 'data-pkey':'cadence_hours', value: printer.cadence_hours!=null ? String(printer.cadence_hours) : '24', min:'1', max:'720'});
-  var cadWrap = h('div', {className:'cfg-number-wrap'}); cadWrap.append(cadInp); cadWrap.append(h('span', {className:'cfg-number-unit'}, 'hours'));
-  grid.append(makeField('Cadence', cadWrap, '1 - 720 hours'));
+  var cadInp = h('input', {type:'number', className:'cfg-input', 'data-pkey':'cadence_hours', value: printer.cadence_hours!=null ? String(Math.round(printer.cadence_hours / 24)) : '1', min:'1', max:'30'});
+  var cadWrap = h('div', {className:'cfg-number-wrap'}); cadWrap.append(cadInp); cadWrap.append(h('span', {className:'cfg-number-unit'}, 'days'));
+  grid.append(makeField('Cadence', cadWrap, '1 - 30 days'));
 
   // Template
   var tmplSel = h('select', {className:'cfg-input', 'data-pkey':'template'});
@@ -1399,7 +1399,7 @@ function serializePrinterCard(card) {
       if (lines.length) p[key] = lines;
     } else if (el.type === 'number') {
       var v = el.value.trim();
-      if (v !== '') p[key] = Number(v);
+      if (v !== '') p[key] = (key === 'cadence_hours') ? Number(v) * 24 : Number(v);
     } else {
       var v = el.value.trim();
       if (v !== '') p[key] = v;

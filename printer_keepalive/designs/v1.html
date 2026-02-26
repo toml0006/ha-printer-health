@@ -1681,7 +1681,7 @@ function buildPrinters() {
       '</div>' +
       '<div class="control-row">' +
         '<label><input type="checkbox" class="p-enabled"' + (p.enabled ? ' checked' : '') + '> Enabled</label>' +
-        '<label>Cadence <input type="number" class="p-cadence" value="' + p.cadence_hours + '" min="1">h</label>' +
+        '<label>Cadence <input type="number" class="p-cadence" value="' + Math.round(p.cadence_hours / 24) + '" min="1"> days</label>' +
         '<select class="p-template">' + opts + '</select>' +
       '</div>' +
       '<div class="btn-row">' +
@@ -1695,7 +1695,7 @@ function buildPrinters() {
 
     card.querySelector('.btn-save').onclick = async function() {
       var enabled = card.querySelector('.p-enabled').checked;
-      var cadence = parseInt(card.querySelector('.p-cadence').value, 10) || p.cadence_hours;
+      var cadence = (parseInt(card.querySelector('.p-cadence').value, 10) || 7) * 24;
       var template = card.querySelector('.p-template').value;
       try {
         await requestJson('printers/' + encodeURIComponent(pid) + '/settings', {
@@ -1941,7 +1941,7 @@ function buildPrinterCard(index, collapsed) {
       makeTextField(prefix + '.id', 'ID', 'Optional stable ID (slug)') +
       makeSelectField(prefix + '.printer_type', 'Type', 'Used for maintenance guidance', PRINTER_TYPE_OPTIONS) +
       makeToggleField(prefix + '.enabled', 'Enabled', 'Participate in scheduled keepalive') +
-      makeNumberField(prefix + '.cadence_hours', 'Cadence Hours', 'Hours between keepalive prints', 1, 720, 'hours') +
+      makeNumberField(prefix + '.cadence_hours', 'Cadence', 'Days between keepalive prints', 1, 30, 'days') +
       makeSelectField(prefix + '.template', 'Template', '', TEMPLATE_OPTIONS) +
       makeTextField(prefix + '.weather_entity', 'Weather Entity', '') +
       makeTextareaField(prefix + '.entity_ids', 'Entity IDs', 'One entity ID per line') +
@@ -2036,7 +2036,7 @@ function addPrinterCard(printerData, collapsed) {
   setFieldValue(card, prefix + '.id', printerData.id || '');
   setFieldValue(card, prefix + '.printer_type', printerData.printer_type || 'inkjet');
   setFieldValue(card, prefix + '.enabled', printerData.enabled !== false);
-  setFieldValue(card, prefix + '.cadence_hours', printerData.cadence_hours || 72);
+  setFieldValue(card, prefix + '.cadence_hours', Math.round((printerData.cadence_hours || 72) / 24));
   setFieldValue(card, prefix + '.template', printerData.template || 'color_bars');
   setFieldValue(card, prefix + '.weather_entity', printerData.weather_entity || '');
   setFieldValue(card, prefix + '.entity_ids', printerData.entity_ids || []);
@@ -2174,7 +2174,7 @@ function serializeForm() {
     if (id) p.id = id;
     p.printer_type = getFieldValue(card, prefix + '.printer_type');
     p.enabled = getFieldValue(card, prefix + '.enabled');
-    p.cadence_hours = getFieldValue(card, prefix + '.cadence_hours');
+    p.cadence_hours = getFieldValue(card, prefix + '.cadence_hours') * 24;
     p.template = getFieldValue(card, prefix + '.template');
     var we = getFieldValue(card, prefix + '.weather_entity');
     if (we) p.weather_entity = we;
