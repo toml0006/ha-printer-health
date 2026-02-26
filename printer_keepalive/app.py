@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.4.4"
+APP_VERSION = "0.5.0"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -250,6 +250,88 @@ def save_options(payload: dict[str, Any]) -> None:
     with OPTIONS_PATH.open("w", encoding="utf-8") as fp:
         json.dump(payload, fp, indent=2, sort_keys=True)
         fp.write("\n")
+    _save_supervisor_options(payload)
+
+
+def _save_supervisor_options(payload: dict[str, Any]) -> None:
+    token = supervisor_token_env()
+    if not token:
+        return
+    try:
+        data = json.dumps({"options": payload}).encode("utf-8")
+        request = Request(
+            f"{SUPERVISOR_API_BASE}/addons/self/options",
+            data=data,
+            method="POST",
+        )
+        request.add_header("Authorization", f"Bearer {token}")
+        request.add_header("Content-Type", "application/json")
+        with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            if 200 <= status < 300:
+                log("Supervisor options updated.")
+            else:
+                log(f"Supervisor options update returned status {status}.")
+    except Exception as exc:  # noqa: BLE001
+        log(f"Supervisor options update failed (non-fatal): {exc}")
+
+
+def reload_config() -> str:
+    global OPTIONS, PRINTERS, PRINTERS_BY_ID
+    global AUTO_PRINT_ENABLED, STATUS_POLL_INTERVAL_SECONDS, AUTH_TOKEN
+    global FAILURE_RETRY_MINUTES, DISCOVERY_ENABLED, DISCOVERY_INTERVAL_SECONDS
+    global DISCOVERY_TIMEOUT_SECONDS, DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS
+    global DISCOVERY_INCLUDE_IPPS, MQTT_CONFIG, ADDON_PAGE_URL
+
+    try:
+        new_options = load_options()
+    except RuntimeError as exc:
+        return f"Reload failed: {exc}"
+
+    new_printers = parse_printers(new_options)
+    old_ids = set(PRINTERS_BY_ID.keys())
+    new_ids = {p.printer_id for p in new_printers}
+
+    OPTIONS = new_options
+    PRINTERS[:] = new_printers
+    PRINTERS_BY_ID.clear()
+    PRINTERS_BY_ID.update({p.printer_id: p for p in new_printers})
+
+    AUTO_PRINT_ENABLED = option_bool(OPTIONS, "auto_print_enabled", True)
+    STATUS_POLL_INTERVAL_SECONDS = option_int(OPTIONS, "status_poll_interval_minutes", 15, 1, 1440) * 60
+    AUTH_TOKEN = option_str(OPTIONS, "auth_token")
+    FAILURE_RETRY_MINUTES = option_int(OPTIONS, "failure_retry_minutes", DEFAULT_FAILURE_RETRY_MINUTES, 1, 1440)
+    DISCOVERY_ENABLED = option_bool(OPTIONS, "discovery_enabled", True)
+    DISCOVERY_INTERVAL_SECONDS = option_int(OPTIONS, "discovery_interval_minutes", DEFAULT_DISCOVERY_INTERVAL_MINUTES, 1, 1440) * 60
+    DISCOVERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_timeout_seconds", DEFAULT_DISCOVERY_TIMEOUT_SECONDS, 1, 30)
+    DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_ipp_query_timeout_seconds", DEFAULT_DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS, 1, 30)
+    DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
+    MQTT_CONFIG = parse_mqtt_config(OPTIONS)
+
+    addon_page_url = option_str(OPTIONS, "addon_page_url")
+    ha_url = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
+    if not addon_page_url and ha_url:
+        addon_page_url = f"{ha_url.rstrip('/')}/hassio/addon/{ADDON_SLUG}/info"
+    if not addon_page_url:
+        addon_page_url = APP_URL
+    ADDON_PAGE_URL = addon_page_url
+
+    # Initialize state for new printers
+    with STATE_LOCK:
+        for printer in new_printers:
+            if printer.printer_id not in old_ids:
+                ensure_printer_state_locked(printer.printer_id)
+
+    added = new_ids - old_ids
+    removed = old_ids - new_ids
+    parts = [f"Reloaded config: {len(new_printers)} printer(s)"]
+    if added:
+        parts.append(f"added {', '.join(sorted(added))}")
+    if removed:
+        parts.append(f"removed {', '.join(sorted(removed))}")
+    msg = ". ".join(parts) + "."
+    log(msg)
+    return msg
 
 
 def validate_options_payload(payload: dict[str, Any]) -> tuple[bool, str]:
@@ -4737,11 +4819,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._write_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": f"Unable to save options: {exc}"})
                 return
 
+            reload_msg = reload_config()
+
             self._write_json(
                 HTTPStatus.OK,
                 {
                     "ok": True,
-                    "message": "Configuration saved to /data/options.json. Restart the add-on/service to apply changes.",
+                    "message": f"Configuration saved and applied. {reload_msg}",
                     "restart_supported": bool(SUPERVISOR_TOKEN),
                 },
             )
