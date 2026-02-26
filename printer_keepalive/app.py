@@ -4555,11 +4555,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if part.startswith("pk_design="):
                     design_choice = part.split("=", 1)[1].strip()
                     break
-            if design_choice in {"v1", "v2", "v3", "v4", "v5"}:
-                design_html = _load_design_file(design_choice)
-                if design_html is not None:
-                    self._write_html(HTTPStatus.OK, design_html)
-                    return
+            if design_choice not in {"v1", "v2", "v3", "v4", "v5"}:
+                design_choice = "v1"
+            design_html = _load_design_file(design_choice)
+            if design_html is not None:
+                self._write_html(HTTPStatus.OK, design_html)
+                return
             self._write_html(HTTPStatus.OK, ui_dashboard_html())
             return
 
