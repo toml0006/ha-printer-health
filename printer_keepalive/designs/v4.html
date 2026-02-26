@@ -436,7 +436,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
   font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;
   letter-spacing:.1em;padding:10px 20px;border:1px dashed var(--cyan);
   background:transparent;color:var(--cyan);border-radius:3px;cursor:pointer;
-  transition:all .2s;margin-bottom:16px;
+  transition:all .2s;
 }
 .btn-add-printer-view:hover{background:rgba(0,240,255,.05);box-shadow:0 0 12px var(--glow-cyan);}
 
@@ -475,6 +475,46 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
   margin-left:2px;animation:blink .6s step-end infinite;vertical-align:text-bottom;
 }
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Restart overlay */
+.restart-overlay{
+  position:fixed;inset:0;z-index:20000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:rgba(6,6,10,.95);
+  backdrop-filter:blur(12px);
+}
+.restart-spinner{
+  width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--cyan);
+  border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px;
+}
+.restart-text{
+  font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--cyan);
+  letter-spacing:.12em;text-shadow:0 0 12px var(--glow-cyan);
+}
+
+/* Template list/detail views */
+.tpl-list-card{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--cyan);
+  border-radius:6px;padding:20px;margin-bottom:12px;cursor:pointer;transition:all .2s;
+}
+.tpl-list-card:hover{border-color:var(--cyan);box-shadow:0 0 16px var(--glow-cyan);}
+.tpl-list-name{font-size:1rem;font-weight:700;color:var(--cyan);text-shadow:0 0 10px var(--glow-cyan);margin-bottom:6px;}
+.tpl-list-desc{font-size:.78rem;color:var(--dim);font-style:italic;}
+.tpl-detail-back{
+  font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;
+  letter-spacing:.1em;padding:6px 14px;border:1px solid var(--dim);
+  background:transparent;color:var(--dim);border-radius:3px;cursor:pointer;
+  transition:all .2s;margin-bottom:16px;display:inline-block;
+}
+.tpl-detail-back:hover{border-color:var(--cyan);color:var(--cyan);}
+.tpl-detail-title{
+  font-size:1.2rem;font-weight:700;color:var(--cyan);letter-spacing:.1em;
+  text-shadow:0 0 12px var(--glow-cyan);margin-bottom:8px;
+}
+.tpl-detail-desc{font-size:.82rem;color:var(--dim);font-style:italic;margin-bottom:16px;line-height:1.6;}
+.tpl-printer-checks{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;font-size:.8rem;}
+.tpl-printer-checks label{color:var(--dim);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.tpl-printer-checks input{accent-color:var(--cyan);}
 
 /* Tag styles */
 .tag{font-weight:600;font-size:.78rem;}
@@ -556,7 +596,13 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
 
   <!-- PRINTERS -->
   <section class="view" id="view-printers">
-    <button class="btn-add-printer-view" id="btnAddPrinterView" title="Add a new printer to your configuration">[ + ADD_PRINTER ]</button>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;letter-spacing:.08em;color:var(--cyan);">Printers</div>
+        <div style="font-size:.75rem;color:var(--dim);margin-top:2px;">Manage keepalive settings for each configured printer.</div>
+      </div>
+      <button class="btn-add-printer-view" id="btnAddPrinterView" title="Add a new printer to your configuration" style="flex-shrink:0;">[ + ADD_PRINTER ]</button>
+    </div>
     <div id="printerCards"></div>
   </section>
 
@@ -679,6 +725,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
               <option value="weather_snapshot">weather_snapshot</option>
               <option value="entity_report">entity_report</option>
               <option value="hybrid">hybrid</option>
+              <option value="daily_summary">daily_summary</option>
             </select>
           </div>
           <div class="cfg-field">
@@ -1068,6 +1115,7 @@ function renderPrinterCards(){
         '<button class="btn pc-print" title="Print a keepalive page only if one is due based on the cadence schedule">[ PRINT IF DUE ]</button>'+
         '<button class="btn danger pc-force" title="Print a keepalive page immediately regardless of schedule">[ FORCE PRINT ]</button>'+
         '<button class="btn pc-poll" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts">[ POLL STATUS ]</button>'+
+        '<button class="btn danger pc-remove" title="Remove this printer from configuration">[ REMOVE ]</button>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -1097,6 +1145,7 @@ function renderPrinterCards(){
     card.querySelector('.pc-print').addEventListener('click', function(){ printerPrint(pid, card, false); });
     card.querySelector('.pc-force').addEventListener('click', function(){ printerPrint(pid, card, true); });
     card.querySelector('.pc-poll').addEventListener('click', function(){ printerPoll(pid); });
+    card.querySelector('.pc-remove').addEventListener('click', function(){ printerRemove(pid); });
   });
 }
 
@@ -1142,6 +1191,19 @@ async function printerPoll(pid) {
     showToast('Poll sent to ' + pid, 'ok');
     refreshAll();
   } catch(e) { showToast('Poll failed: ' + e.message, 'err'); }
+}
+
+async function printerRemove(pid) {
+  if (!confirm('Remove printer "' + pid + '" from configuration? This cannot be undone.')) return;
+  try {
+    await requestJson('printers/' + encodeURIComponent(pid) + '/delete', {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    showToast('Printer ' + pid + ' removed', 'ok');
+    state.configLoaded = false;
+    refreshAll();
+  } catch(e) { showToast('Remove failed: ' + e.message, 'err'); }
 }
 
 // ── Discovery View ──
@@ -1234,7 +1296,7 @@ function renderDiscovery(){
 var currentConfig = {};
 var configMode = 'form'; // 'form' or 'raw'
 
-var TEMPLATE_OPTIONS = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid'];
+var TEMPLATE_OPTIONS = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid','daily_summary'];
 var PRINTER_TYPE_OPTIONS = ['inkjet','laser'];
 
 function renderConfig(cfg){
@@ -1611,8 +1673,11 @@ var TEMPLATE_DESCS = {
   home_summary: 'HA overview with entity counts and key states',
   weather_snapshot: 'Weather data with temperature, humidity, wind',
   entity_report: 'State report for up to 12 configured entities',
-  hybrid: 'Combined weather and entity report'
+  hybrid: 'Combined weather and entity report',
+  daily_summary: "Previous day's summary with energy use, sensor rollups, weather, household status, and colorful nozzle-exercising patterns."
 };
+
+var tplDetailView = null; // track current template detail view
 
 function buildTemplates() {
   var container = document.getElementById('templatesContainer');
@@ -1620,61 +1685,92 @@ function buildTemplates() {
     container.innerHTML = '<div style="color:var(--dim);font-size:.82rem;">&gt; No printers configured.</div>';
     return;
   }
-  var templates = state.health.supported_templates || Object.keys(TEMPLATE_DESCS);
-  container.innerHTML = state.health.printers.map(function(p) {
-    var pid = p.printer_id;
-    var tplOpts = templates.map(function(t){
-      return '<option value="'+esc(t)+'">'+esc(t)+'</option>';
-    }).join('');
-    return '<div class="tpl-block" data-tpl-pid="'+esc(pid)+'">' +
-      '<div class="tpl-name">'+esc(p.name)+'</div>' +
-      '<div class="tpl-controls">' +
-        '<label>TEMPLATE: <select class="design-select tp-select" style="margin-left:4px;">'+tplOpts+'</select></label>' +
-        '<button class="btn tp-preview-btn">[ PREVIEW ]</button>' +
-        '<button class="btn success tp-print-btn">[ EXECUTE PRINT ]</button>' +
-      '</div>' +
-      '<div class="tpl-desc tp-desc">'+esc(TEMPLATE_DESCS[templates[0]] || '')+'</div>' +
-      '<div class="tpl-preview tp-preview" style="display:none;"><img></div>' +
+  // If we're in detail view, re-render that detail
+  if (tplDetailView) {
+    showTemplateDetail(tplDetailView);
+    return;
+  }
+  showTemplateList();
+}
+
+function showTemplateList() {
+  tplDetailView = null;
+  var container = document.getElementById('templatesContainer');
+  var templates = (state.health && state.health.supported_templates) || Object.keys(TEMPLATE_DESCS);
+  container.innerHTML = templates.map(function(t){
+    return '<div class="tpl-list-card" data-tpl="'+esc(t)+'">' +
+      '<div class="tpl-list-name">'+esc(t)+'</div>' +
+      '<div class="tpl-list-desc">'+esc(TEMPLATE_DESCS[t] || '')+'</div>' +
     '</div>';
   }).join('');
 
-  container.querySelectorAll('.tpl-block').forEach(function(block){
-    var pid = block.dataset.tplPid;
-    var selectEl = block.querySelector('.tp-select');
-    var descEl = block.querySelector('.tp-desc');
-    var previewBtn = block.querySelector('.tp-preview-btn');
-    var printBtn = block.querySelector('.tp-print-btn');
-    var previewDiv = block.querySelector('.tp-preview');
-    var previewImg = previewDiv.querySelector('img');
-
-    selectEl.addEventListener('change', function(){
-      descEl.textContent = TEMPLATE_DESCS[selectEl.value] || '';
-      previewDiv.style.display = 'none';
+  container.querySelectorAll('.tpl-list-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      showTemplateDetail(card.dataset.tpl);
     });
+  });
+}
 
-    previewBtn.addEventListener('click', function(){
-      var tpl = selectEl.value;
-      previewImg.src = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
-      previewDiv.style.display = 'block';
-    });
+function showTemplateDetail(tpl) {
+  tplDetailView = tpl;
+  var container = document.getElementById('templatesContainer');
+  var printers = (state.health && state.health.printers) || [];
+  var singlePrinter = printers.length === 1;
+  var previewPid = printers.length > 0 ? printers[0].printer_id : null;
 
-    printBtn.addEventListener('click', async function(){
-      var tpl = selectEl.value;
-      printBtn.disabled = true;
-      printBtn.textContent = '[ PRINTING... ]';
+  var printerChecksHtml = '';
+  if (printers.length > 1) {
+    printerChecksHtml = '<div style="font-size:.7rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">SELECT PRINTERS</div>' +
+      '<div class="tpl-printer-checks" id="tplPrinterChecks">' +
+      printers.map(function(p){
+        return '<label><input type="checkbox" class="tpl-pcb" value="'+esc(p.printer_id)+'" checked> '+esc(p.name)+'</label>';
+      }).join('') +
+      '</div>';
+  }
+
+  container.innerHTML =
+    '<button class="tpl-detail-back" id="tplBackBtn">&lt; BACK</button>' +
+    '<div class="tpl-detail-title">'+esc(tpl)+'</div>' +
+    '<div class="tpl-detail-desc">'+esc(TEMPLATE_DESCS[tpl] || '')+'</div>' +
+    '<div class="tpl-preview tp-preview" style="margin-bottom:16px;">' +
+      (previewPid ? '<img src="'+apiPath('printers/' + encodeURIComponent(previewPid) + '/preview?template=' + encodeURIComponent(tpl))+'" style="width:100%;max-width:400px;border-radius:3px;display:block;">' : '') +
+    '</div>' +
+    printerChecksHtml +
+    '<button class="btn success" id="tplPrintBtn" style="margin-top:12px;">[ PRINT TEMPLATE ]</button>';
+
+  document.getElementById('tplBackBtn').addEventListener('click', function(){
+    tplDetailView = null;
+    showTemplateList();
+  });
+
+  document.getElementById('tplPrintBtn').addEventListener('click', async function(){
+    var btn = this;
+    var selectedPids = [];
+    if (singlePrinter) {
+      selectedPids = [printers[0].printer_id];
+    } else {
+      document.querySelectorAll('.tpl-pcb:checked').forEach(function(cb){ selectedPids.push(cb.value); });
+    }
+    if (selectedPids.length === 0) { showToast('Select at least one printer', 'err'); return; }
+    btn.disabled = true;
+    btn.textContent = '[ PRINTING... ]';
+    var ok = 0; var fail = 0;
+    for (var i = 0; i < selectedPids.length; i++) {
       try {
-        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
+        await requestJson('printers/' + encodeURIComponent(selectedPids[i]) + '/print', {
           method: 'POST',
-          body: JSON.stringify({template: tpl, force: false})
+          body: JSON.stringify({template: tpl, force: true})
         });
-        showToast('Print job sent: ' + tpl + ' on ' + pid, 'ok');
-      } catch(e) {
-        showToast('Print failed: ' + e.message, 'err');
-      } finally {
-        printBtn.disabled = false;
-        printBtn.textContent = '[ EXECUTE PRINT ]';
-      }
-    });
+        ok++;
+      } catch(e) { fail++; }
+    }
+    if (fail === 0) {
+      showToast('Print sent to ' + ok + ' printer(s): ' + tpl, 'ok');
+    } else {
+      showToast(ok + ' sent, ' + fail + ' failed', fail > 0 ? 'err' : 'ok');
+    }
+    btn.disabled = false;
+    btn.textContent = '[ PRINT TEMPLATE ]';
   });
 }
 
@@ -1762,6 +1858,7 @@ function buildHelp() {
           '<span class="man-dt">weather_snapshot</span><span class="man-dd">Weather data with temperature, humidity, wind</span>' +
           '<span class="man-dt">entity_report</span><span class="man-dd">State report for up to 12 configured entities</span>' +
           '<span class="man-dt">hybrid</span><span class="man-dd">Combined weather and entity report</span>' +
+          '<span class="man-dt">daily_summary</span><span class="man-dd">Previous day&rsquo;s summary with energy use, sensor rollups, weather, household status, and colorful nozzle-exercising patterns</span>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -1781,7 +1878,7 @@ function buildHelp() {
           '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/print</span><span class="man-api-desc">Send print job</span></div>' +
           '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/poll</span><span class="man-api-desc">Poll IPP status</span></div>' +
           '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/printers/{id}/settings</span><span class="man-api-desc">Update printer settings</span></div>' +
-          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/actions/restart</span><span class="man-api-desc">Restart the add-on</span></div>' +
+          '<div class="man-api-endpoint"><span class="man-api-method post">POST</span><span class="man-api-path">/actions/restart</span><span class="man-api-desc">Restart the app</span></div>' +
         '</div>' +
       '</details>' +
     '</div>' +
@@ -1881,10 +1978,24 @@ async function saveConfig(source) {
   }
 }
 
-async function restartAddon() {
+async function restartApp() {
   try {
     await requestJson('actions/restart', { method: 'POST', body: JSON.stringify({}) });
-    showToast('Restart initiated', 'ok');
+    // Show full-screen loading overlay and poll /ping until server responds
+    var overlay = document.createElement('div');
+    overlay.className = 'restart-overlay';
+    overlay.innerHTML = '<div class="restart-spinner"></div><div class="restart-text">RESTARTING...</div>';
+    document.body.appendChild(overlay);
+    var poll = setInterval(async function(){
+      try {
+        var resp = await fetch(apiPath('ping'), {headers: state.authToken ? {'Authorization':'Bearer '+state.authToken} : {}});
+        if (resp.ok) {
+          clearInterval(poll);
+          overlay.remove();
+          window.location.reload();
+        }
+      } catch(e) { /* still restarting */ }
+    }, 1000);
   } catch(e) {
     showToast('Restart failed: ' + e.message, 'err');
   }
@@ -1892,11 +2003,11 @@ async function restartAddon() {
 
 // Raw JSON mode buttons
 document.getElementById('btnConfigSave').addEventListener('click', function(){ saveConfig('raw'); });
-document.getElementById('btnConfigRestart').addEventListener('click', restartAddon);
+document.getElementById('btnConfigRestart').addEventListener('click', restartApp);
 
 // Form mode buttons
 document.getElementById('btnFormSave').addEventListener('click', function(){ saveConfig('form'); });
-document.getElementById('btnFormRestart').addEventListener('click', restartAddon);
+document.getElementById('btnFormRestart').addEventListener('click', restartApp);
 
 // ── Auth token ──
 document.getElementById('authInput').value = state.authToken;

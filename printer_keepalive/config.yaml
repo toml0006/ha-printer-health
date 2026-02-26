@@ -1,5 +1,5 @@
 name: "Printer Keepalive"
-version: "0.5.3"
+version: "0.5.4"
 slug: "printer_keepalive"
 description: "Multi-printer IPP keepalive printing with HA device discovery and IPP health telemetry."
 url: "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"

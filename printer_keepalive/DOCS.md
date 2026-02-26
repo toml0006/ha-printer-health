@@ -277,6 +277,8 @@ If `auth_token` is configured, enter it in the dashboard session field to enable
   - Inkjet and laser maintenance guidance.
 - `GET /discovery`
   - Printer discovery candidates and suggested config snippets.
+- `GET /ping`
+  - Lightweight health check. Returns `{"ok": true, "version": "..."}`.
 - `GET /templates`
   - Supported templates.
 - `POST /print`
@@ -289,6 +291,8 @@ If `auth_token` is configured, enter it in the dashboard session field to enable
 - `POST /printers/<printer_id>/settings`
   - Body fields: `template`, `cadence_hours`, `enabled`
 - `POST /printers/<printer_id>/poll`
+- `POST /printers/<printer_id>/delete`
+  - Remove a printer from the configuration. Updates options and reloads.
 - `POST /discovery/rescan`
   - Force discovery scan refresh.
 - `POST /config`

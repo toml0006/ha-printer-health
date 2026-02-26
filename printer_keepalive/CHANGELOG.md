@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.4
+
+- New `daily_summary` template: a visually rich previous day's summary with energy use, sensor domain rollups, automation counts, weather, household status, and colorful nozzle-exercising patterns (CMYK gradients, rainbow strips, dot grids).
+- Templates view redesigned: template-centric list with click-to-configure detail pages, printer selection checkboxes, and direct print-to-selected-printers action.
+- Remove printer: printers can now be removed directly from the Printers tab via a "Remove" button with confirmation.
+- Restart button renamed to "Restart App" with a loading overlay that polls the server and auto-refreshes when the app comes back online.
+- Added `GET /ping` endpoint for lightweight health checks and restart polling.
+- Added `POST /printers/{id}/delete` endpoint to remove a printer from configuration.
+- Config reload now reconnects MQTT bridge when settings change, re-publishes discovery on printer list changes, and refreshes HA API connection settings.
+
 ## 0.5.3
 
 - Surface native HA IPP integration entities alongside add-on data: ink/toner levels from the built-in IPP integration are now shown in printer cards and the dashboard overview.

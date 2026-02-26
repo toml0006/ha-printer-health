@@ -453,6 +453,20 @@ body{
 .toast.toast-err{color:var(--error-color);}
 .toast.toast-ok{color:var(--success-color);}
 
+/* ── Restart Overlay ── */
+.restart-overlay{
+  position:fixed;inset:0;z-index:20000;
+  background:var(--primary-background-color);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+.restart-spinner{
+  width:48px;height:48px;border:4px solid var(--divider-color);
+  border-top-color:var(--primary-color);border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+.restart-label{font-size:16px;font-weight:500;color:var(--secondary-text-color);}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -642,8 +656,12 @@ body{
 
   <!-- PRINTERS -->
   <section class="view" id="view-printers">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-      <button class="ha-btn" id="btnAddPrinterNav" title="Add a new printer via the Config tab">ADD PRINTER</button>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:20px;font-weight:600;">Printers</div>
+        <div style="font-size:13px;color:var(--secondary-text-color);margin-top:2px;">Manage and monitor your configured printers</div>
+      </div>
+      <button class="ha-btn" id="btnAddPrinterNav" style="flex-shrink:0;" title="Add a new printer via the Config tab">+ ADD PRINTER</button>
     </div>
     <div id="printerCards"></div>
   </section>
@@ -678,7 +696,7 @@ body{
     <div class="config-toolbar">
       <button class="ha-btn" id="btnConfigLoad">LOAD CONFIG</button>
       <button class="ha-btn success" id="btnConfigSave">SAVE CONFIG</button>
-      <button class="ha-btn danger" id="btnConfigRestart">RESTART</button>
+      <button class="ha-btn danger" id="btnConfigRestart">RESTART APP</button>
     </div>
     <div class="config-mode-tabs">
       <button class="config-mode-tab active" data-mode="form">Form</button>
@@ -792,6 +810,7 @@ body{
               <option value="weather_snapshot">weather_snapshot</option>
               <option value="entity_report">entity_report</option>
               <option value="hybrid">hybrid</option>
+              <option value="daily_summary">daily_summary</option>
             </select>
             <div class="cfg-field-desc">Default print template for new printers</div>
           </div>
@@ -1141,6 +1160,7 @@ function renderPrinterCards() {
         '<button class="ha-btn pc-print" title="Print a keepalive page only if one is due based on the cadence schedule">PRINT IF DUE</button>' +
         '<button class="ha-btn warn pc-force" title="Print a keepalive page immediately regardless of schedule">FORCE PRINT</button>' +
         '<button class="ha-btn pc-poll" title="Query the printer\'s IPP attributes to refresh status, ink levels, and job counts">POLL STATUS</button>' +
+        '<button class="ha-btn danger pc-remove" title="Remove this printer from configuration">REMOVE</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1173,6 +1193,7 @@ function renderPrinterCards() {
     card.querySelector('.pc-print').addEventListener('click', function() { printerPrint(pid, card, false); });
     card.querySelector('.pc-force').addEventListener('click', function() { printerPrint(pid, card, true); });
     card.querySelector('.pc-poll').addEventListener('click', function() { printerPoll(pid); });
+    card.querySelector('.pc-remove').addEventListener('click', function() { printerRemove(pid); });
   });
 }
 
@@ -1220,6 +1241,18 @@ async function printerPoll(pid) {
     showToast('Poll sent to ' + pid, 'ok');
     refreshAll();
   } catch (e) { showToast('Poll failed: ' + e.message, 'err'); }
+}
+
+async function printerRemove(pid) {
+  if (!confirm('Remove printer "' + pid + '"? This cannot be undone.')) return;
+  try {
+    await requestJson('printers/' + encodeURIComponent(pid) + '/delete', {
+      method: 'POST', body: JSON.stringify({})
+    });
+    showToast('Printer ' + pid + ' removed', 'ok');
+    state.configLoaded = false;
+    refreshAll();
+  } catch (e) { showToast('Remove failed: ' + e.message, 'err'); }
 }
 
 // ── Discovery View ──
@@ -1645,7 +1678,7 @@ function addPrinterForm(p) {
   card.className = 'cfg-printer-card';
   card.dataset.idx = idx;
 
-  var templateOptions = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid'].map(function(t) {
+  var templateOptions = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid','daily_summary'].map(function(t) {
     return '<option value="' + t + '"' + (t === (p.template || '') ? ' selected' : '') + '>' + t + '</option>';
   }).join('');
 
@@ -1865,59 +1898,136 @@ var TEMPLATE_DESCRIPTIONS = {
   home_summary: 'HA overview with entity counts and key states',
   weather_snapshot: 'Weather data with temperature, humidity, wind',
   entity_report: 'State report for up to 12 configured entities',
-  hybrid: 'Combined weather and entity report'
+  hybrid: 'Combined weather and entity report',
+  daily_summary: "Previous day's summary with energy use, sensor rollups, weather, household status, and colorful nozzle-exercising patterns."
 };
+
+var tplDetailView = null; // currently viewing template name, or null for list
 
 function buildTemplates() {
   var container = document.getElementById('templatesContent');
+  if (tplDetailView) {
+    buildTemplateDetail(container, tplDetailView);
+  } else {
+    buildTemplateList(container);
+  }
+}
+
+function buildTemplateList(container) {
+  var tpls = ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid', 'daily_summary'];
   if (!state.health || !state.health.printers || !state.health.printers.length) {
-    container.innerHTML = '<div class="card"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured.</div></div>';
+    container.innerHTML =
+      '<div style="font-size:20px;font-weight:600;margin-bottom:4px;">Templates</div>' +
+      '<div style="font-size:13px;color:var(--secondary-text-color);margin-bottom:16px;">Browse available print templates</div>' +
+      tpls.map(function(t) {
+        return '<div class="tpl-card tpl-list-item" data-tpl-name="' + esc(t) + '" style="cursor:pointer;">' +
+          '<div class="tpl-header">' + esc(t) + '</div>' +
+          '<div class="tpl-desc">' + esc(TEMPLATE_DESCRIPTIONS[t] || '') + '</div>' +
+        '</div>';
+      }).join('') +
+      '<div class="card" style="margin-top:8px;"><div style="color:var(--secondary-text-color);padding:8px 0;">No printers configured. Add printers to print templates.</div></div>';
+    container.querySelectorAll('.tpl-list-item').forEach(function(card) {
+      card.addEventListener('click', function() {
+        tplDetailView = card.dataset.tplName;
+        buildTemplates();
+      });
+    });
     return;
   }
-  var tpls = ['color_bars', 'home_summary', 'weather_snapshot', 'entity_report', 'hybrid'];
-  container.innerHTML = state.health.printers.map(function(p) {
-    var pid = p.printer_id;
-    var tplOpts = tpls.map(function(t) {
-      return '<option value="' + t + '"' + (t === (p.template || 'color_bars') ? ' selected' : '') + '>' + esc(t) + '</option>';
+  container.innerHTML =
+    '<div style="font-size:20px;font-weight:600;margin-bottom:4px;">Templates</div>' +
+    '<div style="font-size:13px;color:var(--secondary-text-color);margin-bottom:16px;">Browse available print templates</div>' +
+    tpls.map(function(t) {
+      return '<div class="tpl-card tpl-list-item" data-tpl-name="' + esc(t) + '" style="cursor:pointer;transition:background .15s;"' +
+        ' onmouseover="this.style.background=\'var(--hover-bg)\'" onmouseout="this.style.background=\'\'">' +
+        '<div class="tpl-header">' + esc(t) + '</div>' +
+        '<div class="tpl-desc">' + esc(TEMPLATE_DESCRIPTIONS[t] || '') + '</div>' +
+      '</div>';
     }).join('');
-    return '<div class="tpl-card" data-tpl-pid="' + esc(pid) + '">' +
-      '<div class="tpl-header">' + esc(p.name) + '</div>' +
-      '<div class="tpl-controls">' +
-        '<label>Template</label>' +
-        '<select class="control-select tp-select">' + tplOpts + '</select>' +
-        '<button class="ha-btn tp-preview-btn">PREVIEW</button>' +
-        '<button class="ha-btn tp-print">PRINT TEMPLATE</button>' +
-      '</div>' +
-      '<div class="tpl-desc tp-desc">' + esc(TEMPLATE_DESCRIPTIONS[p.template || 'color_bars'] || '') + '</div>' +
-      '<div class="tpl-preview tp-preview"><span class="tpl-placeholder">Select a template and click Preview</span></div>' +
-    '</div>';
-  }).join('');
-
-  container.querySelectorAll('.tpl-card').forEach(function(card) {
-    var pid = card.dataset.tplPid;
-    var selectEl = card.querySelector('.tp-select');
-    var descEl = card.querySelector('.tp-desc');
-    var previewEl = card.querySelector('.tp-preview');
-    selectEl.addEventListener('change', function() {
-      descEl.textContent = TEMPLATE_DESCRIPTIONS[selectEl.value] || '';
-    });
-    card.querySelector('.tp-preview-btn').addEventListener('click', function() {
-      var tpl = selectEl.value;
-      var imgUrl = apiPath('printers/' + encodeURIComponent(pid) + '/preview?template=' + encodeURIComponent(tpl));
-      previewEl.innerHTML = '<img src="' + esc(imgUrl) + '" alt="Preview of ' + esc(tpl) + '" onerror="this.parentNode.innerHTML=\'<span class=tpl-placeholder>Preview not available</span>\'">';
-    });
-    card.querySelector('.tp-print').addEventListener('click', async function() {
-      try {
-        var tpl = selectEl.value;
-        await requestJson('printers/' + encodeURIComponent(pid) + '/print', {
-          method: 'POST', body: JSON.stringify({ template: tpl, force: true })
-        });
-        showToast('Print sent to ' + pid, 'ok');
-      } catch (e) {
-        showToast('Print failed: ' + e.message, 'err');
-      }
+  container.querySelectorAll('.tpl-list-item').forEach(function(card) {
+    card.addEventListener('click', function() {
+      tplDetailView = card.dataset.tplName;
+      buildTemplates();
     });
   });
+}
+
+function buildTemplateDetail(container, tplName) {
+  var printers = (state.health && state.health.printers) || [];
+  var autoSelect = printers.length === 1;
+  var previewPid = printers.length ? printers[0].printer_id : null;
+
+  var printerChecks = '';
+  if (printers.length > 1) {
+    printerChecks =
+      '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:12px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Select Printers</div>' +
+        printers.map(function(p) {
+          return '<label style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:13px;cursor:pointer;">' +
+            '<input type="checkbox" class="tpl-printer-cb" value="' + esc(p.printer_id) + '"> ' + esc(p.name) +
+          '</label>';
+        }).join('') +
+      '</div>';
+  } else if (printers.length === 1) {
+    printerChecks =
+      '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:12px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Printer</div>' +
+        '<span style="font-size:14px;font-weight:500;">' + esc(printers[0].name) + '</span>' +
+        '<input type="checkbox" class="tpl-printer-cb" value="' + esc(printers[0].printer_id) + '" checked style="display:none;">' +
+      '</div>';
+  }
+
+  container.innerHTML =
+    '<button class="ha-btn" id="tplBackBtn" style="margin-bottom:16px;">&larr; BACK TO TEMPLATES</button>' +
+    '<div class="tpl-card">' +
+      '<div class="tpl-header" style="font-size:20px;">' + esc(tplName) + '</div>' +
+      '<div class="tpl-desc" style="margin-bottom:16px;">' + esc(TEMPLATE_DESCRIPTIONS[tplName] || '') + '</div>' +
+      '<div class="tpl-preview" id="tplDetailPreview">' +
+        (previewPid
+          ? '<img src="' + esc(apiPath('printers/' + encodeURIComponent(previewPid) + '/preview?template=' + encodeURIComponent(tplName))) + '" alt="Preview of ' + esc(tplName) + '" onerror="this.parentNode.innerHTML=\'<span class=tpl-placeholder>Preview not available</span>\'">'
+          : '<span class="tpl-placeholder">No printers available for preview</span>') +
+      '</div>' +
+      (printers.length
+        ? printerChecks +
+          '<button class="ha-btn" id="tplPrintBtn">PRINT TEMPLATE</button>'
+        : '<div style="color:var(--secondary-text-color);font-size:13px;">No printers configured.</div>') +
+    '</div>';
+
+  document.getElementById('tplBackBtn').addEventListener('click', function() {
+    tplDetailView = null;
+    buildTemplates();
+  });
+
+  var printBtn = document.getElementById('tplPrintBtn');
+  if (printBtn) {
+    printBtn.addEventListener('click', async function() {
+      var checks = container.querySelectorAll('.tpl-printer-cb:checked');
+      var ids = [];
+      checks.forEach(function(cb) { ids.push(cb.value); });
+      if (!ids.length) { showToast('Select at least one printer', 'err'); return; }
+      printBtn.disabled = true;
+      printBtn.textContent = 'PRINTING...';
+      var ok = 0;
+      var fail = 0;
+      for (var i = 0; i < ids.length; i++) {
+        try {
+          await requestJson('printers/' + encodeURIComponent(ids[i]) + '/print', {
+            method: 'POST', body: JSON.stringify({ template: tplName, force: true })
+          });
+          ok++;
+        } catch (e) {
+          fail++;
+        }
+      }
+      if (fail === 0) {
+        showToast('Print sent to ' + ok + ' printer(s)', 'ok');
+      } else {
+        showToast(ok + ' sent, ' + fail + ' failed', fail > 0 ? 'err' : 'ok');
+      }
+      printBtn.disabled = false;
+      printBtn.textContent = 'PRINT TEMPLATE';
+    });
+  }
 }
 
 // ── Help Tab ──
@@ -1996,6 +2106,7 @@ function buildHelp() {
         '<li><strong>weather_snapshot</strong> &mdash; Weather data with temperature, humidity, wind</li>' +
         '<li><strong>entity_report</strong> &mdash; State report for up to 12 configured entities</li>' +
         '<li><strong>hybrid</strong> &mdash; Combined weather and entity report</li>' +
+        '<li><strong>daily_summary</strong> &mdash; Previous day&#39;s summary with energy use, sensor rollups, weather, household status, and colorful nozzle-exercising patterns</li>' +
       '</ul>' +
     '</div>' +
 
@@ -2149,7 +2260,21 @@ document.getElementById('btnConfigSave').addEventListener('click', async functio
 document.getElementById('btnConfigRestart').addEventListener('click', async function() {
   try {
     await requestJson('actions/restart', { method: 'POST', body: JSON.stringify({}) });
-    showToast('Restart initiated', 'ok');
+    // Show full-screen loading overlay and poll /ping
+    var overlay = document.createElement('div');
+    overlay.className = 'restart-overlay';
+    overlay.innerHTML = '<div class="restart-spinner"></div><div class="restart-label">Restarting app...</div>';
+    document.body.appendChild(overlay);
+    var poll = setInterval(async function() {
+      try {
+        var resp = await fetch(apiPath('ping'), { method: 'GET' });
+        if (resp.ok) {
+          clearInterval(poll);
+          overlay.remove();
+          window.location.reload();
+        }
+      } catch (_) { /* server still down, keep polling */ }
+    }, 1000);
   } catch (e) {
     showToast('Restart failed: ' + e.message, 'err');
   }

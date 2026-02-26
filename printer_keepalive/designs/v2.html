@@ -556,6 +556,22 @@ textarea.cfg-input { resize: vertical; min-height: 80px; line-height: 1.5; font-
 .toast.error { border-left: 3px solid #ef4444; }
 .toast.info { border-left: 3px solid #3b82f6; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Restart overlay ── */
+.restart-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  background: rgba(15,10,30,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+.restart-spinner {
+  width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.15);
+  border-top-color: #7c3aed; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.restart-status {
+  font-size: 15px; font-weight: 600; color: #f1f5f9; text-align: center;
+}
 
 /* ── Version badge (bottom-left) ── */
 .version-float {
@@ -739,7 +755,7 @@ textarea.cfg-input { resize: vertical; min-height: 80px; line-height: 1.5; font-
 
 /* ── Add Printer button (printers view) ── */
 .add-printer-top-btn {
-  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px;
+  display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
 }
 </style>
 </head>
@@ -1059,14 +1075,20 @@ function renderPrinters() {
   root.innerHTML = '';
   if (!state.health) { root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Loading...</p>'; return; }
 
-  // Add Printer button at top
-  root.append(h('button', {className:'btn-glass primary add-printer-top-btn', onClick: function() {
+  // Section header with title and Add Printer button
+  var header = h('div', {style:'display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px'});
+  var titleWrap = h('div');
+  titleWrap.append(h('h2', {style:'margin:0 0 4px 0;font-size:20px;font-weight:600;color:var(--text-primary)'}, 'Printers'));
+  titleWrap.append(h('p', {style:'margin:0;font-size:13px;color:var(--text-muted)'}, 'Manage keepalive settings for your printers'));
+  header.append(titleWrap);
+  header.append(h('button', {className:'btn-glass primary add-printer-top-btn', onClick: function() {
     switchToTab('config');
     setTimeout(function() {
       var sec = document.getElementById('cfgSecPrinters');
       if (sec) { sec.classList.add('open'); sec.scrollIntoView({behavior:'smooth'}); }
     }, 100);
   }}, '+ Add Printer'));
+  root.append(header);
 
   if (!state.health.printers || !state.health.printers.length) {
     var empty = h('div', {className:'printers-empty glass'});
@@ -1206,6 +1228,16 @@ function renderPrinters() {
       }).then(function() { showToast('Poll sent to ' + p.name, 'success'); refreshAll(); })
         .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
     }}, 'Poll Status'));
+
+    // Remove
+    actions.append(h('button', {className:'btn-glass danger', style:'margin-left:auto', title:'Remove this printer from configuration', onClick: function() {
+      if (!confirm('Remove printer "' + p.name + '"? This cannot be undone.')) return;
+      requestJson('printers/' + p.printer_id + '/delete', {
+        method: 'POST',
+        body: JSON.stringify({})
+      }).then(function() { showToast('Printer "' + p.name + '" removed', 'success'); refreshAll(); })
+        .catch(function(err) { showToast('Remove error: ' + err.message, 'error'); });
+    }}, 'Remove'));
 
     // Configure toggle
     actions.append(h('button', {className:'btn-glass', onClick: function() {
@@ -1360,7 +1392,7 @@ function renderDiscovery() {
 var configMode = 'form'; // 'form' or 'advanced'
 var currentConfig = {};
 
-var TEMPLATE_OPTIONS = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid'];
+var TEMPLATE_OPTIONS = ['color_bars','home_summary','weather_snapshot','entity_report','hybrid','daily_summary'];
 
 /* ── Config helpers ── */
 function makeToggle(isOn, onChange) {
@@ -1882,11 +1914,26 @@ function renderConfig(configData) {
   }}, 'Reload'));
 
   actions.append(h('button', {className: 'btn-glass danger', onClick: function() {
-    if (!confirm('Restart the add-on?')) return;
+    if (!confirm('Restart the app?')) return;
     requestJson('actions/restart', { method: 'POST', body: JSON.stringify({}) })
-      .then(function() { showToast('Restart triggered', 'success'); })
+      .then(function() {
+        var overlay = h('div', {className: 'restart-overlay'});
+        overlay.append(h('div', {className: 'restart-spinner'}));
+        var statusEl = h('div', {className: 'restart-status'}, 'Restarting\u2026');
+        overlay.append(statusEl);
+        document.body.append(overlay);
+        var pollTimer = setInterval(function() {
+          fetch(apiPath('ping'), {method: 'GET'}).then(function(r) {
+            if (r.ok) {
+              clearInterval(pollTimer);
+              statusEl.textContent = 'Back online!';
+              setTimeout(function() { overlay.remove(); location.reload(); }, 600);
+            }
+          }).catch(function() { statusEl.textContent = 'Waiting for server\u2026'; });
+        }, 1000);
+      })
       .catch(function(err) { showToast('Restart error: ' + err.message, 'error'); });
-  }}, 'Restart Add-on'));
+  }}, 'Restart App'));
 
   panel.append(actions);
   root.append(panel);
@@ -2023,62 +2070,108 @@ var TEMPLATE_DESCRIPTIONS = {
   home_summary: 'HA instance overview with entity counts and key states',
   weather_snapshot: 'Current weather with temperature, humidity, wind, and tracked entities',
   entity_report: 'Detailed state report for up to 12 configured entities',
-  hybrid: 'Combined weather and entity report on a single page'
+  hybrid: 'Combined weather and entity report on a single page',
+  daily_summary: "Previous day's summary with energy use, sensor rollups, weather, household status, and colorful nozzle-exercising patterns."
 };
+
+var tplExpandedTemplate = null;
 
 function buildTemplates() {
   var root = document.getElementById('view-templates');
   root.innerHTML = '';
-  if (!state.health || !state.health.printers || !state.health.printers.length) {
+  var printers = (state.health && state.health.printers) || [];
+
+  if (!printers.length) {
     root.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">No printers configured. Add printers in the Config tab.</p>';
     return;
   }
+
+  // Detail view for a specific template
+  if (tplExpandedTemplate) {
+    var tpl = tplExpandedTemplate;
+    var backBtn = h('button', {className: 'btn-glass', style: 'margin-bottom:20px; display:inline-flex; align-items:center; gap:6px', onClick: function() {
+      tplExpandedTemplate = null;
+      buildTemplates();
+    }});
+    backBtn.innerHTML = '&#8592; Back to Templates';
+    root.append(backBtn);
+
+    var detail = h('div', {className: 'glass', style: 'padding:24px'});
+    detail.append(h('div', {className: 'section-title', style: 'margin-bottom:8px'},
+      h('span', {className: 'dot', style: 'background:#f97316'}), tpl
+    ));
+    detail.append(h('div', {className: 'tpl-description', style: 'margin-bottom:16px'}, TEMPLATE_DESCRIPTIONS[tpl] || ''));
+
+    // Preview image using first printer
+    var previewPrinter = printers[0];
+    var frame = h('div', {className: 'tpl-preview-frame'});
+    var img = h('img', {src: apiPath('printers/' + previewPrinter.printer_id + '/preview?template=' + tpl), alt: 'Preview of ' + tpl});
+    frame.append(img);
+    detail.append(frame);
+
+    // Printer selection
+    var selectedPrinters = {};
+    if (printers.length === 1) {
+      selectedPrinters[printers[0].printer_id] = true;
+    } else {
+      var printerSection = h('div', {style: 'margin-top:18px'});
+      printerSection.append(h('div', {style: 'font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:10px'}, 'Select printers to print on:'));
+      printers.forEach(function(p) {
+        selectedPrinters[p.printer_id] = true;
+        var row = h('label', {style: 'display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; cursor:pointer'});
+        var cb = h('input', {type: 'checkbox', checked: true});
+        cb.addEventListener('change', function() { selectedPrinters[p.printer_id] = cb.checked; });
+        row.append(cb);
+        row.append(h('span', {className: 'pc-status-dot ' + p.health_status}));
+        row.append(h('span', null, p.name));
+        printerSection.append(row);
+      });
+      detail.append(printerSection);
+    }
+
+    // Print button
+    var printActions = h('div', {style: 'margin-top:18px'});
+    printActions.append(h('button', {className: 'btn-glass primary', onClick: function() {
+      var targets = printers.filter(function(p) { return selectedPrinters[p.printer_id]; });
+      if (!targets.length) { showToast('Select at least one printer', 'error'); return; }
+      var promises = targets.map(function(p) {
+        return requestJson('printers/' + p.printer_id + '/print', {
+          method: 'POST',
+          body: JSON.stringify({template: tpl, force: true})
+        });
+      });
+      Promise.all(promises)
+        .then(function() { showToast('Printing ' + tpl + ' on ' + targets.length + ' printer(s)', 'success'); })
+        .catch(function(err) { showToast('Print error: ' + err.message, 'error'); });
+    }}, 'Print Template'));
+    detail.append(printActions);
+
+    root.append(detail);
+    return;
+  }
+
+  // List view: one card per template
   var title = h('div', {className: 'section-title', style: 'margin-bottom:20px'},
-    h('span', {className: 'dot', style: 'background:#f97316'}), 'Template Preview'
+    h('span', {className: 'dot', style: 'background:#f97316'}), 'Templates'
   );
   root.append(title);
   var grid = h('div', {className: 'templates-grid'});
-  state.health.printers.forEach(function(p) {
-    var card = h('div', {className: 'template-item glass'});
+
+  TEMPLATE_OPTIONS.forEach(function(tpl) {
+    var card = h('div', {className: 'template-item glass', style: 'cursor:pointer; transition: box-shadow 0.3s, transform 0.3s'});
+    card.addEventListener('mouseenter', function() { card.style.transform = 'translateY(-2px)'; });
+    card.addEventListener('mouseleave', function() { card.style.transform = ''; });
+    card.addEventListener('click', function() {
+      tplExpandedTemplate = tpl;
+      buildTemplates();
+    });
+
     var headerRow = h('div', {className: 'template-item-header'},
-      h('span', {className: 'pc-status-dot ' + p.health_status}),
-      p.name
+      h('span', {className: 'dot', style: 'background:#f97316'}),
+      tpl
     );
     card.append(headerRow);
-
-    var selectRow = h('div', {style: 'margin-bottom:8px; display:flex; align-items:center; gap:10px'});
-    selectRow.append(h('label', {style: 'font-size:12px; font-weight:600; color:var(--text-secondary)'}, 'Template:'));
-    var sel = h('select', {className: 'card-style-select'});
-    TEMPLATE_OPTIONS.forEach(function(t) {
-      var opt = h('option', {value: t}, t);
-      if (t === p.template) opt.selected = true;
-      sel.append(opt);
-    });
-    selectRow.append(sel);
-    card.append(selectRow);
-
-    var desc = h('div', {className: 'tpl-description'}, TEMPLATE_DESCRIPTIONS[sel.value] || '');
-    card.append(desc);
-
-    var frame = h('div', {className: 'tpl-preview-frame'});
-    var img = h('img', {src: apiPath('printers/' + p.printer_id + '/preview?template=' + sel.value), alt: 'Template preview'});
-    frame.append(img);
-    card.append(frame);
-
-    sel.addEventListener('change', function() {
-      desc.textContent = TEMPLATE_DESCRIPTIONS[sel.value] || '';
-      img.src = apiPath('printers/' + p.printer_id + '/preview?template=' + sel.value);
-    });
-
-    var actions = h('div', {style: 'margin-top:14px'});
-    actions.append(h('button', {className: 'btn-glass primary', onClick: function() {
-      requestJson('printers/' + p.printer_id + '/print', {
-        method: 'POST',
-        body: JSON.stringify({template: sel.value, force: true})
-      }).then(function() { showToast('Printing ' + sel.value + ' on ' + p.name, 'success'); })
-        .catch(function(err) { showToast('Print error: ' + err.message, 'error'); });
-    }}, 'Print This Template'));
-    card.append(actions);
+    card.append(h('div', {className: 'tpl-description'}, TEMPLATE_DESCRIPTIONS[tpl] || ''));
 
     grid.append(card);
   });
@@ -2188,7 +2281,7 @@ function buildHelp() {
   var colBody = h('div', {className: 'help-collapsible-body'});
 
   var getEndpoints = ['/', '/health', '/config', '/printers', '/printers/{id}', '/printers/{id}/card', '/printers/{id}/preview', '/templates', '/guidance', '/discovery'];
-  var postEndpoints = ['/print', '/printers/{id}/print', '/printers/{id}/settings', '/printers/{id}/poll', '/discovery/rescan', '/config', '/actions/restart'];
+  var postEndpoints = ['/print', '/printers/{id}/print', '/printers/{id}/settings', '/printers/{id}/poll', '/printers/{id}/delete', '/discovery/rescan', '/config', '/actions/restart'];
 
   colBody.append(h('div', {style: 'margin-bottom:12px; font-size:12px; font-weight:600; color:var(--text-primary)'}, 'GET Endpoints'));
   var getList = h('ul', {style: 'list-style:none; padding:0'});

@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.3"
+APP_VERSION = "0.5.4"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -64,6 +64,7 @@ SUPPORTED_TEMPLATES = (
     "weather_snapshot",
     "entity_report",
     "hybrid",
+    "daily_summary",
 )
 SUPPORTED_PRINTER_TYPES = ("inkjet", "laser")
 
@@ -282,6 +283,7 @@ def reload_config() -> str:
     global FAILURE_RETRY_MINUTES, DISCOVERY_ENABLED, DISCOVERY_INTERVAL_SECONDS
     global DISCOVERY_TIMEOUT_SECONDS, DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS
     global DISCOVERY_INCLUDE_IPPS, MQTT_CONFIG, ADDON_PAGE_URL
+    global SELECTED_HA_URL, SELECTED_HA_TOKEN, HASS_API_BASE, HASS_AUTH_TOKEN
 
     try:
         new_options = load_options()
@@ -306,12 +308,51 @@ def reload_config() -> str:
     DISCOVERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_timeout_seconds", DEFAULT_DISCOVERY_TIMEOUT_SECONDS, 1, 30)
     DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_ipp_query_timeout_seconds", DEFAULT_DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS, 1, 30)
     DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
-    MQTT_CONFIG = parse_mqtt_config(OPTIONS)
+
+    # Reload HA API connection settings
+    SELECTED_HA_URL = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
+    SELECTED_HA_TOKEN = option_str(OPTIONS, "ha_token") or os.environ.get("HA_TOKEN", "").strip()
+    HASS_API_BASE = DEFAULT_SUPERVISOR_API_BASE
+    HASS_AUTH_TOKEN = SUPERVISOR_TOKEN
+    if not HASS_AUTH_TOKEN:
+        if SELECTED_HA_URL:
+            HASS_API_BASE = f"{SELECTED_HA_URL.rstrip('/')}/api"
+            HASS_AUTH_TOKEN = SELECTED_HA_TOKEN
+
+    # Invalidate HA IPP entity cache so new config is reflected
+    _HA_IPP_CACHE["ts"] = 0.0
+    _HA_IPP_CACHE["data"] = {}
+
+    # Reload MQTT bridge if config changed
+    old_mqtt = MQTT_BRIDGE.config
+    new_mqtt = parse_mqtt_config(OPTIONS)
+    MQTT_CONFIG = new_mqtt
+    mqtt_changed = (
+        old_mqtt.enabled != new_mqtt.enabled
+        or old_mqtt.host != new_mqtt.host
+        or old_mqtt.port != new_mqtt.port
+        or old_mqtt.username != new_mqtt.username
+        or old_mqtt.password != new_mqtt.password
+        or old_mqtt.tls != new_mqtt.tls
+        or old_mqtt.client_id != new_mqtt.client_id
+        or old_mqtt.discovery_prefix != new_mqtt.discovery_prefix
+        or old_mqtt.topic_prefix != new_mqtt.topic_prefix
+    )
+    if mqtt_changed:
+        log("MQTT config changed, reconnecting bridge.")
+        MQTT_BRIDGE.stop()
+        MQTT_BRIDGE.config = new_mqtt
+        MQTT_BRIDGE.connected = False
+        MQTT_BRIDGE.last_error = ""
+        MQTT_BRIDGE.start()
+    elif MQTT_BRIDGE.started:
+        # Printer list may have changed — re-publish discovery and states
+        MQTT_BRIDGE.publish_discovery()
+        MQTT_BRIDGE.publish_all_states()
 
     addon_page_url = option_str(OPTIONS, "addon_page_url")
-    ha_url = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
-    if not addon_page_url and ha_url:
-        addon_page_url = f"{ha_url.rstrip('/')}/hassio/addon/{ADDON_SLUG}/info"
+    if not addon_page_url and SELECTED_HA_URL:
+        addon_page_url = f"{SELECTED_HA_URL.rstrip('/')}/hassio/addon/{ADDON_SLUG}/info"
     if not addon_page_url:
         addon_page_url = APP_URL
     ADDON_PAGE_URL = addon_page_url
@@ -1479,12 +1520,304 @@ def build_hybrid_page(printer: PrinterConfig, print_context: dict[str, Any] | No
     return image, {"template": "hybrid", "weather_entity": weather_entity}
 
 
+def _draw_gradient_rect(draw: ImageDraw.ImageDraw, x1: int, y1: int, x2: int, y2: int, c1: tuple, c2: tuple, vertical: bool = True) -> None:
+    steps = max(1, (y2 - y1) if vertical else (x2 - x1))
+    for i in range(steps):
+        ratio = i / max(1, steps - 1)
+        r = int(c1[0] + (c2[0] - c1[0]) * ratio)
+        g = int(c1[1] + (c2[1] - c1[1]) * ratio)
+        b = int(c1[2] + (c2[2] - c1[2]) * ratio)
+        if vertical:
+            draw.line([(x1, y1 + i), (x2, y1 + i)], fill=(r, g, b))
+        else:
+            draw.line([(x1 + i, y1), (x1 + i, y2)], fill=(r, g, b))
+
+
+def _draw_bar_chart(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int,
+                    values: list[tuple[str, float, tuple]], font: ImageFont.ImageFont) -> int:
+    if not values:
+        return y
+    max_val = max(v for _, v, _ in values) or 1
+    bar_h = max(16, (h - 20) // len(values))
+    gap = 4
+    for i, (label, val, color) in enumerate(values):
+        by = y + i * (bar_h + gap)
+        bar_w = max(4, int((val / max_val) * (w - 200)))
+        _draw_gradient_rect(draw, x + 180, by, x + 180 + bar_w, by + bar_h - 2, color, (min(255, color[0] + 60), min(255, color[1] + 60), min(255, color[2] + 60)), vertical=False)
+        draw.rectangle((x + 180, by, x + 180 + bar_w, by + bar_h - 2), outline=(30, 30, 30), width=1)
+        draw.text((x, by + 2), label[:20], font=font, fill=(30, 30, 30))
+        draw.text((x + 185 + bar_w, by + 2), str(int(val)) if val == int(val) else f"{val:.1f}", font=font, fill=(60, 60, 60))
+    return y + len(values) * (bar_h + gap)
+
+
+def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
+    """Previous Day's Summary — a visually rich page that exercises all nozzles.
+
+    Includes: energy use, sensor class rollups, automation counts, system stats,
+    weather, and family-relevant highlights. Uses color gradients, filled bars,
+    and fine patterns to keep every nozzle active.
+    """
+    image = Image.new("RGB", (PAGE_WIDTH, PAGE_HEIGHT), color=(255, 255, 255))
+    draw = ImageDraw.Draw(image)
+
+    states = fetch_all_states()
+    indexed = states_by_entity(states)
+    yesterday = datetime.now().strftime("%A, %B %-d")
+
+    # ── Header with gradient background ──
+    _draw_gradient_rect(draw, 0, 0, PAGE_WIDTH, 320, (25, 60, 120), (60, 140, 200))
+    draw.text((120, 50), f"Daily Summary", font=FONT_TITLE, fill=(255, 255, 255))
+    draw.text((120, 150), yesterday, font=FONT_SECTION, fill=(220, 235, 255))
+    draw.text((120, 210), f"Printer: {printer.name}", font=FONT_SMALL, fill=(180, 210, 240))
+    draw.text((120, 250), f"Generated: {datetime.now().strftime('%I:%M %p')}", font=FONT_SMALL, fill=(180, 210, 240))
+
+    if print_context and isinstance(print_context, dict):
+        qr_url = _sanitize_qr_url(str(print_context.get("addon_page_url", "")))
+        _draw_qr_code(image, draw, qr_url)
+
+    # ── Nozzle exercise strip — CMYK gradient bands ──
+    strip_y = 330
+    strip_h = 30
+    cmyk_colors = [
+        ((0, 200, 255), (0, 80, 180)),    # Cyan
+        ((255, 0, 180), (180, 0, 100)),    # Magenta
+        ((255, 220, 0), (220, 160, 0)),    # Yellow
+        ((40, 40, 40), (120, 120, 120)),   # Key/Black
+    ]
+    band_w = (PAGE_WIDTH - 240) // len(cmyk_colors)
+    for i, (c1, c2) in enumerate(cmyk_colors):
+        _draw_gradient_rect(draw, 120 + i * band_w, strip_y, 120 + (i + 1) * band_w, strip_y + strip_h, c1, c2, vertical=False)
+
+    # Fine crosshatch pattern — exercises fine lines
+    hatch_y = strip_y + strip_h + 6
+    for px in range(120, PAGE_WIDTH - 120, 3):
+        c = ((px * 7) % 200 + 55, (px * 3) % 180 + 55, (px * 11) % 160 + 80)
+        draw.line([(px, hatch_y), (px, hatch_y + 8)], fill=c, width=1)
+
+    y = hatch_y + 24
+
+    # ── Section: System Overview ──
+    _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (50, 50, 70), (80, 80, 110))
+    draw.text((140, y + 8), "SYSTEM OVERVIEW", font=FONT_SECTION, fill=(255, 255, 255))
+    y += 64
+
+    total_entities = len(states)
+    unavailable = sum(1 for s in states if str(s.get("state")) in {"unknown", "unavailable"})
+    automations = [s for s in states if str(s.get("entity_id", "")).startswith("automation.")]
+    automations_on = sum(1 for a in automations if str(a.get("state")) == "on")
+    scripts = sum(1 for s in states if str(s.get("entity_id", "")).startswith("script."))
+    scenes = sum(1 for s in states if str(s.get("entity_id", "")).startswith("scene."))
+    updates_available = sum(1 for s in states if str(s.get("entity_id", "")).startswith("update.") and str(s.get("state")) == "on")
+
+    sys_stats = [
+        f"Total entities: {total_entities}  |  Unavailable: {unavailable}",
+        f"Automations: {len(automations)} ({automations_on} active)  |  Scripts: {scripts}  |  Scenes: {scenes}",
+    ]
+    if updates_available:
+        sys_stats.append(f"Updates available: {updates_available}")
+
+    for line in sys_stats:
+        draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
+        y += line_height(FONT_BODY) + 8
+    y += 16
+
+    # ── Section: Sensor Domain Rollup ──
+    _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (30, 100, 70), (60, 160, 100))
+    draw.text((140, y + 8), "SENSOR BREAKDOWN", font=FONT_SECTION, fill=(255, 255, 255))
+    y += 64
+
+    domain_counts: dict[str, int] = {}
+    for s in states:
+        eid = str(s.get("entity_id", ""))
+        if "." in eid:
+            domain = eid.split(".", 1)[0]
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+
+    domain_colors = {
+        "sensor": (52, 152, 219),
+        "binary_sensor": (46, 204, 113),
+        "light": (241, 196, 15),
+        "switch": (230, 126, 34),
+        "automation": (155, 89, 182),
+        "climate": (231, 76, 60),
+        "media_player": (26, 188, 156),
+        "cover": (127, 140, 141),
+    }
+    top_domains = sorted(domain_counts.items(), key=lambda x: -x[1])[:8]
+    bar_values = [(d, float(c), domain_colors.get(d, (100, 100, 180))) for d, c in top_domains]
+    y = _draw_bar_chart(draw, 140, y, PAGE_WIDTH - 280, 280, bar_values, FONT_BODY)
+    y += 20
+
+    # ── Section: Energy & Climate ──
+    energy_entities = [s for s in states if str(s.get("entity_id", "")).startswith("sensor.") and str(s.get("attributes", {}).get("device_class", "")) in ("energy", "power", "gas")]
+    climate_entities = [s for s in states if str(s.get("entity_id", "")).startswith("climate.")]
+
+    if energy_entities or climate_entities:
+        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (180, 80, 20), (220, 140, 40))
+        draw.text((140, y + 8), "ENERGY & CLIMATE", font=FONT_SECTION, fill=(255, 255, 255))
+        y += 64
+
+        shown = 0
+        for s in energy_entities[:6]:
+            eid = s.get("entity_id", "")
+            friendly = s.get("attributes", {}).get("friendly_name", eid)
+            state_val = s.get("state", "unknown")
+            unit = s.get("attributes", {}).get("unit_of_measurement", "")
+            draw.text((140, y), f"{friendly}: {state_val} {unit}".strip(), font=FONT_BODY, fill=(35, 35, 35))
+            y += line_height(FONT_BODY) + 6
+            shown += 1
+            if y > PAGE_HEIGHT - 700:
+                break
+
+        for s in climate_entities[:3]:
+            if y > PAGE_HEIGHT - 700:
+                break
+            eid = s.get("entity_id", "")
+            friendly = s.get("attributes", {}).get("friendly_name", eid)
+            state_val = s.get("state", "unknown")
+            temp = s.get("attributes", {}).get("current_temperature", "")
+            target = s.get("attributes", {}).get("temperature", "")
+            line = f"{friendly}: {state_val}"
+            if temp:
+                line += f" (current: {temp}"
+                if target:
+                    line += f", target: {target}"
+                line += ")"
+            draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
+            y += line_height(FONT_BODY) + 6
+            shown += 1
+
+        if shown == 0:
+            draw.text((140, y), "No energy data available.", font=FONT_BODY, fill=(100, 100, 100))
+            y += line_height(FONT_BODY) + 6
+        y += 16
+
+    # ── Section: Weather ──
+    weather_entity = detect_weather_entity(printer, states)
+    weather = indexed.get(weather_entity)
+    if weather:
+        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (40, 80, 140), (80, 140, 210))
+        draw.text((140, y + 8), "WEATHER", font=FONT_SECTION, fill=(255, 255, 255))
+        y += 64
+        attrs = weather.get("attributes", {}) or {}
+        condition = weather.get("state", "unknown")
+        temp = attrs.get("temperature", "")
+        temp_unit = attrs.get("temperature_unit", "")
+        humidity = attrs.get("humidity", "")
+        wind = attrs.get("wind_speed", "")
+        pressure = attrs.get("pressure", "")
+        weather_lines = [f"Condition: {condition}"]
+        if temp:
+            weather_lines.append(f"Temperature: {temp} {temp_unit}".strip())
+        parts = []
+        if humidity:
+            parts.append(f"Humidity: {humidity}%")
+        if wind:
+            parts.append(f"Wind: {wind}")
+        if pressure:
+            parts.append(f"Pressure: {pressure}")
+        if parts:
+            weather_lines.append("  |  ".join(parts))
+
+        forecast = attrs.get("forecast", [])
+        if isinstance(forecast, list) and forecast:
+            fc = forecast[0]
+            fc_cond = fc.get("condition", "")
+            fc_hi = fc.get("temperature", "")
+            fc_lo = fc.get("templow", "")
+            if fc_cond:
+                weather_lines.append(f"Forecast: {fc_cond}, High {fc_hi} / Low {fc_lo}")
+
+        for line in weather_lines:
+            draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
+            y += line_height(FONT_BODY) + 6
+        y += 16
+
+    # ── Section: Family Highlights ──
+    person_entities = [s for s in states if str(s.get("entity_id", "")).startswith("person.")]
+    device_trackers = sum(1 for s in states if str(s.get("entity_id", "")).startswith("device_tracker."))
+    lights_on = sum(1 for s in states if str(s.get("entity_id", "")).startswith("light.") and str(s.get("state")) == "on")
+    total_lights = sum(1 for s in states if str(s.get("entity_id", "")).startswith("light."))
+    doors_open = sum(1 for s in states if str(s.get("entity_id", "")).startswith("binary_sensor.") and "door" in str(s.get("entity_id", "")).lower() and str(s.get("state")) == "on")
+    locks = [s for s in states if str(s.get("entity_id", "")).startswith("lock.")]
+
+    if person_entities or total_lights:
+        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (120, 50, 130), (180, 80, 180))
+        draw.text((140, y + 8), "HOUSEHOLD", font=FONT_SECTION, fill=(255, 255, 255))
+        y += 64
+
+        for p in person_entities[:6]:
+            name = p.get("attributes", {}).get("friendly_name", p.get("entity_id", ""))
+            loc = p.get("state", "unknown")
+            draw.text((140, y), f"{name}: {loc}", font=FONT_BODY, fill=(35, 35, 35))
+            y += line_height(FONT_BODY) + 6
+
+        household_lines = [f"Lights: {lights_on}/{total_lights} on  |  Tracked devices: {device_trackers}"]
+        if doors_open:
+            household_lines.append(f"Open doors/windows: {doors_open}")
+        if locks:
+            locked = sum(1 for l in locks if str(l.get("state")) == "locked")
+            household_lines.append(f"Locks: {locked}/{len(locks)} locked")
+
+        for line in household_lines:
+            draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
+            y += line_height(FONT_BODY) + 6
+        y += 16
+
+    # ── Bottom color exercise pattern ──
+    if y < PAGE_HEIGHT - 200:
+        pattern_y = max(y, PAGE_HEIGHT - 200)
+        # Rainbow gradient strip
+        rainbow_w = PAGE_WIDTH - 240
+        for px in range(rainbow_w):
+            ratio = px / max(1, rainbow_w - 1)
+            hue = ratio * 6
+            sector = int(hue)
+            frac = hue - sector
+            r, g, b = 255, 255, 255
+            if sector == 0:
+                r, g, b = 255, int(255 * frac), 0
+            elif sector == 1:
+                r, g, b = int(255 * (1 - frac)), 255, 0
+            elif sector == 2:
+                r, g, b = 0, 255, int(255 * frac)
+            elif sector == 3:
+                r, g, b = 0, int(255 * (1 - frac)), 255
+            elif sector == 4:
+                r, g, b = int(255 * frac), 0, 255
+            else:
+                r, g, b = 255, 0, int(255 * (1 - frac))
+            draw.line([(120 + px, pattern_y), (120 + px, pattern_y + 20)], fill=(r, g, b))
+
+        # Fine dot grid
+        for gx in range(120, PAGE_WIDTH - 120, 8):
+            for gy in range(pattern_y + 28, pattern_y + 60, 8):
+                c = ((gx * 13 + gy * 7) % 200 + 40, (gx * 7 + gy * 11) % 180 + 50, (gx * 3 + gy * 5) % 160 + 70)
+                draw.point((gx, gy), fill=c)
+
+    # ── Footer ──
+    footer_y = PAGE_HEIGHT - 100
+    draw.line([(120, footer_y - 20), (PAGE_WIDTH - 120, footer_y - 20)], fill=(200, 200, 200), width=2)
+    footer_text = printer.footer or f"{APP_NAME} v{APP_VERSION}"
+    draw.text((120, footer_y), footer_text, font=FONT_SMALL, fill=(100, 100, 100))
+    draw.text((PAGE_WIDTH - 600, footer_y), f"Keeping {printer.name} healthy", font=FONT_SMALL, fill=(100, 100, 100))
+
+    return image, {
+        "template": "daily_summary",
+        "total_entities": len(states),
+        "domains": len(domain_counts),
+        "automations": len(automations),
+        "energy_entities": len(energy_entities),
+    }
+
+
 TEMPLATE_BUILDERS = {
     "color_bars": build_color_bars_page,
     "entity_report": build_entity_report_page,
     "weather_snapshot": build_weather_snapshot_page,
     "home_summary": build_home_summary_page,
     "hybrid": build_hybrid_page,
+    "daily_summary": build_daily_summary_page,
 }
 
 
@@ -4925,6 +5258,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._write_json(HTTPStatus.OK, global_payload())
             return
 
+        if path == "/ping":
+            self._write_json(HTTPStatus.OK, {"ok": True, "version": APP_VERSION})
+            return
+
         if path == "/templates":
             self._write_json(
                 HTTPStatus.OK,
@@ -5160,6 +5497,29 @@ class RequestHandler(BaseHTTPRequestHandler):
                 result = poll_printer(printer, force=True)
                 publish_printer_state_if_enabled(printer)
                 self._write_json(HTTPStatus.OK, {"ok": True, "printer": result})
+                return
+
+            if action == "delete":
+                try:
+                    current_options = load_options()
+                except RuntimeError as exc:
+                    self._write_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(exc)})
+                    return
+                existing = current_options.get("printers", [])
+                if not isinstance(existing, list):
+                    existing = []
+                updated = [p for p in existing if str(p.get("id", "")) != printer.printer_id]
+                if len(updated) == len(existing):
+                    self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Printer not found in config"})
+                    return
+                current_options["printers"] = updated
+                try:
+                    save_options(current_options)
+                except OSError as exc:
+                    self._write_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": f"Save failed: {exc}"})
+                    return
+                reload_msg = reload_config()
+                self._write_json(HTTPStatus.OK, {"ok": True, "message": f"Printer removed. {reload_msg}"})
                 return
 
         self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not Found"})
