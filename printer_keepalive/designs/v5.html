@@ -1027,9 +1027,29 @@ function renderHealthRows() {
     var chipLabel = p.printer_state ? p.printer_state.charAt(0).toUpperCase() + p.printer_state.slice(1) : 'Unknown';
     var due = relTime(p.next_keepalive_due_at);
     var overdue = p.next_keepalive_due_at && new Date(p.next_keepalive_due_at) < Date.now();
+    var ippBars = '';
+    if (p.ha_ipp_entities) {
+      var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+      if (markers.length) {
+        ippBars = '<span style="display:inline-flex;align-items:center;gap:3px;margin-left:8px;" title="Ink/Toner Levels">' +
+          markers.map(function(e) {
+            var pct = parseFloat(e.state);
+            if (isNaN(pct)) pct = 0;
+            var barColor = pct > 50 ? 'var(--success-color)' : pct > 15 ? 'var(--warning-color)' : 'var(--error-color)';
+            var label = e.friendly_name || e.entity_id || '';
+            label = label.replace(/^[A-Z][A-Za-z0-9\-]+(?: [A-Za-z0-9\-]+)* Series /i, '');
+            return '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;" title="' + esc(label) + ': ' + Math.round(pct) + '%">' +
+              '<span style="width:24px;height:4px;background:var(--hover-bg);border-radius:2px;overflow:hidden;display:block;">' +
+                '<span style="display:block;width:' + Math.max(0, Math.min(100, pct)) + '%;height:100%;background:' + barColor + ';border-radius:2px;"></span>' +
+              '</span>' +
+            '</span>';
+          }).join('') +
+        '</span>';
+      }
+    }
     return '<div class="health-row">' +
       '<span class="dot ' + st + '"></span>' +
-      '<span class="health-name">' + esc(p.name) + '</span>' +
+      '<span class="health-name">' + esc(p.name) + ippBars + '</span>' +
       '<span class="chip ' + st + '">' + esc(chipLabel) + '</span>' +
       '<span class="health-due ' + (overdue ? 'overdue' : '') + '">' + (overdue ? 'Overdue - ' : 'Next: ') + esc(due) + '</span>' +
     '</div>';
@@ -1088,6 +1108,29 @@ function renderPrinterCards() {
       '<div class="printer-stats">' + stats.map(function(s) {
         return '<div class="stat-row"><span class="stat-label">' + esc(s.label) + '</span><span class="stat-value">' + esc(String(s.value)) + '</span></div>';
       }).join('') + '</div>' +
+      (function() {
+        if (!p.ha_ipp_entities) return '';
+        var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+        if (!markers.length) return '';
+        return '<div style="padding:12px 16px;margin:0 -20px;border-top:1px solid var(--divider-color);border-bottom:1px solid var(--divider-color);">' +
+          '<div style="font-size:11px;font-weight:500;color:var(--secondary-text-color);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Native HA IPP Integration</div>' +
+          markers.map(function(e) {
+            var pct = parseFloat(e.state);
+            if (isNaN(pct)) pct = 0;
+            var barColor = pct > 50 ? 'var(--success-color)' : pct > 15 ? 'var(--warning-color)' : 'var(--error-color)';
+            var label = e.friendly_name || e.entity_id || '';
+            // Strip device prefix (e.g. "EPSON ET-3850 Series " from supply names)
+            label = label.replace(/^[A-Z][A-Za-z0-9\-]+(?: [A-Za-z0-9\-]+)* Series /i, '');
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+              '<span style="font-size:12px;color:var(--secondary-text-color);min-width:100px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(e.friendly_name || '') + '">' + esc(label) + '</span>' +
+              '<div style="flex:1;height:6px;background:var(--hover-bg);border-radius:3px;overflow:hidden;min-width:60px;">' +
+                '<div style="width:' + Math.max(0, Math.min(100, pct)) + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width .3s;"></div>' +
+              '</div>' +
+              '<span style="font-size:11px;color:var(--secondary-text-color);min-width:32px;text-align:right;">' + Math.round(pct) + '%</span>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      })() +
       '<div class="controls-section">' +
         '<div class="control-group"><label class="control-label">Enabled</label><label class="toggle"><input type="checkbox" class="pc-enabled"' + (p.enabled ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>' +
         '<div class="control-group"><label class="control-label">Cadence (days)</label><input type="number" class="control-input pc-cadence" style="width:70px;" value="' + Math.round((p.cadence_hours || 0) / 24) + '" min="1"></div>' +

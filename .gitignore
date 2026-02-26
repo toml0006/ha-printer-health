@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 printer_keepalive/dev/data/options.json
 printer_keepalive/dev/data/state.json
+.mcp.json

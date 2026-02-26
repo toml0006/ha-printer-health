@@ -1002,12 +1002,31 @@ function renderDashboard() {
     h('span'), h('span', null, 'Printer'), h('span', null, 'State'), h('span', {className:'health-due-col'}, 'Next Due')
   ));
   d.printers.forEach(function(p) {
-    panel.append(h('div', {className:'health-row'},
-      h('span', {className:'health-dot '+p.health_status}),
-      h('span', {className:'health-name'}, p.name),
-      h('span', {className:'health-state'}, p.printer_state),
-      h('span', {className:'health-due health-due-col'}, timeUntil(p.next_keepalive_due_at))
-    ));
+    var row = h('div', {className:'health-row'});
+    row.append(h('span', {className:'health-dot '+p.health_status}));
+    row.append(h('span', {className:'health-name'}, p.name));
+    row.append(h('span', {className:'health-state'}, p.printer_state));
+    // Inline ink level mini-bars when HA IPP entities available
+    if (p.ha_ipp_entities && p.ha_ipp_entities.length) {
+      var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+      if (markers.length) {
+        var inkWrap = h('span', {style:'display:inline-flex;align-items:center;gap:3px;margin-left:4px'});
+        markers.forEach(function(ent) {
+          var level = parseFloat(ent.state);
+          if (isNaN(level)) level = 0;
+          var barColor = level > 50 ? '#22c55e' : level > 15 ? '#f59e0b' : '#ef4444';
+          var label = ent.friendly_name || ent.entity_id;
+          label = label.replace(/^[A-Z][A-Za-z0-9 ./-]+(Series|series)\s*/i, '').replace(/^[A-Z][A-Za-z0-9 ./-]+\s+(?=ink|toner|drum|black|cyan|magenta|yellow|photo|waste|maint)/i, '');
+          if (!label) label = ent.friendly_name || ent.entity_id;
+          var miniBar = h('span', {style:'display:inline-block;width:20px;height:6px;border-radius:3px;background:var(--glass-border);overflow:hidden;vertical-align:middle', title:label + ': ' + level + (ent.unit || '%')});
+          miniBar.append(h('span', {style:'display:block;height:100%;width:' + Math.max(0, Math.min(100, level)) + '%;border-radius:3px;background:' + barColor}));
+          inkWrap.append(miniBar);
+        });
+        row.append(inkWrap);
+      }
+    }
+    row.append(h('span', {className:'health-due health-due-col'}, timeUntil(p.next_keepalive_due_at)));
+    panel.append(row);
   });
   sec1.append(panel);
   root.append(sec1);
@@ -1088,6 +1107,32 @@ function renderPrinters() {
     });
     body.append(stats);
     body.append(h('div', {className:'pc-uri'}, p.printer_uri));
+
+    // Native HA IPP Integration entities (ink/toner levels)
+    if (p.ha_ipp_entities && p.ha_ipp_entities.length) {
+      var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+      if (markers.length) {
+        var ippWrap = h('div', {style:'margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--badge-bg);border:1px solid var(--glass-border)'});
+        ippWrap.append(h('div', {style:'font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px'}, 'Native HA IPP Integration'));
+        markers.forEach(function(ent) {
+          var level = parseFloat(ent.state);
+          if (isNaN(level)) level = 0;
+          var barColor = level > 50 ? '#22c55e' : level > 15 ? '#f59e0b' : '#ef4444';
+          var label = ent.friendly_name || ent.entity_id;
+          // Strip common device-name prefixes (e.g. "EPSON ET-3850 Series ")
+          label = label.replace(/^[A-Z][A-Za-z0-9 ./-]+(Series|series)\s*/i, '').replace(/^[A-Z][A-Za-z0-9 ./-]+\s+(?=ink|toner|drum|black|cyan|magenta|yellow|photo|waste|maint)/i, '');
+          if (!label) label = ent.friendly_name || ent.entity_id;
+          var row = h('div', {style:'display:flex;align-items:center;gap:8px;margin-bottom:5px'});
+          row.append(h('span', {style:'font-size:11px;color:var(--text-secondary);min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'}, label));
+          var barOuter = h('div', {style:'flex:1;height:6px;border-radius:3px;background:var(--glass-border);overflow:hidden'});
+          barOuter.append(h('div', {style:'height:100%;width:' + Math.max(0, Math.min(100, level)) + '%;border-radius:3px;background:' + barColor + ';transition:width 0.3s'}));
+          row.append(barOuter);
+          row.append(h('span', {style:'font-size:10px;font-weight:600;color:var(--text-secondary);min-width:32px;text-align:right'}, (ent.unit ? level + ent.unit : level + '%')));
+          ippWrap.append(row);
+        });
+        body.append(ippWrap);
+      }
+    }
 
     // Settings section
     var settingsWrap = h('div', {style:'margin-bottom:14px; display:none'});

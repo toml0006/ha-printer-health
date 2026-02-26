@@ -1394,6 +1394,7 @@
               <th>Cadence</th>
               <th>Last Print</th>
               <th>Next Due</th>
+              <th>Ink / Toner</th>
             </tr>
           </thead>
           <tbody id="health-tbody"></tbody>
@@ -1871,7 +1872,8 @@ function renderDashboard(health) {
       '<td><span class="template-pill" style="padding:2px 8px">' + esc(p.template) + '</span></td>' +
       '<td>' + esc(Math.round(p.cadence_hours / 24) + ' days') + '</td>' +
       '<td>' + esc(timeAgo(p.last_print_at)) + '</td>' +
-      '<td style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</td>';
+      '<td style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</td>' +
+      '<td>' + renderInkBarsInline(p) + '</td>';
     htbody.appendChild(tr);
   });
 
@@ -1905,6 +1907,88 @@ function renderDashboard(health) {
     s.textContent = t;
     tpills.appendChild(s);
   });
+}
+
+/* ===== HA IPP Entity Helpers ===== */
+function ippSupplyLabel(friendlyName) {
+  // Strip common device-name prefixes (e.g. "EPSON ET-3850 Series Black ink")
+  // Keep only the supply-specific part
+  var parts = (friendlyName || '').split(' ');
+  // Heuristic: drop tokens until we hit a color or ink/toner keyword
+  var keywords = ['black','cyan','magenta','yellow','photo','matte','light','ink','toner','drum','waste','maintenance','kit'];
+  var startIdx = 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (keywords.indexOf(parts[i].toLowerCase()) !== -1) { startIdx = i; break; }
+  }
+  var label = parts.slice(startIdx).join(' ');
+  return label || friendlyName || 'Unknown';
+}
+
+function ippBarColor(pct) {
+  if (pct > 50) return 'var(--mint)';
+  if (pct > 15) return '#f0a500';
+  return 'var(--coral)';
+}
+
+function renderInkBarsInline(p) {
+  if (!p.ha_ipp_entities) return '<span style="color:#999;font-size:11px">\u2014</span>';
+  var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+  if (markers.length === 0) return '<span style="color:#999;font-size:11px">\u2014</span>';
+  var html = '<div style="display:flex;gap:3px;align-items:flex-end;min-width:80px">';
+  markers.forEach(function(m) {
+    var pct = parseFloat(m.state);
+    if (isNaN(pct)) pct = 0;
+    var color = ippBarColor(pct);
+    var label = ippSupplyLabel(m.friendly_name);
+    html += '<div style="display:flex;flex-direction:column;align-items:center;gap:1px" title="' + esc(label) + ': ' + pct + (m.unit ? esc(m.unit) : '%') + '">' +
+      '<div style="width:10px;height:22px;border:1.5px solid var(--black);background:linear-gradient(to top,' + color + ' ' + pct + '%,#eee ' + pct + '%);"></div>' +
+      '<div style="font-size:7px;font-family:\'DM Mono\',monospace;font-weight:500;line-height:1;white-space:nowrap;max-width:28px;overflow:hidden;text-overflow:ellipsis">' + esc(label.split(' ')[0].substring(0,3).toUpperCase()) + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderIppSection(p) {
+  if (!p.ha_ipp_entities) return '';
+  var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+  var others = p.ha_ipp_entities.filter(function(e) { return !e.marker_type; });
+  if (markers.length === 0 && others.length === 0) return '';
+
+  var html = '<div style="margin:10px 0 6px 0;padding:10px 12px;border:2px solid var(--black);background:rgba(67,97,238,0.04)">' +
+    '<div style="font-family:\'DM Mono\',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;color:#666">Native HA IPP Integration</div>';
+
+  if (markers.length > 0) {
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:' + (others.length > 0 ? '8px' : '0') + '">';
+    markers.forEach(function(m) {
+      var pct = parseFloat(m.state);
+      if (isNaN(pct)) pct = 0;
+      var color = ippBarColor(pct);
+      var label = ippSupplyLabel(m.friendly_name);
+      html += '<div style="flex:1;min-width:80px;max-width:160px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">' +
+          '<span style="font-size:11px;font-weight:700">' + esc(label) + '</span>' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:11px;font-weight:500">' + pct + (m.unit ? esc(m.unit) : '%') + '</span>' +
+        '</div>' +
+        '<div style="height:8px;border:1.5px solid var(--black);background:#eee">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + color + ';transition:width .3s"></div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  if (others.length > 0) {
+    html += '<div style="display:flex;gap:6px 14px;flex-wrap:wrap">';
+    others.forEach(function(e) {
+      var label = ippSupplyLabel(e.friendly_name);
+      html += '<div style="font-size:11px"><span style="font-weight:700">' + esc(label) + ':</span> ' + esc(e.state) + (e.unit ? ' ' + esc(e.unit) : '') + '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
 /* ===== Render: Printers ===== */
@@ -1954,6 +2038,7 @@ function renderPrinters(health) {
           '<div><div class="meta-label">Last Print</div><div class="meta-value">' + esc(timeAgo(p.last_print_at)) + '</div></div>' +
           '<div><div class="meta-label">Next Due</div><div class="meta-value" style="' + (overdue ? 'color:var(--coral);font-weight:700' : '') + '">' + esc(timeUntil(p.next_keepalive_due_at)) + '</div></div>' +
         '</div>' +
+        renderIppSection(p) +
       '</div>' +
       '<div class="printer-card-actions">' +
         '<button class="btn btn-yellow" title="Print a keepalive page only if one is due based on the cadence schedule" onclick="doPrint(\'' + pid + '\',document.getElementById(\'' + cardId + '-tpl\').value,false)">Print if Due</button>' +

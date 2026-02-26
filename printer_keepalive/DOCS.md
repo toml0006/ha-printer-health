@@ -217,6 +217,22 @@ Per printer, the add-on publishes:
 
 Health sensor attributes include richer IPP data and maintenance guidance.
 
+### Native HA IPP Integration
+
+Home Assistant's built-in IPP integration provides read-only sensors for
+printer state, uptime, and per-supply ink/toner levels. This add-on is fully
+additive — it provides keepalive controls, print scheduling, and maintenance
+management that the native integration does not offer.
+
+When both are active, the add-on automatically detects native IPP entities
+(matched by IP address or model name) and surfaces their ink/toner levels
+in the dashboard and printer cards. There is no entity naming collision:
+
+- Native IPP: `sensor.epson_et_3850_series_black_ink` (from HA IPP integration)
+- Add-on: `sensor.office_et3850_lowest_marker_level` (from MQTT discovery)
+
+Both sets of entities coexist without conflict.
+
 ## Ingress Dashboard
 
 When installed as a Home Assistant add-on, open `Printer Keepalive` from the sidebar

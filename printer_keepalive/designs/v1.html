@@ -1571,12 +1571,27 @@ function buildDashboard() {
   h.printers.forEach(function(p) {
     var due = new Date(p.next_keepalive_due_at);
     var overdue = due < new Date();
+    var ippBar = '';
+    if (p.ha_ipp_entities) {
+      var markers = p.ha_ipp_entities.filter(function(e) { return e.marker_type; });
+      if (markers.length) {
+        ippBar = '<div style="display:flex;gap:4px;margin-top:4px">';
+        markers.forEach(function(m) {
+          var pct = parseInt(m.state, 10) || 0;
+          var c = pct > 50 ? 'var(--success)' : pct > 15 ? 'var(--warning)' : 'var(--danger)';
+          var label = m.friendly_name.replace(/.*Series\s*/i, '').replace(/\s*ink$/i, '').replace(/\s*toner$/i, '');
+          ippBar += '<div style="flex:1;min-width:0" title="' + escHtml(label) + ' ' + pct + '%"><div style="height:4px;border-radius:2px;background:var(--border)"><div style="width:' + pct + '%;height:100%;border-radius:2px;background:' + c + '"></div></div></div>';
+        });
+        ippBar += '</div>';
+      }
+    }
     rows +=
       '<div class="printer-row">' +
         '<div class="status-dot ' + escHtml(p.health_status) + '"></div>' +
         '<div class="printer-info">' +
           '<div class="printer-name">' + escHtml(p.name) + '</div>' +
           '<div class="printer-state">' + escHtml(p.printer_state) + ' &middot; ' + escHtml(p.template) + '</div>' +
+          ippBar +
         '</div>' +
         '<div class="printer-due">' +
           '<div class="due-label">Next due</div>' +
@@ -1704,6 +1719,34 @@ function buildPrinters() {
         '<div class="stat-box"><div class="stat-label">Last Print</div><div class="stat-value">' + escHtml(relTime(p.last_print_at)) + '</div></div>' +
         '<div class="stat-box"><div class="stat-label">Next Due</div><div class="stat-value">' + escHtml(relTime(p.next_keepalive_due_at)) + '</div></div>' +
       '</div>' +
+      (p.ha_ipp_entities ? (function() {
+        var ipp = p.ha_ipp_entities;
+        var main = ipp.find(function(e) { return !e.marker_type; });
+        var markers = ipp.filter(function(e) { return e.marker_type; });
+        var html = '<div style="margin:12px 0;padding:10px 12px;background:var(--accent-subtle);border:1px solid var(--accent-border);border-radius:var(--radius-sm)">' +
+          '<div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Native HA IPP Integration</div>';
+        if (main) {
+          html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">' + escHtml(main.friendly_name) + ' — <span style="text-transform:capitalize">' + escHtml(main.state) + '</span></div>';
+        }
+        if (markers.length) {
+          html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+          markers.forEach(function(m) {
+            var label = m.friendly_name.replace(/.*Series\s*/i, '').replace(/\s*ink$/i, '').replace(/\s*toner$/i, '');
+            var pct = parseInt(m.state, 10) || 0;
+            var color = pct > 50 ? 'var(--success)' : pct > 15 ? 'var(--warning)' : 'var(--danger)';
+            html += '<div style="flex:1;min-width:60px;text-align:center">' +
+              '<div style="font-size:11px;color:var(--muted)">' + escHtml(label) + '</div>' +
+              '<div style="margin-top:2px;height:6px;border-radius:3px;background:var(--border)">' +
+                '<div style="width:' + pct + '%;height:100%;border-radius:3px;background:' + color + '"></div>' +
+              '</div>' +
+              '<div style="font-size:11px;font-weight:600;color:var(--text);margin-top:2px">' + pct + '%</div>' +
+            '</div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+        return html;
+      })() : '') +
       '<div class="control-row">' +
         '<label><input type="checkbox" class="p-enabled"' + (p.enabled ? ' checked' : '') + '> Enabled</label>' +
         '<label>Cadence <input type="number" class="p-cadence" value="' + origCadence + '" min="1"> days</label>' +

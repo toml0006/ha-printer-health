@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.3
+
+- Surface native HA IPP integration entities alongside add-on data: ink/toner levels from the built-in IPP integration are now shown in printer cards and the dashboard overview.
+- Auto-match configured printers to their native HA IPP devices by IP address or model name.
+- Dashboard printer health rows show inline ink level bars when native IPP data is available.
+- Printer cards display a "Native HA IPP Integration" section with per-supply level indicators.
+- Cached HA IPP entity lookups with 5-minute TTL to avoid excessive API calls.
+- MQTT diagnostics: connection status (`connected`, `last_error`) tracked and surfaced in health payload and dashboard tiles.
+- Improved MQTT connection error logging with human-readable error codes.
+
 ## 0.5.2
 
 - Config sections now show summaries when collapsed (printer count, scheduler status, discovery count, MQTT status).

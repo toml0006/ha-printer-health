@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.2"
+APP_VERSION = "0.5.3"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -884,6 +884,116 @@ def states_by_entity(states: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         if isinstance(entity_id, str):
             indexed[entity_id] = state
     return indexed
+
+
+_HA_IPP_CACHE: dict[str, Any] = {"ts": 0.0, "data": {}}
+_HA_IPP_CACHE_TTL = 300  # 5 minutes
+
+
+def _fetch_ha_ipp_entities() -> dict[str, list[dict[str, Any]]]:
+    """Fetch native HA IPP integration entities, grouped by device.
+
+    Returns a dict keyed by device name (e.g. "EPSON ET-3850 Series") with
+    lists of simplified entity dicts {entity_id, state, friendly_name, unit, ...}.
+    """
+    now = time.time()
+    if now - _HA_IPP_CACHE["ts"] < _HA_IPP_CACHE_TTL:
+        return _HA_IPP_CACHE["data"]
+
+    states = fetch_all_states()
+    if not states:
+        _HA_IPP_CACHE["ts"] = now
+        _HA_IPP_CACHE["data"] = {}
+        return {}
+
+    # Find entities from the IPP integration by checking config_entry or
+    # platform attribute, or by matching known IPP entity patterns.
+    ipp_entities: list[dict[str, Any]] = []
+    for s in states:
+        eid = s.get("entity_id", "")
+        attrs = s.get("attributes", {})
+        # Native IPP integration sensors have marker_type (ink/toner) or
+        # info attribute with printer model, and command_set attribute
+        is_ipp_marker = "marker_type" in attrs
+        is_ipp_printer = "command_set" in attrs or "uri_supported" in attrs
+        if is_ipp_marker or is_ipp_printer:
+            friendly = attrs.get("friendly_name", eid)
+            entry = {
+                "entity_id": eid,
+                "state": s.get("state"),
+                "friendly_name": friendly,
+            }
+            if "unit_of_measurement" in attrs:
+                entry["unit"] = attrs["unit_of_measurement"]
+            if "marker_type" in attrs:
+                entry["marker_type"] = attrs["marker_type"]
+            if "uri_supported" in attrs:
+                entry["uri_supported"] = attrs["uri_supported"]
+            if "info" in attrs:
+                entry["model"] = attrs["info"]
+            if "serial" in attrs:
+                entry["serial"] = attrs["serial"]
+            ipp_entities.append(entry)
+
+    # Group by device: detect the "main" printer sensor (the one with command_set)
+    # and associate ink sensors by shared entity prefix
+    devices: dict[str, list[dict[str, Any]]] = {}
+    for e in ipp_entities:
+        eid = e["entity_id"]
+        # Extract device prefix: e.g. "sensor.epson_et_3850_series" -> group key
+        # Ink sensors are like sensor.epson_et_3850_series_black_ink
+        parts = eid.rsplit("_", 1)
+        if e.get("marker_type"):
+            # strip last two parts: _black_ink -> sensor.epson_et_3850_series
+            base = eid.rsplit("_", 2)[0] if eid.count("_") >= 2 else eid
+        else:
+            base = eid
+        devices.setdefault(base, []).append(e)
+
+    # Re-key by friendly device name
+    result: dict[str, list[dict[str, Any]]] = {}
+    for base_id, entities in devices.items():
+        # Find the main entity to get the device name
+        main = next((e for e in entities if not e.get("marker_type")), entities[0])
+        device_name = main.get("model") or main.get("friendly_name", base_id)
+        result[device_name] = entities
+
+    _HA_IPP_CACHE["ts"] = now
+    _HA_IPP_CACHE["data"] = result
+    return result
+
+
+def match_ha_ipp_device(printer: "PrinterConfig") -> list[dict[str, Any]] | None:
+    """Match a configured printer to its native HA IPP entities.
+
+    Matches by IP address in URI, or by model name similarity.
+    """
+    ipp_devices = _fetch_ha_ipp_entities()
+    if not ipp_devices:
+        return None
+
+    # Extract IP/hostname from printer URI
+    try:
+        parsed = urlparse(printer.printer_uri)
+        printer_host = parsed.hostname or ""
+    except Exception:
+        printer_host = ""
+
+    for device_name, entities in ipp_devices.items():
+        # Check if any entity's uri_supported contains the same IP
+        for e in entities:
+            uri_supported = e.get("uri_supported", "")
+            if printer_host and printer_host in str(uri_supported):
+                return entities
+
+        # Check model name match
+        model_slug = device_name.lower().replace(" ", "").replace("-", "")
+        printer_name_slug = printer.name.lower().replace(" ", "").replace("-", "")
+        printer_id_slug = printer.printer_id.lower().replace("_", "")
+        if model_slug and (model_slug in printer_name_slug or model_slug in printer_id_slug or printer_name_slug in model_slug):
+            return entities
+
+    return None
 
 
 def choose_default_entities(states: list[dict[str, Any]], limit: int = 8) -> list[str]:
@@ -2126,6 +2236,12 @@ def build_printer_payload(printer: PrinterConfig, now: datetime | None = None) -
             "sources": guidance.get("sources", []),
         },
     }
+
+    # Include native HA IPP integration entities if available
+    ha_ipp = match_ha_ipp_device(printer)
+    if ha_ipp:
+        payload["ha_ipp_entities"] = ha_ipp
+
     return payload
 
 

@@ -979,7 +979,24 @@ function renderHealthRows(){
     var stTag=st==='ok'?'[OK]':st==='warn'?'[WARN]':'[ERR]';
     var due=relTime(p.next_keepalive_due_at);
     var overdue=p.next_keepalive_due_at && new Date(p.next_keepalive_due_at)<Date.now();
-    return '<div class="printer-row"><span class="dot '+st+'"></span><span class="printer-name">'+esc(p.name)+'</span><span class="printer-state tag '+st+'">['+esc(p.printer_state.toUpperCase())+']</span><span class="printer-state tag '+st+'" style="margin-left:8px">'+stTag+'</span><span class="printer-due '+(overdue?'overdue':'')+'">'+( overdue?'OVERDUE ':'')+esc(due)+'</span></div>';
+    var ippBars = '';
+    if (p.ha_ipp_entities) {
+      var markers = p.ha_ipp_entities.filter(function(e){ return e.marker_type; });
+      if (markers.length > 0) {
+        ippBars = '<span style="display:inline-flex;align-items:center;gap:3px;margin-left:12px;">' +
+          markers.map(function(e){
+            var pct = parseFloat(e.state); if (isNaN(pct)) pct = 0;
+            var c = pct > 50 ? 'var(--success)' : pct > 15 ? '#ffc800' : 'var(--danger)';
+            var g = pct > 50 ? 'var(--glow-green)' : pct > 15 ? 'var(--glow-yellow)' : 'var(--glow-red)';
+            var lbl = (e.friendly_name || '').replace(/^.*?\b(?:series|printer)\s*/i, '').replace(/^\s*-?\s*/, '') || e.marker_type || '';
+            return '<span title="'+esc(lbl)+' '+Math.round(pct)+'%" style="display:inline-block;width:24px;height:5px;background:rgba(26,26,46,.8);border-radius:2px;overflow:hidden;">' +
+              '<span style="display:block;width:'+pct+'%;height:100%;background:'+c+';border-radius:2px;box-shadow:0 0 4px '+g+';"></span>' +
+            '</span>';
+          }).join('') +
+        '</span>';
+      }
+    }
+    return '<div class="printer-row"><span class="dot '+st+'"></span><span class="printer-name">'+esc(p.name)+'</span><span class="printer-state tag '+st+'">['+esc(p.printer_state.toUpperCase())+']</span><span class="printer-state tag '+st+'" style="margin-left:8px">'+stTag+'</span>'+ippBars+'<span class="printer-due '+(overdue?'overdue':'')+'">'+( overdue?'OVERDUE ':'')+esc(due)+'</span></div>';
   }).join('');
 }
 
@@ -1018,6 +1035,29 @@ function renderPrinterCards(){
     return '<div class="printer-card boot-hidden" data-printer-id="'+esc(p.printer_id)+'" data-orig-enabled="'+origEnabled+'" data-orig-cadence="'+esc(origCadence)+'" data-orig-template="'+esc(origTemplate)+'">'+
       '<div class="printer-card-header"><div style="display:flex;align-items:center;gap:10px"><span class="dot '+st+'"></span><span class="printer-card-name">'+esc(p.name)+'</span></div><span class="printer-card-status tag '+st+'">'+stTag+'</span></div>'+
       '<div class="printer-card-readout">'+lines.map(function(l){var dLen=Math.max(2,20-l.label.length);return '<div class="readout-line"><span class="readout-prefix">&gt;</span><span class="readout-label">'+esc(l.label)+'</span><span class="readout-dots">'+dots(dLen)+'</span><span class="readout-value '+l.cls+'">'+esc(String(l.value))+'</span></div>';}).join('')+'</div>'+
+      (function(){
+        if (!p.ha_ipp_entities) return '';
+        var markers = p.ha_ipp_entities.filter(function(e){ return e.marker_type; });
+        if (markers.length === 0) return '';
+        var barsHtml = markers.map(function(e){
+          var pct = parseFloat(e.state);
+          if (isNaN(pct)) pct = 0;
+          var barColor = pct > 50 ? 'var(--success)' : pct > 15 ? '#ffc800' : 'var(--danger)';
+          var glowColor = pct > 50 ? 'var(--glow-green)' : pct > 15 ? 'var(--glow-yellow)' : 'var(--glow-red)';
+          var label = (e.friendly_name || e.entity_id || '').replace(/^.*?\b(?:series|printer)\s*/i, '').replace(/^\s*-?\s*/, '') || e.entity_id;
+          return '<div style="display:flex;align-items:center;gap:8px;font-size:.75rem;">' +
+            '<span style="color:var(--dim);min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(e.friendly_name || e.entity_id)+'">'+esc(label)+'</span>' +
+            '<div style="flex:1;height:6px;background:rgba(26,26,46,.8);border-radius:3px;min-width:80px;overflow:hidden;">' +
+              '<div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:3px;box-shadow:0 0 6px '+glowColor+';transition:width .3s;"></div>' +
+            '</div>' +
+            '<span style="color:var(--dim);font-size:.7rem;min-width:30px;text-align:right;">'+Math.round(pct)+(e.unit||'%')+'</span>' +
+          '</div>';
+        }).join('');
+        return '<div style="margin-bottom:14px;padding:12px;background:rgba(6,6,10,.5);border:1px solid var(--border);border-radius:4px;">' +
+          '<div style="font-size:.65rem;font-weight:600;color:var(--dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;">Native HA IPP Integration</div>' +
+          '<div style="display:flex;flex-direction:column;gap:5px;">'+barsHtml+'</div>' +
+        '</div>';
+      })()+
       '<div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.8rem;">'+
         '<label style="color:var(--dim);">TEMPLATE: <select class="design-select pc-template" style="margin-left:4px;">'+templateOpts+'</select></label>'+
         '<label style="color:var(--dim);">CADENCE_D: <input type="number" class="auth-input pc-cadence" style="width:60px;padding:4px 6px;" value="'+Math.round((p.cadence_hours||0)/24)+'" min="1"></label>'+
