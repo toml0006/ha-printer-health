@@ -1892,21 +1892,42 @@ function renderDiscovery(discovery) {
   dtbody.innerHTML = '';
   printers.forEach(function(p) {
     var tr = document.createElement('tr');
-    var actionCell;
-    if (!p.already_configured && p.reachable) {
-      actionCell = '<button class="btn btn-mint" style="padding:6px 14px;font-size:11px" onclick="showToast(\'Use config to add this printer\')">Add</button>';
-    } else if (p.already_configured) {
-      actionCell = '<span style="opacity:.4">Managed</span>';
-    } else {
-      actionCell = '<span style="opacity:.4">Offline</span>';
-    }
     tr.innerHTML =
       '<td class="printer-name">' + esc(p.printer_name) + '</td>' +
       '<td>' + esc(p.uri) + '</td>' +
       '<td><span class="badge ' + (p.printer_type_guess === 'laser' ? 'badge-blue' : 'badge-yellow') + '">' + esc(p.printer_type_guess) + '</span></td>' +
       '<td><span class="badge ' + (p.reachable ? 'badge-green' : 'badge-red') + '">' + (p.reachable ? 'Yes' : 'No') + '</span></td>' +
       '<td><span class="badge ' + (p.already_configured ? 'badge-green' : '') + '">' + (p.already_configured ? 'Yes' : 'No') + '</span></td>' +
-      '<td>' + actionCell + '</td>';
+      '<td></td>';
+    var actionTd = tr.querySelector('td:last-child');
+    if (!p.already_configured && p.reachable) {
+      var btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = '+ Add';
+      btn.style.cssText = 'padding:5px 14px;font-size:11px;font-weight:800;background:var(--mint);border:2px solid var(--black);cursor:pointer';
+      btn.addEventListener('click', async function() {
+        try {
+          btn.disabled = true;
+          btn.textContent = '...';
+          var cfgResp = await requestJson('config');
+          var opts = cfgResp.options || {};
+          if (!Array.isArray(opts.printers)) opts.printers = [];
+          opts.printers.push(p.suggested_config);
+          await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
+          showToast('Added ' + p.printer_name + ' — restart to apply');
+          refreshAll();
+        } catch (err) {
+          showToast('Failed to add printer: ' + err.message, true);
+          btn.disabled = false;
+          btn.textContent = '+ Add';
+        }
+      });
+      actionTd.appendChild(btn);
+    } else if (p.already_configured) {
+      actionTd.innerHTML = '<span style="opacity:.4">Managed</span>';
+    } else {
+      actionTd.innerHTML = '<span style="opacity:.4">Offline</span>';
+    }
     dtbody.appendChild(tr);
   });
 }

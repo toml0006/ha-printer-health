@@ -1779,13 +1779,19 @@ function buildDiscovery() {
     } catch (e) { showToast('Rescan failed: ' + e.message, true); }
   };
 
-  var tableRows = (d.printers || []).map(function(p) {
+  var tableRows = (d.printers || []).map(function(p, idx) {
+    var configCell;
+    if (p.already_configured) {
+      configCell = '<span class="pill pill-blue">Configured</span>';
+    } else {
+      configCell = '<button class="btn btn-primary disc-add-btn" style="font-size:12px;padding:4px 12px;" data-disc-idx="' + idx + '">Add</button>';
+    }
     return '<tr>' +
       '<td style="font-weight:500">' + escHtml(p.printer_name) + '</td>' +
       '<td class="mono">' + escHtml(p.uri) + '</td>' +
       '<td>' + escHtml(p.printer_type_guess) + '</td>' +
       '<td>' + (p.reachable ? '<span class="pill pill-green">Online</span>' : '<span class="pill pill-red">Offline</span>') + '</td>' +
-      '<td>' + (p.already_configured ? '<span class="pill pill-blue">Configured</span>' : '<span class="pill pill-gray">New</span>') + '</td>' +
+      '<td>' + configCell + '</td>' +
     '</tr>';
   }).join('');
 
@@ -1799,6 +1805,28 @@ function buildDiscovery() {
     '</div>'
   );
   container.appendChild(tableCard);
+
+  tableCard.querySelectorAll('.disc-add-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var idx = parseInt(btn.getAttribute('data-disc-idx'), 10);
+      var p = d.printers[idx];
+      btn.disabled = true;
+      btn.textContent = 'Adding...';
+      try {
+        var cfgResp = await requestJson('config');
+        var opts = cfgResp.options || {};
+        if (!Array.isArray(opts.printers)) opts.printers = [];
+        opts.printers.push(p.suggested_config);
+        await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
+        showToast('Added ' + p.printer_name + ' — restart to apply');
+        refreshAll();
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Add';
+        showToast('Failed to add printer: ' + e.message, true);
+      }
+    });
+  });
 }
 
 /* ── Config View ─────────────────────────────────────────── */

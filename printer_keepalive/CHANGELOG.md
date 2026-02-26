@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+- Added "Add" button in discovery table to add discovered printers to config with one click.
+- Default UI now serves v1 design with all 7 tabs (was falling back to legacy 4-tab template).
+- Fixed sidebar icon to valid MDI name (`mdi:printer`).
+
 ## 0.4.0
 
 ### UI Overhaul

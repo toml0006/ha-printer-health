@@ -1148,17 +1148,44 @@ function renderDiscovery() {
   var thead = h('thead');
   thead.append(h('tr', null,
     h('th', null, 'Printer'), h('th', null, 'URI'), h('th', null, 'Type'),
-    h('th', null, 'Reachable'), h('th', null, 'Configured')
+    h('th', null, 'Reachable'), h('th', null, 'Status')
   ));
   table.append(thead);
   var tbody = h('tbody');
   printers.forEach(function(p) {
+    var statusTd = h('td', null);
+    if (p.already_configured) {
+      statusTd.innerHTML = '<span class="conf-badge yes">Configured</span>';
+    } else {
+      var addBtn = h('button', {
+        className: 'btn-glass primary btn-add-printer',
+        style: 'font-size:11px;padding:4px 12px;min-width:0',
+        onClick: async function() {
+          addBtn.disabled = true;
+          addBtn.textContent = 'Adding\u2026';
+          try {
+            var cfgResp = await requestJson('config');
+            var opts = cfgResp.options || {};
+            if (!Array.isArray(opts.printers)) opts.printers = [];
+            opts.printers.push(p.suggested_config);
+            await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
+            showToast('Added ' + p.printer_name + ' \u2014 restart to apply', 'success');
+            refreshAll();
+          } catch (err) {
+            showToast('Failed to add: ' + err.message, 'error');
+            addBtn.disabled = false;
+            addBtn.textContent = 'Add';
+          }
+        }
+      }, 'Add');
+      statusTd.append(addBtn);
+    }
     tbody.append(h('tr', null,
       h('td', {style:'font-weight:600'}, p.printer_name),
       h('td', {className:'uri'}, p.uri),
       h('td', {style:'text-transform:capitalize'}, p.printer_type_guess || ''),
       h('td', {innerHTML: '<span class="reach-dot '+(p.reachable?'yes':'no')+'"></span>'+(p.reachable?'Yes':'No')}),
-      h('td', {innerHTML: '<span class="conf-badge '+(p.already_configured?'yes':'no')+'">'+(p.already_configured?'Yes':'Available')+'</span>'})
+      statusTd
     ));
   });
   table.append(tbody);
