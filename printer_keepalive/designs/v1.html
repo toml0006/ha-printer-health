@@ -1528,6 +1528,7 @@ TAB_NAMES.forEach(function(name, i) {
     document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
     btn.classList.add('active');
     document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    rebuildView(btn.dataset.view);
     animateCards();
   };
   tabsEl.appendChild(btn);
@@ -2678,6 +2679,7 @@ function buildTemplateDetail(container, tpl, printers) {
   document.getElementById('tpl-back').onclick = function() {
     tplExpandedTemplate = null;
     buildTemplates();
+    requestAnimationFrame(function() { animateCards(); });
   };
 
   var card = el('div', 'card');
@@ -2893,6 +2895,37 @@ function animateCards() {
   });
 }
 
+/* ── Rebuild a specific view on tab switch ───────────────── */
+function rebuildView(viewName) {
+  switch (viewName) {
+    case 'dashboard': buildDashboard(); break;
+    case 'printers': buildPrinters(); break;
+    case 'discovery': buildDiscovery(); break;
+    case 'cards': buildCards(); break;
+    case 'templates': buildTemplates(); break;
+    case 'config': rebuildConfigIfNeeded(); break;
+    case 'help': buildHelp(); break;
+  }
+}
+
+var configDirty = false;
+
+function rebuildConfigIfNeeded() {
+  if (configDirty) {
+    buildConfig();
+    configDirty = false;
+    // Reload config data
+    requestJson('config').then(function(cfgResp) {
+      state.config = cfgResp.options || {};
+      configRawObj = state.config;
+      var textarea = document.getElementById('config-textarea');
+      if (textarea) textarea.value = JSON.stringify(configRawObj, null, 2);
+      populateForm(configRawObj);
+    }).catch(function() {});
+  }
+  updateConfigSummaries();
+}
+
 /* ── Refresh all data ────────────────────────────────────── */
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -2938,6 +2971,8 @@ async function refreshAll() {
         if (textarea) textarea.value = JSON.stringify(configRawObj, null, 2);
         populateForm(configRawObj);
       } catch (e) { /* config load is optional */ }
+    } else {
+      configDirty = true;
     }
     updateConfigSummaries();
 

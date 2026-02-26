@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.5
+
+- **Daily summary overhaul**: utility usage (energy, water, solar, gas) with 30-day rolling averages and trend indicators; cost sensor detection with daily cost and projected monthly bills; 5-day weather forecast via HA service call; AI-generated weather preparation tips via `conversation.process`; localized number formatting; sensor activity stats (active/total with percentages) instead of raw entity counts.
+- **UI state management fixes**: tab switching now rebuilds the target view; config form refreshes when printer list changes; "All Templates" back button properly re-renders card list with visibility animation.
+- **Preview caching**: template preview images cached server-side for 2 minutes, eliminating repeated HA API calls and PIL renders on rapid navigation.
+- Added `hass_post_json` helper for HA service calls (weather forecasts, conversation processing).
+- Added `daily_summary` to config schema template options.
+
 ## 0.5.4
 
 - New `daily_summary` template: a visually rich previous day's summary with energy use, sensor domain rollups, automation counts, weather, household status, and colorful nozzle-exercising patterns (CMYK gradients, rainbow strips, dot grids).

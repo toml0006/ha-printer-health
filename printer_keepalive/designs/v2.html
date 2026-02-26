@@ -2092,6 +2092,14 @@ function buildTemplates() {
     var backBtn = h('button', {className: 'btn-glass', style: 'margin-bottom:20px; display:inline-flex; align-items:center; gap:6px', onClick: function() {
       tplExpandedTemplate = null;
       buildTemplates();
+      requestAnimationFrame(function() {
+        document.querySelectorAll('.view.active .template-item').forEach(function(c, i) {
+          c.style.animation = 'none';
+          c.offsetHeight; // force reflow
+          c.style.animation = '';
+          c.style.animationDelay = (0.05 * i) + 's';
+        });
+      });
     }});
     backBtn.innerHTML = '&#8592; Back to Templates';
     root.append(backBtn);
@@ -2333,6 +2341,36 @@ function loadConfig() {
     });
 }
 
+function rebuildView(viewName) {
+  switch (viewName) {
+    case 'dashboard': renderDashboard(); break;
+    case 'printers': renderPrinters(); break;
+    case 'discovery': renderDiscovery(); break;
+    case 'cards': buildCards(); break;
+    case 'templates': buildTemplates(); break;
+    case 'config': rebuildConfigIfNeeded(); break;
+    case 'help': buildHelp(); break;
+  }
+}
+
+var configDirty = false;
+
+function rebuildConfigIfNeeded() {
+  if (configDirty) {
+    loadConfig();
+    configDirty = false;
+    requestJson('config').then(function(cfgResp) {
+      state.configLoaded = true;
+      var opts = cfgResp.options || cfgResp;
+      currentConfig = opts;
+      var textarea = document.getElementById('configTextarea');
+      if (textarea) textarea.value = JSON.stringify(currentConfig, null, 2);
+      populateForm(currentConfig);
+    }).catch(function() {});
+  }
+  updateConfigSummaries();
+}
+
 /* ── Refresh all data ── */
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -2363,6 +2401,8 @@ async function refreshAll() {
     buildTemplates();
     if (!state.configLoaded) {
       loadConfig();
+    } else {
+      configDirty = true;
     }
     updateConfigSummaries();
   } catch(err) {
@@ -2380,6 +2420,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
     document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
     var target = document.getElementById('view-' + btn.dataset.tab);
     target.classList.add('active');
+    rebuildView(btn.dataset.tab);
   });
 });
 

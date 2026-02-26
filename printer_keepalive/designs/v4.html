@@ -955,6 +955,8 @@ function switchTab(btn){
   btn.classList.add('active');
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
   document.getElementById(btn.dataset.view).classList.add('active');
+  var viewName = btn.dataset.view.replace('view-', '');
+  rebuildView(viewName);
   var view=document.getElementById(btn.dataset.view);
   view.querySelectorAll('.boot-hidden').forEach(function(el,i){
     el.classList.remove('boot-visible');
@@ -1741,6 +1743,17 @@ function showTemplateDetail(tpl) {
   document.getElementById('tplBackBtn').addEventListener('click', function(){
     tplDetailView = null;
     showTemplateList();
+    requestAnimationFrame(function(){
+      document.querySelectorAll('.tpl-list-card').forEach(function(el, i){
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(8px)';
+        el.style.transition = 'opacity .4s ease, transform .4s ease';
+        setTimeout(function(){
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        }, i * 80);
+      });
+    });
   });
 
   document.getElementById('tplPrintBtn').addEventListener('click', async function(){
@@ -1889,6 +1902,34 @@ function buildHelp() {
     '</div>';
 }
 
+// ── Rebuild View on Tab Switch ──
+function rebuildView(viewName) {
+  switch (viewName) {
+    case 'dashboard': renderSysReadout(); renderHealthRows(); renderLog(); break;
+    case 'printers': renderPrinterCards(); break;
+    case 'discovery': renderDiscovery(); break;
+    case 'cards': buildCards(); break;
+    case 'templates': buildTemplates(); break;
+    case 'config': rebuildConfigIfNeeded(); break;
+    case 'help': buildHelp(); break;
+  }
+}
+
+var configDirty = false;
+
+function rebuildConfigIfNeeded() {
+  if (configDirty) {
+    renderConfig(currentConfig);
+    configDirty = false;
+    requestJson('config').then(function(cfgResp) {
+      currentConfig = cfgResp.options || {};
+      document.getElementById('configEditor').value = JSON.stringify(currentConfig, null, 2);
+      populateForm(currentConfig);
+    }).catch(function() {});
+  }
+  updateCfgSummaries(currentConfig);
+}
+
 // ── Refresh All ──
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -1937,6 +1978,8 @@ async function refreshAll() {
     } catch(e) {
       console.error('Config fetch failed:', e);
     }
+  } else {
+    configDirty = true;
   }
 
   state.refreshInFlight = false;

@@ -1948,6 +1948,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
     document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
     btn.classList.add('active');
     document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+    rebuildView(btn.dataset.tab);
   });
 });
 
@@ -3101,6 +3102,31 @@ async function refreshDiscovery() {
   }
 }
 
+function rebuildView(viewName) {
+  switch (viewName) {
+    case 'dashboard': renderDashboard(state.health); break;
+    case 'printers': renderPrinters(state.health); break;
+    case 'discovery': break;
+    case 'cards': buildCards(state.health); break;
+    case 'templates': buildTemplates(state.health); break;
+    case 'config': rebuildConfigIfNeeded(); break;
+    case 'help': buildHelp(); break;
+  }
+}
+
+var configDirty = false;
+
+function rebuildConfigIfNeeded() {
+  if (configDirty) {
+    configDirty = false;
+    requestJson('config').then(function(cfgResp) {
+      document.getElementById('config-area').value = JSON.stringify(cfgResp, null, 2);
+      populateForm(cfgResp);
+    }).catch(function() {});
+  }
+  updateConfigSummaries();
+}
+
 async function refreshAll() {
   if (state.refreshInFlight) return;
   state.refreshInFlight = true;
@@ -3132,6 +3158,8 @@ async function refreshAll() {
     } catch (err) {
       console.error('Config fetch error:', err);
     }
+  } else {
+    configDirty = true;
   }
 
   updateSupervisorContext();

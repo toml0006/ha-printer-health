@@ -955,6 +955,8 @@ function switchTab(btn) {
   btn.classList.add('active');
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   document.getElementById(btn.dataset.view).classList.add('active');
+  var viewName = btn.dataset.view.replace('view-', '');
+  rebuildView(viewName);
 }
 
 // ── Theme ──
@@ -2158,6 +2160,35 @@ function buildHelp() {
   });
 }
 
+function rebuildView(viewName) {
+  switch (viewName) {
+    case 'dashboard': renderSummary(); renderHealthRows(); renderSysInfo(); break;
+    case 'printers': renderPrinterCards(); break;
+    case 'discovery': renderDiscovery(); break;
+    case 'cards': buildCards(); break;
+    case 'templates': buildTemplates(); break;
+    case 'config': rebuildConfigIfNeeded(); break;
+    case 'help': buildHelp(); break;
+  }
+}
+
+var configDirty = false;
+
+function rebuildConfigIfNeeded() {
+  if (configDirty) {
+    populateForm(currentConfig);
+    configDirty = false;
+    requestJson('config').then(function(cfgResp) {
+      var opts = cfgResp.options || {};
+      currentConfig = opts;
+      var textarea = document.getElementById('configEditor');
+      if (textarea) textarea.value = JSON.stringify(currentConfig, null, 2);
+      populateForm(currentConfig);
+    }).catch(function() {});
+  }
+  updateSectionSummaries(currentConfig);
+}
+
 // ── Refresh All ──
 async function refreshAll() {
   if (state.refreshInFlight) return;
@@ -2195,6 +2226,8 @@ async function refreshAll() {
     } catch (e) {
       console.error('Config fetch failed:', e);
     }
+  } else {
+    configDirty = true;
   }
 
   state.refreshInFlight = false;

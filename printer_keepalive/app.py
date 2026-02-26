@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.4"
+APP_VERSION = "0.5.5"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -913,6 +913,25 @@ def hass_get_json(path: str) -> Any | None:
         return None
 
 
+def hass_post_json(path: str, data: dict[str, Any]) -> Any | None:
+    if not HASS_API_BASE:
+        return None
+
+    body = json.dumps(data).encode("utf-8")
+    request = Request(f"{HASS_API_BASE}{path}", data=body, method="POST")
+    if HASS_AUTH_TOKEN:
+        request.add_header("Authorization", f"Bearer {HASS_AUTH_TOKEN}")
+    request.add_header("Content-Type", "application/json")
+
+    try:
+        with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            payload = response.read().decode("utf-8")
+            return json.loads(payload)
+    except (HTTPError, URLError, TimeoutError, ValueError) as exc:
+        log(f"Home Assistant API POST failed for {path}: {exc}")
+        return None
+
+
 def fetch_all_states() -> list[dict[str, Any]]:
     payload = hass_get_json("/states")
     return payload if isinstance(payload, list) else []
@@ -929,6 +948,10 @@ def states_by_entity(states: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 _HA_IPP_CACHE: dict[str, Any] = {"ts": 0.0, "data": {}}
 _HA_IPP_CACHE_TTL = 300  # 5 minutes
+
+# Preview image cache — keyed by (printer_id, template_name), stores (bytes, timestamp)
+_PREVIEW_CACHE: dict[tuple[str, str], tuple[bytes, float]] = {}
+_PREVIEW_CACHE_TTL = 120  # 2 minutes
 
 
 def _fetch_ha_ipp_entities() -> dict[str, list[dict[str, Any]]]:
@@ -1550,26 +1573,216 @@ def _draw_bar_chart(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int,
     return y + len(values) * (bar_h + gap)
 
 
+def _fmt_num(val: float, decimals: int = 1) -> str:
+    """Format a number with locale-aware thousands separators."""
+    try:
+        import locale
+        locale.setlocale(locale.LC_ALL, "")
+        if decimals == 0:
+            return locale.format_string("%d", int(val), grouping=True)
+        return locale.format_string(f"%.{decimals}f", val, grouping=True)
+    except Exception:
+        if decimals == 0:
+            return f"{int(val):,}"
+        return f"{val:,.{decimals}f}"
+
+
+def _fetch_history_stats(entity_id: str, days: int = 30) -> list[float]:
+    """Fetch daily statistics from HA history for a sensor over N days."""
+    if not HASS_API_BASE:
+        return []
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=days)
+    path = f"/history/period/{start.isoformat()}?filter_entity_id={quote(entity_id)}&minimal_response&no_attributes"
+    result = hass_get_json(path)
+    if not isinstance(result, list) or not result:
+        return []
+
+    # Group state values by calendar day
+    daily: dict[str, list[float]] = {}
+    for entry in result[0] if result else []:
+        state_val = entry.get("state", "")
+        last_changed = entry.get("last_changed", "")
+        try:
+            val = float(state_val)
+            day_key = last_changed[:10]
+            daily.setdefault(day_key, []).append(val)
+        except (ValueError, TypeError):
+            continue
+
+    # Return the last recorded value per day (for cumulative sensors, this is the daily total)
+    values = []
+    for day_key in sorted(daily.keys()):
+        values.append(daily[day_key][-1])
+    return values
+
+
+def _fetch_weather_forecast(entity_id: str, forecast_type: str = "daily") -> list[dict[str, Any]]:
+    """Fetch weather forecast via HA service call."""
+    result = hass_post_json(
+        "/services/weather/get_forecasts",
+        {"entity_id": entity_id, "type": forecast_type},
+    )
+    if isinstance(result, list) and result:
+        # Response is a list of state objects; forecast in first item's attributes
+        for item in result:
+            forecast = item.get("attributes", {}).get("forecast", [])
+            if forecast:
+                return forecast
+        # Try alternate response shape
+        for item in result:
+            if "forecast" in item:
+                return item["forecast"]
+    # Also try as dict response
+    if isinstance(result, dict):
+        fc = result.get(entity_id, {})
+        if isinstance(fc, dict):
+            return fc.get("forecast", [])
+    return []
+
+
+def _get_ai_weather_description(weather_data: dict[str, Any], forecast: list[dict[str, Any]]) -> str:
+    """Try to get an AI-generated weather preparation tip via conversation.process."""
+    if not HASS_API_BASE:
+        return ""
+    condition = weather_data.get("state", "unknown")
+    attrs = weather_data.get("attributes", {}) or {}
+    temp = attrs.get("temperature", "")
+    temp_unit = attrs.get("temperature_unit", "")
+    humidity = attrs.get("humidity", "")
+
+    today_fc = forecast[0] if forecast else {}
+    today_hi = today_fc.get("temperature", "")
+    today_lo = today_fc.get("templow", "")
+    today_cond = today_fc.get("condition", condition)
+    precip = today_fc.get("precipitation_probability", "")
+
+    prompt = (
+        f"In one concise sentence, how should someone prepare for today's weather? "
+        f"Current: {condition}, {temp}{temp_unit}, humidity {humidity}%. "
+        f"Today's forecast: {today_cond}, high {today_hi}, low {today_lo}"
+    )
+    if precip:
+        prompt += f", {precip}% chance of precipitation"
+    prompt += ". Be practical and specific."
+
+    result = hass_post_json("/services/conversation/process", {"text": prompt})
+    if isinstance(result, list) and result:
+        speech = result[0].get("attributes", {}).get("speech", {})
+        if isinstance(speech, dict):
+            return speech.get("plain", {}).get("speech", "")
+    if isinstance(result, dict):
+        resp = result.get("response", {})
+        if isinstance(resp, dict):
+            speech = resp.get("speech", {})
+            if isinstance(speech, dict):
+                return speech.get("plain", {}).get("speech", "")
+    return ""
+
+
+def _detect_utility_sensors(states: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Find energy, water, solar, gas sensors with their cost counterparts."""
+    utilities: dict[str, dict[str, Any]] = {}
+    device_classes = {"energy": "Energy", "water": "Water", "gas": "Gas"}
+
+    for s in states:
+        eid = str(s.get("entity_id", ""))
+        if not eid.startswith("sensor."):
+            continue
+        attrs = s.get("attributes", {}) or {}
+        dc = str(attrs.get("device_class", ""))
+        state_class = str(attrs.get("state_class", ""))
+
+        if dc in device_classes and state_class in ("total", "total_increasing", "measurement"):
+            unit = str(attrs.get("unit_of_measurement", "")).strip()
+            label = attrs.get("friendly_name", eid)
+            key = f"{dc}_{eid}"
+
+            # Classify solar vs grid energy by name heuristics
+            category = device_classes[dc]
+            lower_name = label.lower()
+            if dc == "energy":
+                if any(w in lower_name for w in ("solar", "pv", "generation", "production")):
+                    category = "Solar"
+                elif any(w in lower_name for w in ("export", "feed")):
+                    category = "Solar Export"
+
+            try:
+                val = float(s.get("state", ""))
+            except (ValueError, TypeError):
+                continue
+
+            utilities[key] = {
+                "entity_id": eid,
+                "label": label,
+                "category": category,
+                "value": val,
+                "unit": unit,
+                "device_class": dc,
+            }
+
+    # Find cost sensors — look for monetary device_class or *_cost patterns
+    cost_sensors: dict[str, dict[str, Any]] = {}
+    for s in states:
+        eid = str(s.get("entity_id", ""))
+        if not eid.startswith("sensor."):
+            continue
+        attrs = s.get("attributes", {}) or {}
+        dc = str(attrs.get("device_class", ""))
+        if dc == "monetary":
+            try:
+                val = float(s.get("state", ""))
+                cost_sensors[eid] = {
+                    "entity_id": eid,
+                    "label": attrs.get("friendly_name", eid),
+                    "value": val,
+                    "unit": str(attrs.get("unit_of_measurement", "")).strip(),
+                }
+            except (ValueError, TypeError):
+                continue
+
+    # Try to match cost sensors to utility sensors by name similarity
+    for key, util in utilities.items():
+        util_name = util["label"].lower()
+        best_cost = None
+        best_score = 0
+        for ceid, csensor in cost_sensors.items():
+            cost_name = csensor["label"].lower()
+            # Simple word overlap scoring
+            util_words = set(util_name.replace("_", " ").split())
+            cost_words = set(cost_name.replace("_", " ").split())
+            common = util_words & cost_words - {"sensor", "total", "daily"}
+            if len(common) > best_score:
+                best_score = len(common)
+                best_cost = csensor
+        if best_cost and best_score >= 1:
+            util["cost_sensor"] = best_cost
+
+    return utilities
+
+
 def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
     """Previous Day's Summary — a visually rich page that exercises all nozzles.
 
-    Includes: energy use, sensor class rollups, automation counts, system stats,
-    weather, and family-relevant highlights. Uses color gradients, filled bars,
-    and fine patterns to keep every nozzle active.
+    Includes: utility usage with 30-day averages, cost projections, weather with
+    5-day forecast and AI tips, usage statistics, household status, and colorful
+    nozzle-exercising patterns.
     """
     image = Image.new("RGB", (PAGE_WIDTH, PAGE_HEIGHT), color=(255, 255, 255))
     draw = ImageDraw.Draw(image)
 
     states = fetch_all_states()
     indexed = states_by_entity(states)
-    yesterday = datetime.now().strftime("%A, %B %-d")
+    now_dt = datetime.now()
+    yesterday_dt = now_dt - timedelta(days=1)
+    yesterday = yesterday_dt.strftime("%A, %B %-d")
 
     # ── Header with gradient background ──
     _draw_gradient_rect(draw, 0, 0, PAGE_WIDTH, 320, (25, 60, 120), (60, 140, 200))
-    draw.text((120, 50), f"Daily Summary", font=FONT_TITLE, fill=(255, 255, 255))
+    draw.text((120, 50), "Daily Summary", font=FONT_TITLE, fill=(255, 255, 255))
     draw.text((120, 150), yesterday, font=FONT_SECTION, fill=(220, 235, 255))
     draw.text((120, 210), f"Printer: {printer.name}", font=FONT_SMALL, fill=(180, 210, 240))
-    draw.text((120, 250), f"Generated: {datetime.now().strftime('%I:%M %p')}", font=FONT_SMALL, fill=(180, 210, 240))
+    draw.text((120, 250), f"Generated: {now_dt.strftime('%I:%M %p')}", font=FONT_SMALL, fill=(180, 210, 240))
 
     if print_context and isinstance(print_context, dict):
         qr_url = _sanitize_qr_url(str(print_context.get("addon_page_url", "")))
@@ -1596,42 +1809,50 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
 
     y = hatch_y + 24
 
-    # ── Section: System Overview ──
+    # ── Section: System Overview (usage stats, not just counts) ──
     _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (50, 50, 70), (80, 80, 110))
     draw.text((140, y + 8), "SYSTEM OVERVIEW", font=FONT_SECTION, fill=(255, 255, 255))
     y += 64
 
     total_entities = len(states)
     unavailable = sum(1 for s in states if str(s.get("state")) in {"unknown", "unavailable"})
+    available_pct = ((total_entities - unavailable) / max(1, total_entities)) * 100
     automations = [s for s in states if str(s.get("entity_id", "")).startswith("automation.")]
     automations_on = sum(1 for a in automations if str(a.get("state")) == "on")
-    scripts = sum(1 for s in states if str(s.get("entity_id", "")).startswith("script."))
-    scenes = sum(1 for s in states if str(s.get("entity_id", "")).startswith("scene."))
+    lights = [s for s in states if str(s.get("entity_id", "")).startswith("light.")]
+    lights_on = sum(1 for l in lights if str(l.get("state")) == "on")
+    switches = [s for s in states if str(s.get("entity_id", "")).startswith("switch.")]
+    switches_on = sum(1 for s in switches if str(s.get("state")) == "on")
     updates_available = sum(1 for s in states if str(s.get("entity_id", "")).startswith("update.") and str(s.get("state")) == "on")
 
     sys_stats = [
-        f"Total entities: {total_entities}  |  Unavailable: {unavailable}",
-        f"Automations: {len(automations)} ({automations_on} active)  |  Scripts: {scripts}  |  Scenes: {scenes}",
+        f"{_fmt_num(total_entities, 0)} entities  |  {_fmt_num(available_pct, 1)}% available  |  {_fmt_num(unavailable, 0)} unavailable",
+        f"Automations: {_fmt_num(automations_on, 0)}/{_fmt_num(len(automations), 0)} active  |  Lights: {_fmt_num(lights_on, 0)}/{_fmt_num(len(lights), 0)} on  |  Switches: {_fmt_num(switches_on, 0)}/{_fmt_num(len(switches), 0)} on",
     ]
     if updates_available:
-        sys_stats.append(f"Updates available: {updates_available}")
+        sys_stats.append(f"Updates available: {_fmt_num(updates_available, 0)}")
 
     for line in sys_stats:
         draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
         y += line_height(FONT_BODY) + 8
     y += 16
 
-    # ── Section: Sensor Domain Rollup ──
+    # ── Section: Sensor Usage Stats ──
     _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (30, 100, 70), (60, 160, 100))
-    draw.text((140, y + 8), "SENSOR BREAKDOWN", font=FONT_SECTION, fill=(255, 255, 255))
+    draw.text((140, y + 8), "SENSOR ACTIVITY", font=FONT_SECTION, fill=(255, 255, 255))
     y += 64
 
-    domain_counts: dict[str, int] = {}
+    # Count entities by state rather than just by domain
+    domain_active: dict[str, tuple[int, int]] = {}  # domain -> (active, total)
     for s in states:
         eid = str(s.get("entity_id", ""))
-        if "." in eid:
-            domain = eid.split(".", 1)[0]
-            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        if "." not in eid:
+            continue
+        domain = eid.split(".", 1)[0]
+        state_val = str(s.get("state", ""))
+        is_active = state_val not in ("unknown", "unavailable", "off", "idle", "standby", "closed", "locked", "not_home", "")
+        active, total = domain_active.get(domain, (0, 0))
+        domain_active[domain] = (active + (1 if is_active else 0), total + 1)
 
     domain_colors = {
         "sensor": (52, 152, 219),
@@ -1643,56 +1864,102 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
         "media_player": (26, 188, 156),
         "cover": (127, 140, 141),
     }
-    top_domains = sorted(domain_counts.items(), key=lambda x: -x[1])[:8]
-    bar_values = [(d, float(c), domain_colors.get(d, (100, 100, 180))) for d, c in top_domains]
-    y = _draw_bar_chart(draw, 140, y, PAGE_WIDTH - 280, 280, bar_values, FONT_BODY)
-    y += 20
+    top_domains = sorted(domain_active.items(), key=lambda x: -x[1][1])[:8]
 
-    # ── Section: Energy & Climate ──
-    energy_entities = [s for s in states if str(s.get("entity_id", "")).startswith("sensor.") and str(s.get("attributes", {}).get("device_class", "")) in ("energy", "power", "gas")]
-    climate_entities = [s for s in states if str(s.get("entity_id", "")).startswith("climate.")]
+    for domain, (active, total) in top_domains:
+        color = domain_colors.get(domain, (100, 100, 180))
+        pct = (active / max(1, total)) * 100
+        bar_w = max(4, int((pct / 100) * (PAGE_WIDTH - 640)))
+        _draw_gradient_rect(draw, 380, y, 380 + bar_w, y + 28, color, (min(255, color[0] + 60), min(255, color[1] + 60), min(255, color[2] + 60)), vertical=False)
+        draw.rectangle((380, y, 380 + bar_w, y + 28), outline=(30, 30, 30), width=1)
+        draw.text((140, y + 2), domain[:20], font=FONT_BODY, fill=(30, 30, 30))
+        draw.text((390 + bar_w, y + 2), f"{_fmt_num(active, 0)}/{_fmt_num(total, 0)} active ({_fmt_num(pct, 0)}%)", font=FONT_BODY, fill=(60, 60, 60))
+        y += 36
+    y += 16
 
-    if energy_entities or climate_entities:
+    # ── Section: Utility Usage (energy, water, solar, gas) ──
+    utility_sensors = _detect_utility_sensors(states)
+    if utility_sensors:
         _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (180, 80, 20), (220, 140, 40))
-        draw.text((140, y + 8), "ENERGY & CLIMATE", font=FONT_SECTION, fill=(255, 255, 255))
+        draw.text((140, y + 8), "UTILITY USAGE", font=FONT_SECTION, fill=(255, 255, 255))
         y += 64
 
-        shown = 0
-        for s in energy_entities[:6]:
-            eid = s.get("entity_id", "")
-            friendly = s.get("attributes", {}).get("friendly_name", eid)
-            state_val = s.get("state", "unknown")
-            unit = s.get("attributes", {}).get("unit_of_measurement", "")
-            draw.text((140, y), f"{friendly}: {state_val} {unit}".strip(), font=FONT_BODY, fill=(35, 35, 35))
-            y += line_height(FONT_BODY) + 6
-            shown += 1
-            if y > PAGE_HEIGHT - 700:
-                break
+        # Group by category
+        by_cat: dict[str, list[dict[str, Any]]] = {}
+        for util in utility_sensors.values():
+            by_cat.setdefault(util["category"], []).append(util)
 
-        for s in climate_entities[:3]:
-            if y > PAGE_HEIGHT - 700:
+        cat_icons = {"Energy": "\u26a1", "Solar": "\u2600", "Solar Export": "\u2197", "Water": "\U0001f4a7", "Gas": "\U0001f525"}
+        cat_colors = {
+            "Energy": (52, 152, 219),
+            "Solar": (241, 196, 15),
+            "Solar Export": (230, 126, 34),
+            "Water": (46, 204, 113),
+            "Gas": (231, 76, 60),
+        }
+
+        for cat_name in ["Energy", "Solar", "Solar Export", "Water", "Gas"]:
+            cat_sensors = by_cat.get(cat_name, [])
+            if not cat_sensors or y > PAGE_HEIGHT - 500:
+                continue
+            icon = cat_icons.get(cat_name, "")
+            color = cat_colors.get(cat_name, (100, 100, 100))
+
+            for util in cat_sensors[:3]:
+                val = util["value"]
+                unit = util["unit"]
+                label = util["label"]
+
+                # Fetch 30-day history for rolling average
+                history = _fetch_history_stats(util["entity_id"], days=30)
+                avg_30d = sum(history) / max(1, len(history)) if history else None
+
+                line = f"{icon} {label}: {_fmt_num(val)} {unit}"
+                draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
+                y += line_height(FONT_BODY) + 4
+
+                if avg_30d is not None and avg_30d > 0:
+                    diff_pct = ((val - avg_30d) / avg_30d) * 100
+                    direction = "\u2191" if diff_pct > 0 else "\u2193" if diff_pct < 0 else "\u2194"
+                    trend_color = (200, 50, 50) if diff_pct > 10 else (50, 150, 50) if diff_pct < -10 else (100, 100, 100)
+                    trend_line = f"  30-day avg: {_fmt_num(avg_30d)} {unit}  {direction} {_fmt_num(abs(diff_pct), 1)}%"
+                    draw.text((160, y), trend_line, font=FONT_SMALL, fill=trend_color)
+                    y += line_height(FONT_SMALL) + 4
+
+                # Cost and bill projection
+                cost = util.get("cost_sensor")
+                if cost:
+                    cost_val = cost["value"]
+                    cost_unit = cost["unit"]
+                    days_in_month = 30
+                    daily_cost = cost_val  # Assume current value is today's cost
+                    projected = daily_cost * days_in_month
+                    cost_line = f"  Today: {cost_unit}{_fmt_num(cost_val)} | Projected monthly: {cost_unit}{_fmt_num(projected)}"
+                    draw.text((160, y), cost_line, font=FONT_SMALL, fill=(120, 80, 20))
+                    y += line_height(FONT_SMALL) + 4
+
+                y += 4
+
+        # Climate entities
+        climate_entities = [s for s in states if str(s.get("entity_id", "")).startswith("climate.")]
+        for s in climate_entities[:2]:
+            if y > PAGE_HEIGHT - 500:
                 break
-            eid = s.get("entity_id", "")
-            friendly = s.get("attributes", {}).get("friendly_name", eid)
+            friendly = s.get("attributes", {}).get("friendly_name", s.get("entity_id", ""))
             state_val = s.get("state", "unknown")
             temp = s.get("attributes", {}).get("current_temperature", "")
             target = s.get("attributes", {}).get("temperature", "")
-            line = f"{friendly}: {state_val}"
+            line = f"\U0001f321 {friendly}: {state_val}"
             if temp:
-                line += f" (current: {temp}"
+                line += f" ({_fmt_num(float(temp))}°"
                 if target:
-                    line += f", target: {target}"
+                    line += f" \u2192 {_fmt_num(float(target))}°"
                 line += ")"
             draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
             y += line_height(FONT_BODY) + 6
-            shown += 1
-
-        if shown == 0:
-            draw.text((140, y), "No energy data available.", font=FONT_BODY, fill=(100, 100, 100))
-            y += line_height(FONT_BODY) + 6
         y += 16
 
-    # ── Section: Weather ──
+    # ── Section: Weather (yesterday + today + 5-day forecast) ──
     weather_entity = detect_weather_entity(printer, states)
     weather = indexed.get(weather_entity)
     if weather:
@@ -1702,46 +1969,80 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
         attrs = weather.get("attributes", {}) or {}
         condition = weather.get("state", "unknown")
         temp = attrs.get("temperature", "")
-        temp_unit = attrs.get("temperature_unit", "")
+        temp_unit = attrs.get("temperature_unit", "°")
         humidity = attrs.get("humidity", "")
         wind = attrs.get("wind_speed", "")
-        pressure = attrs.get("pressure", "")
-        weather_lines = [f"Condition: {condition}"]
+        wind_unit = attrs.get("wind_speed_unit", "")
+
+        # Current conditions with large text
+        draw.text((140, y), f"Now: {condition.replace('_', ' ').title()}", font=FONT_SECTION, fill=(25, 60, 120))
+        y += line_height(FONT_SECTION) + 4
         if temp:
-            weather_lines.append(f"Temperature: {temp} {temp_unit}".strip())
-        parts = []
+            draw.text((140, y), f"{_fmt_num(float(temp))}{temp_unit}", font=FONT_TITLE, fill=(35, 35, 35))
+            y += line_height(FONT_TITLE) + 4
+
+        details = []
         if humidity:
-            parts.append(f"Humidity: {humidity}%")
+            details.append(f"Humidity: {_fmt_num(float(humidity), 0)}%")
         if wind:
-            parts.append(f"Wind: {wind}")
-        if pressure:
-            parts.append(f"Pressure: {pressure}")
-        if parts:
-            weather_lines.append("  |  ".join(parts))
+            details.append(f"Wind: {_fmt_num(float(wind))} {wind_unit}".strip())
+        if details:
+            draw.text((140, y), "  |  ".join(details), font=FONT_BODY, fill=(60, 60, 60))
+            y += line_height(FONT_BODY) + 8
 
-        forecast = attrs.get("forecast", [])
-        if isinstance(forecast, list) and forecast:
-            fc = forecast[0]
-            fc_cond = fc.get("condition", "")
-            fc_hi = fc.get("temperature", "")
-            fc_lo = fc.get("templow", "")
-            if fc_cond:
-                weather_lines.append(f"Forecast: {fc_cond}, High {fc_hi} / Low {fc_lo}")
+        # Fetch 5-day forecast via HA service
+        forecast = _fetch_weather_forecast(weather_entity, "daily")
 
-        for line in weather_lines:
-            draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
-            y += line_height(FONT_BODY) + 6
+        # Draw forecast as a mini-table
+        if forecast:
+            y += 8
+            _draw_gradient_rect(draw, 140, y, PAGE_WIDTH - 140, y + 40, (220, 235, 250), (200, 220, 245))
+            draw.text((160, y + 6), "5-DAY FORECAST", font=FONT_SMALL, fill=(40, 60, 100))
+            y += 48
+
+            for fc in forecast[:5]:
+                if y > PAGE_HEIGHT - 350:
+                    break
+                fc_date = str(fc.get("datetime", ""))[:10]
+                try:
+                    fc_day = datetime.fromisoformat(fc_date.replace("Z", "+00:00")).strftime("%a %-d")
+                except Exception:
+                    fc_day = fc_date
+                fc_cond = str(fc.get("condition", "")).replace("_", " ").title()
+                fc_hi = fc.get("temperature", "")
+                fc_lo = fc.get("templow", "")
+                fc_precip = fc.get("precipitation_probability", "")
+
+                fc_line = f"  {fc_day}: {fc_cond}"
+                if fc_hi:
+                    fc_line += f"  H: {_fmt_num(float(fc_hi), 0)}°"
+                if fc_lo:
+                    fc_line += f"  L: {_fmt_num(float(fc_lo), 0)}°"
+                if fc_precip:
+                    fc_line += f"  \U0001f4a7{_fmt_num(float(fc_precip), 0)}%"
+
+                draw.text((140, y), fc_line, font=FONT_BODY, fill=(35, 35, 35))
+                y += line_height(FONT_BODY) + 4
+
+            y += 8
+
+        # AI weather preparation tip
+        ai_desc = _get_ai_weather_description(weather, forecast)
+        if ai_desc:
+            _draw_gradient_rect(draw, 140, y, PAGE_WIDTH - 140, y + 6, (80, 140, 210), (40, 80, 140))
+            y += 12
+            y = draw_wrapped_text(draw, 140, y, f"\U0001f4a1 {ai_desc}", FONT_BODY, (40, 60, 100), PAGE_WIDTH - 280)
+            y += 8
+
         y += 16
 
     # ── Section: Family Highlights ──
     person_entities = [s for s in states if str(s.get("entity_id", "")).startswith("person.")]
     device_trackers = sum(1 for s in states if str(s.get("entity_id", "")).startswith("device_tracker."))
-    lights_on = sum(1 for s in states if str(s.get("entity_id", "")).startswith("light.") and str(s.get("state")) == "on")
-    total_lights = sum(1 for s in states if str(s.get("entity_id", "")).startswith("light."))
     doors_open = sum(1 for s in states if str(s.get("entity_id", "")).startswith("binary_sensor.") and "door" in str(s.get("entity_id", "")).lower() and str(s.get("state")) == "on")
     locks = [s for s in states if str(s.get("entity_id", "")).startswith("lock.")]
 
-    if person_entities or total_lights:
+    if person_entities or lights:
         _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (120, 50, 130), (180, 80, 180))
         draw.text((140, y + 8), "HOUSEHOLD", font=FONT_SECTION, fill=(255, 255, 255))
         y += 64
@@ -1752,12 +2053,12 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
             draw.text((140, y), f"{name}: {loc}", font=FONT_BODY, fill=(35, 35, 35))
             y += line_height(FONT_BODY) + 6
 
-        household_lines = [f"Lights: {lights_on}/{total_lights} on  |  Tracked devices: {device_trackers}"]
+        household_lines = [f"Lights: {_fmt_num(lights_on, 0)}/{_fmt_num(len(lights), 0)} on  |  Tracked devices: {_fmt_num(device_trackers, 0)}"]
         if doors_open:
-            household_lines.append(f"Open doors/windows: {doors_open}")
+            household_lines.append(f"Open doors/windows: {_fmt_num(doors_open, 0)}")
         if locks:
-            locked = sum(1 for l in locks if str(l.get("state")) == "locked")
-            household_lines.append(f"Locks: {locked}/{len(locks)} locked")
+            locked = sum(1 for lk in locks if str(lk.get("state")) == "locked")
+            household_lines.append(f"Locks: {_fmt_num(locked, 0)}/{_fmt_num(len(locks), 0)} locked")
 
         for line in household_lines:
             draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
@@ -1802,12 +2103,14 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
     draw.text((120, footer_y), footer_text, font=FONT_SMALL, fill=(100, 100, 100))
     draw.text((PAGE_WIDTH - 600, footer_y), f"Keeping {printer.name} healthy", font=FONT_SMALL, fill=(100, 100, 100))
 
+    utility_count = len(utility_sensors)
+    domain_count = len(domain_active)
     return image, {
         "template": "daily_summary",
         "total_entities": len(states),
-        "domains": len(domain_counts),
+        "domains": domain_count,
         "automations": len(automations),
-        "energy_entities": len(energy_entities),
+        "utility_sensors": utility_count,
     }
 
 
@@ -5355,10 +5658,17 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if template_name not in SUPPORTED_TEMPLATES:
                     template_name = printer.template
                 try:
-                    file_path, _meta = generate_template_image(printer, template_name)
-                    with open(file_path, "rb") as fh:
-                        data = fh.read()
-                    os.unlink(file_path)
+                    cache_key = (printer.printer_id, template_name)
+                    now = time.time()
+                    cached = _PREVIEW_CACHE.get(cache_key)
+                    if cached and (now - cached[1]) < _PREVIEW_CACHE_TTL:
+                        data = cached[0]
+                    else:
+                        file_path, _meta = generate_template_image(printer, template_name)
+                        with open(file_path, "rb") as fh:
+                            data = fh.read()
+                        os.unlink(file_path)
+                        _PREVIEW_CACHE[cache_key] = (data, now)
                     self._write_bytes(HTTPStatus.OK, data, "image/jpeg")
                 except Exception as exc:
                     LOG.warning("Preview generation failed: %s", exc)
