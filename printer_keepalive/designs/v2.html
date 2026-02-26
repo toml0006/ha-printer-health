@@ -1147,29 +1147,36 @@ function renderDiscovery() {
   var table = h('table', {className:'disc-table'});
   var thead = h('thead');
   thead.append(h('tr', null,
-    h('th', null, 'Printer'), h('th', null, 'URI'), h('th', null, 'Type'),
-    h('th', null, 'Reachable'), h('th', null, 'Status')
+    h('th', null, 'Name'), h('th', null, 'Model'), h('th', null, 'Host'), h('th', null, 'State'), h('th', null, 'Type'),
+    h('th', null, 'Reachable'), h('th', null, 'Action')
   ));
   table.append(thead);
   var tbody = h('tbody');
-  printers.forEach(function(p) {
-    var statusTd = h('td', null);
+  printers.forEach(function(p, idx) {
+    var actionTd = h('td', null);
     if (p.already_configured) {
-      statusTd.innerHTML = '<span class="conf-badge yes">Configured</span>';
+      actionTd.innerHTML = '<span class="conf-badge yes">Configured</span>';
     } else {
       var addBtn = h('button', {
         className: 'btn-glass primary btn-add-printer',
         style: 'font-size:11px;padding:4px 12px;min-width:0',
+        'data-disc-idx': String(idx),
         onClick: async function() {
           addBtn.disabled = true;
           addBtn.textContent = 'Adding\u2026';
           try {
+            var typeSelect = panel.querySelector('.disc-type-select[data-disc-idx="' + idx + '"]');
+            if (typeSelect) {
+              p.suggested_config.printer_type = typeSelect.value;
+              p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
+            }
             var cfgResp = await requestJson('config');
             var opts = cfgResp.options || {};
             if (!Array.isArray(opts.printers)) opts.printers = [];
             opts.printers.push(p.suggested_config);
             await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-            showToast('Added ' + p.printer_name + ' \u2014 restart to apply', 'success');
+            var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
+            showToast(msg, 'success');
             refreshAll();
           } catch (err) {
             showToast('Failed to add: ' + err.message, 'error');
@@ -1178,14 +1185,37 @@ function renderDiscovery() {
           }
         }
       }, 'Add');
-      statusTd.append(addBtn);
+      actionTd.append(addBtn);
     }
+
+    var typeTd = h('td', null);
+    if (p.already_configured) {
+      typeTd.textContent = p.printer_type_guess || '';
+      typeTd.style.textTransform = 'capitalize';
+    } else {
+      var typeVal = p.printer_type_guess || 'inkjet';
+      var sel = h('select', {className:'disc-type-select', 'data-disc-idx': String(idx), style:'font-size:12px;padding:2px 4px;'});
+      var optInk = h('option', {value:'inkjet'}, 'inkjet');
+      var optLas = h('option', {value:'laser'}, 'laser');
+      if (typeVal === 'laser') optLas.selected = true; else optInk.selected = true;
+      sel.append(optInk, optLas);
+      sel.addEventListener('change', function() {
+        if (p.suggested_config) {
+          p.suggested_config.printer_type = sel.value;
+          p.suggested_config.cadence_hours = sel.value === 'laser' ? 720 : 168;
+        }
+      });
+      typeTd.append(sel);
+    }
+
     tbody.append(h('tr', null,
       h('td', {style:'font-weight:600'}, p.printer_name),
-      h('td', {className:'uri'}, p.uri),
-      h('td', {style:'text-transform:capitalize'}, p.printer_type_guess || ''),
+      h('td', null, p.printer_make_and_model || '\u2014'),
+      h('td', {className:'uri'}, p.host || ''),
+      h('td', null, p.printer_state || '\u2014'),
+      typeTd,
       h('td', {innerHTML: '<span class="reach-dot '+(p.reachable?'yes':'no')+'"></span>'+(p.reachable?'Yes':'No')}),
-      statusTd
+      actionTd
     ));
   });
   table.append(tbody);

@@ -1786,10 +1786,19 @@ function buildDiscovery() {
     } else {
       configCell = '<button class="btn btn-primary disc-add-btn" style="font-size:12px;padding:4px 12px;" data-disc-idx="' + idx + '">Add</button>';
     }
+    var typeVal = p.printer_type_guess || 'inkjet';
+    var typeCell = p.already_configured
+      ? '<td>' + escHtml(typeVal) + '</td>'
+      : '<td><select class="disc-type-select" data-disc-idx="' + idx + '" style="font-size:12px;padding:2px 4px;">' +
+          '<option value="inkjet"' + (typeVal === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
+          '<option value="laser"' + (typeVal === 'laser' ? ' selected' : '') + '>laser</option>' +
+        '</select></td>';
     return '<tr>' +
       '<td style="font-weight:500">' + escHtml(p.printer_name) + '</td>' +
-      '<td class="mono">' + escHtml(p.uri) + '</td>' +
-      '<td>' + escHtml(p.printer_type_guess) + '</td>' +
+      '<td>' + escHtml(p.printer_make_and_model || '\u2014') + '</td>' +
+      '<td class="mono">' + escHtml(p.host) + '</td>' +
+      '<td>' + escHtml(p.printer_state || '\u2014') + '</td>' +
+      typeCell +
       '<td>' + (p.reachable ? '<span class="pill pill-green">Online</span>' : '<span class="pill pill-red">Offline</span>') + '</td>' +
       '<td>' + configCell + '</td>' +
     '</tr>';
@@ -1799,12 +1808,23 @@ function buildDiscovery() {
     '<div class="card-title">Discovered Printers</div>' +
     '<div style="overflow-x:auto">' +
       '<table class="disc-table">' +
-        '<thead><tr><th>Name</th><th>URI</th><th>Type</th><th>Status</th><th>Config</th></tr></thead>' +
+        '<thead><tr><th>Name</th><th>Model</th><th>Host</th><th>State</th><th>Type</th><th>Status</th><th>Config</th></tr></thead>' +
         '<tbody>' + tableRows + '</tbody>' +
       '</table>' +
     '</div>'
   );
   container.appendChild(tableCard);
+
+  tableCard.querySelectorAll('.disc-type-select').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      var idx = parseInt(sel.getAttribute('data-disc-idx'), 10);
+      var p = d.printers[idx];
+      if (p && p.suggested_config) {
+        p.suggested_config.printer_type = sel.value;
+        p.suggested_config.cadence_hours = sel.value === 'laser' ? 720 : 168;
+      }
+    });
+  });
 
   tableCard.querySelectorAll('.disc-add-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
@@ -1813,12 +1833,20 @@ function buildDiscovery() {
       btn.disabled = true;
       btn.textContent = 'Adding...';
       try {
+        var typeSelect = tableCard.querySelector('.disc-type-select[data-disc-idx="' + idx + '"]');
+        if (typeSelect) {
+          p.suggested_config.printer_type = typeSelect.value;
+          p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
+        }
         var cfgResp = await requestJson('config');
         var opts = cfgResp.options || {};
         if (!Array.isArray(opts.printers)) opts.printers = [];
         opts.printers.push(p.suggested_config);
         await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-        showToast('Added ' + p.printer_name + ' — restart to apply');
+        var restartBtn = document.getElementById('cfg-restart');
+        var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
+        if (restartBtn) msg += ' Use the Restart button to apply.';
+        showToast(msg);
         refreshAll();
       } catch (e) {
         btn.disabled = false;

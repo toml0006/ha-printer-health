@@ -1370,11 +1370,12 @@
         <table>
           <thead>
             <tr>
-              <th>Printer</th>
-              <th>URI</th>
+              <th>Name</th>
+              <th>Model</th>
+              <th>Host</th>
+              <th>State</th>
               <th>Type</th>
               <th>Reachable</th>
-              <th>Configured</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -1890,31 +1891,58 @@ function renderDiscovery(discovery) {
 
   var dtbody = document.getElementById('discovery-tbody');
   dtbody.innerHTML = '';
-  printers.forEach(function(p) {
+  printers.forEach(function(p, idx) {
     var tr = document.createElement('tr');
+    var typeVal = p.printer_type_guess || 'inkjet';
+    var typeCell = p.already_configured
+      ? '<td><span class="badge ' + (typeVal === 'laser' ? 'badge-blue' : 'badge-yellow') + '">' + esc(typeVal) + '</span></td>'
+      : '<td><select class="disc-type-select" data-disc-idx="' + idx + '" style="font-size:11px;padding:2px 4px;font-weight:700;border:2px solid var(--black);">' +
+          '<option value="inkjet"' + (typeVal === 'inkjet' ? ' selected' : '') + '>inkjet</option>' +
+          '<option value="laser"' + (typeVal === 'laser' ? ' selected' : '') + '>laser</option>' +
+        '</select></td>';
     tr.innerHTML =
       '<td class="printer-name">' + esc(p.printer_name) + '</td>' +
-      '<td>' + esc(p.uri) + '</td>' +
-      '<td><span class="badge ' + (p.printer_type_guess === 'laser' ? 'badge-blue' : 'badge-yellow') + '">' + esc(p.printer_type_guess) + '</span></td>' +
-      '<td><span class="badge ' + (p.reachable ? 'badge-green' : 'badge-red') + '">' + (p.reachable ? 'Yes' : 'No') + '</span></td>' +
-      '<td><span class="badge ' + (p.already_configured ? 'badge-green' : '') + '">' + (p.already_configured ? 'Yes' : 'No') + '</span></td>' +
+      '<td>' + esc(p.printer_make_and_model || '\u2014') + '</td>' +
+      '<td>' + esc(p.host || '') + '</td>' +
+      '<td>' + esc(p.printer_state || '\u2014') + '</td>' +
+      typeCell +
+      '<td><span class="badge ' + (p.reachable ? 'badge-green' : 'badge-red') + '">' + (p.reachable ? 'Online' : 'Offline') + '</span></td>' +
       '<td></td>';
+
+    // Type select change handler
+    var typeSel = tr.querySelector('.disc-type-select');
+    if (typeSel) {
+      typeSel.addEventListener('change', function() {
+        if (p.suggested_config) {
+          p.suggested_config.printer_type = typeSel.value;
+          p.suggested_config.cadence_hours = typeSel.value === 'laser' ? 720 : 168;
+        }
+      });
+    }
+
     var actionTd = tr.querySelector('td:last-child');
     if (!p.already_configured && p.reachable) {
       var btn = document.createElement('button');
       btn.className = 'btn';
       btn.textContent = '+ Add';
+      btn.setAttribute('data-disc-idx', idx);
       btn.style.cssText = 'padding:5px 14px;font-size:11px;font-weight:800;background:var(--mint);border:2px solid var(--black);cursor:pointer';
       btn.addEventListener('click', async function() {
         try {
           btn.disabled = true;
           btn.textContent = '...';
+          var typeSelect = dtbody.querySelector('.disc-type-select[data-disc-idx="' + idx + '"]');
+          if (typeSelect) {
+            p.suggested_config.printer_type = typeSelect.value;
+            p.suggested_config.cadence_hours = typeSelect.value === 'laser' ? 720 : 168;
+          }
           var cfgResp = await requestJson('config');
           var opts = cfgResp.options || {};
           if (!Array.isArray(opts.printers)) opts.printers = [];
           opts.printers.push(p.suggested_config);
           await requestJson('config', { method: 'POST', body: JSON.stringify({ options: opts }) });
-          showToast('Added ' + p.printer_name + ' — restart to apply');
+          var msg = 'Added ' + p.printer_name + ' to config. Restart the add-on to apply.';
+          showToast(msg);
           refreshAll();
         } catch (err) {
           showToast('Failed to add printer: ' + err.message, true);

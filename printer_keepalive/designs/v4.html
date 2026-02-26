@@ -545,7 +545,7 @@ textarea.cfg-input{min-height:80px;resize:vertical;line-height:1.6;}
     <div class="card boot-hidden">
       <div class="card-title">&gt; <span>DISCOVERED_PRINTERS</span></div>
       <table class="disc-table" id="discTable">
-        <thead><tr><th>Printer</th><th>URI</th><th>Type</th><th>Status</th><th>Configured</th><th></th></tr></thead>
+        <thead><tr><th>Printer</th><th>Model</th><th>Host</th><th>State</th><th>Type</th><th>Status</th><th></th></tr></thead>
         <tbody id="discBody"></tbody>
       </table>
     </div>
@@ -1063,22 +1063,48 @@ function renderDiscovery(){
   var printers = d.printers || [];
   document.getElementById('discBody').innerHTML=printers.map(function(p,i){
     var rCls=p.reachable?'ok':'err';
-    var cCls=p.already_configured?'ok':'warn';
-    var actionCol=p.already_configured?'':'<button class="btn btn-add-disc" data-idx="'+i+'" style="padding:2px 10px;font-size:11px;line-height:1.4">[ ADD ]</button>';
-    return '<tr><td style="color:var(--bright);font-weight:600">'+esc(p.printer_name)+'</td><td class="uri">'+esc(p.uri)+'</td><td>'+esc((p.printer_type_guess||'').toUpperCase())+'</td><td><span class="tag '+rCls+'">'+(p.reachable?'[ONLINE]':'[OFFLINE]')+'</span></td><td><span class="tag '+cCls+'">'+(p.already_configured?'[YES]':'[NO]')+'</span></td><td>'+actionCol+'</td></tr>';
+    var typeVal=(p.printer_type_guess||'inkjet');
+    var typeCell=p.already_configured
+      ?'<td>'+esc(typeVal.toUpperCase())+'</td>'
+      :'<td><select class="disc-type-select" data-disc-idx="'+i+'" style="font-size:11px;padding:1px 4px;background:var(--bg);color:var(--dim);border:1px solid var(--dim);font-family:inherit;">'
+        +'<option value="inkjet"'+(typeVal==='inkjet'?' selected':'')+'>INKJET</option>'
+        +'<option value="laser"'+(typeVal==='laser'?' selected':'')+'>LASER</option>'
+        +'</select></td>';
+    var actionCol=p.already_configured?'<span class="tag ok">[CONFIGURED]</span>':'<button class="btn btn-add-disc" data-idx="'+i+'" data-disc-idx="'+i+'" style="padding:2px 10px;font-size:11px;line-height:1.4">[ ADD ]</button>';
+    return '<tr><td style="color:var(--bright);font-weight:600">'+esc(p.printer_name)+'</td><td>'+esc(p.printer_make_and_model||'\u2014')+'</td><td>'+esc(p.host||'')+'</td><td>'+esc(p.printer_state||'\u2014')+'</td>'+typeCell+'<td><span class="tag '+rCls+'">'+(p.reachable?'[ONLINE]':'[OFFLINE]')+'</span></td><td>'+actionCol+'</td></tr>';
   }).join('');
+
+  document.querySelectorAll('.disc-type-select').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      var idx=parseInt(sel.getAttribute('data-disc-idx'));
+      var p=printers[idx];
+      if(p&&p.suggested_config){
+        p.suggested_config.printer_type=sel.value;
+        p.suggested_config.cadence_hours=sel.value==='laser'?720:168;
+      }
+    });
+  });
+
   document.querySelectorAll('.btn-add-disc').forEach(function(btn){
     btn.addEventListener('click', async function(){
       var idx=parseInt(this.getAttribute('data-idx'));
       var p=printers[idx];
       if(!p||!p.suggested_config) return;
       try {
+        var typeSelect=document.querySelector('.disc-type-select[data-disc-idx="'+idx+'"]');
+        if(typeSelect){
+          p.suggested_config.printer_type=typeSelect.value;
+          p.suggested_config.cadence_hours=typeSelect.value==='laser'?720:168;
+        }
         var cfgResp=await requestJson('config');
         var opts=cfgResp.options||{};
         if(!Array.isArray(opts.printers)) opts.printers=[];
         opts.printers.push(p.suggested_config);
         await requestJson('config',{method:'POST',body:JSON.stringify({options:opts})});
-        showToast('Added '+p.printer_name+' — restart to apply','ok');
+        var restartBtn=document.getElementById('btnFormRestart')||document.getElementById('btnConfigRestart');
+        var msg='Added '+p.printer_name+' to config. Restart the add-on to apply.';
+        if(restartBtn) msg+=' Use the RESTART button to apply.';
+        showToast(msg,'ok');
         refreshAll();
       } catch(e){ showToast('Add failed: '+e.message,'err'); }
     });
