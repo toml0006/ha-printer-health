@@ -249,6 +249,10 @@ If `auth_token` is configured, enter it in the dashboard session field to enable
   - One printer payload.
 - `GET /printers/<printer_id>/card`
   - Returns a Lovelace YAML snippet for a printer health/control card.
+  - Optional `?style=` parameter: `full`, `compact`, `glance`, `status`, `controls`.
+- `GET /printers/<printer_id>/preview`
+  - Returns a rendered template image as JPEG.
+  - Optional `?template=` parameter (defaults to the printer's configured template).
 - `GET /guidance`
   - Inkjet and laser maintenance guidance.
 - `GET /discovery`

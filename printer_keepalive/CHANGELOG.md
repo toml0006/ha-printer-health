@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.0
+
+### UI Overhaul
+- Rebuilt ingress dashboard as a full SPA with hash-based client-side routing.
+- Added light/dark/system theme support with FOUC prevention.
+- Introduced 5 selectable design themes: Bento Grid, Glassmorphism, Neubrutalist, Cinematic Dark, and Home Assistant Native.
+- User design preference persisted via cookie with server-side routing.
+- Added dual-mode configuration editor: organized form fields and advanced raw JSON with bidirectional sync.
+
+### New Tabs
+- **Cards**: Lovelace YAML generator with 5 card styles (Full Dashboard, Compact, Glance, Status Only, Controls Only) and copy-to-clipboard per printer.
+- **Templates**: Live JPEG preview of all print templates per printer with direct print action.
+- **Help**: Full add-on documentation including maintenance model, configuration guide, HA entity reference, and collapsible API docs. Config sections link to Help via "Learn more".
+
+### API
+- Added `GET /printers/<id>/preview?template=<name>` endpoint returning rendered template as JPEG.
+- Expanded `GET /printers/<id>/card` with `?style=` parameter and `styles_available` in response.
+
+### Fixes
+- Enabled `host_network: true` so mDNS printer discovery works from the add-on container.
+- Removed duplicate MQTT connection fields (host, port, username, password, TLS) from config schema — these are auto-discovered from the Supervisor MQTT service at runtime.
+- Added `BUILD_VERSION` label to Dockerfile for cache busting on rebuilds.
+
 ## 0.3.8
 
 - Added ingress-first configuration workflow:
