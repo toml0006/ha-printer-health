@@ -844,10 +844,32 @@ def line_height(font: ImageFont.ImageFont) -> int:
     return bottom - top
 
 
-def load_font(size: int, path: str | None = None) -> ImageFont.ImageFont:
+def _set_font_weight(font: ImageFont.FreeTypeFont, weight: int) -> None:
+    """Set the weight axis on a variable font, preserving other axes at defaults."""
+    try:
+        axes = font.get_variation_axes()
+    except Exception:
+        return
+    values = []
+    for ax in axes:
+        name = ax["name"] if isinstance(ax["name"], str) else ax["name"].decode("utf-8", errors="replace")
+        if name.lower() == "weight":
+            values.append(max(ax["minimum"], min(ax["maximum"], weight)))
+        else:
+            values.append(ax["default"])
+    try:
+        font.set_variation_by_axes(values)
+    except Exception:
+        pass
+
+
+def load_font(size: int, path: str | None = None, weight: int = 0) -> ImageFont.ImageFont:
     if path:
         try:
-            return ImageFont.truetype(path, size)
+            font = ImageFont.truetype(path, size)
+            if weight:
+                _set_font_weight(font, weight)
+            return font
         except OSError:
             pass
     candidates = (
@@ -881,10 +903,10 @@ def load_theme_fonts(design: str = "v1") -> dict[str, ImageFont.ImageFont]:
         return _FONT_CACHE[design]
     font_path = THEME_FONTS.get(design)
     fonts = {
-        "title": load_font(72, font_path),
-        "section": load_font(42, font_path),
-        "body": load_font(32, font_path),
-        "small": load_font(26, font_path),
+        "title": load_font(119, font_path, weight=700),
+        "section": load_font(69, font_path, weight=600),
+        "body": load_font(53, font_path, weight=500),
+        "small": load_font(43, font_path, weight=400),
     }
     _FONT_CACHE[design] = fonts
     return fonts
@@ -1809,6 +1831,25 @@ def _detect_utility_sensors(states: list[dict[str, Any]]) -> dict[str, dict[str,
     return utilities
 
 
+def _section_banner(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    label: str,
+    c1: tuple[int, int, int],
+    c2: tuple[int, int, int],
+) -> int:
+    """Draw a section header banner auto-sized to the section font. Returns y after banner."""
+    banner_h = line_height(FONT_SECTION) + 30
+    _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + banner_h, c1, c2)
+    draw.text((140, y + 12), label, font=FONT_SECTION, fill=(255, 255, 255))
+    return y + banner_h + 14
+
+
+def _text_width(font: ImageFont.ImageFont, text: str) -> int:
+    bbox = font.getbbox(text)
+    return bbox[2] - bbox[0]
+
+
 def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, Any] | None = None) -> tuple[Image.Image, dict[str, Any]]:
     """Previous Day's Summary — a visually rich page that exercises all nozzles.
 
@@ -1825,19 +1866,24 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
     yesterday_dt = now_dt - timedelta(days=1)
     yesterday = yesterday_dt.strftime("%A, %B %-d")
 
-    # ── Header with gradient background ──
-    _draw_gradient_rect(draw, 0, 0, PAGE_WIDTH, 320, (25, 60, 120), (60, 140, 200))
-    draw.text((120, 50), "Daily Summary", font=FONT_TITLE, fill=(255, 255, 255))
-    draw.text((120, 150), yesterday, font=FONT_SECTION, fill=(220, 235, 255))
-    draw.text((120, 210), f"Printer: {printer.name}", font=FONT_SMALL, fill=(180, 210, 240))
-    draw.text((120, 250), f"Generated: {now_dt.strftime('%I:%M %p')}", font=FONT_SMALL, fill=(180, 210, 240))
+    # ── Header with gradient background (auto-sized to font) ──
+    header_h = line_height(FONT_TITLE) + line_height(FONT_SECTION) + line_height(FONT_SMALL) * 2 + 100
+    _draw_gradient_rect(draw, 0, 0, PAGE_WIDTH, header_h, (25, 60, 120), (60, 140, 200))
+    hy = 40
+    draw.text((120, hy), "Daily Summary", font=FONT_TITLE, fill=(255, 255, 255))
+    hy += line_height(FONT_TITLE) + 12
+    draw.text((120, hy), yesterday, font=FONT_SECTION, fill=(220, 235, 255))
+    hy += line_height(FONT_SECTION) + 10
+    draw.text((120, hy), f"Printer: {printer.name}", font=FONT_SMALL, fill=(180, 210, 240))
+    hy += line_height(FONT_SMALL) + 4
+    draw.text((120, hy), f"Generated: {now_dt.strftime('%I:%M %p')}", font=FONT_SMALL, fill=(180, 210, 240))
 
     if print_context and isinstance(print_context, dict):
         qr_url = _sanitize_qr_url(str(print_context.get("addon_page_url", "")))
         _draw_qr_code(image, draw, qr_url)
 
     # ── Nozzle exercise strip — CMYK gradient bands ──
-    strip_y = 330
+    strip_y = header_h + 10
     strip_h = 30
     cmyk_colors = [
         ((0, 200, 255), (0, 80, 180)),    # Cyan
@@ -1857,10 +1903,8 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
 
     y = hatch_y + 24
 
-    # ── Section: System Overview (usage stats, not just counts) ──
-    _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (50, 50, 70), (80, 80, 110))
-    draw.text((140, y + 8), "SYSTEM OVERVIEW", font=FONT_SECTION, fill=(255, 255, 255))
-    y += 64
+    # ── Section: System Overview ──
+    y = _section_banner(draw, y, "SYSTEM OVERVIEW", (50, 50, 70), (80, 80, 110))
 
     total_entities = len(states)
     unavailable = sum(1 for s in states if str(s.get("state")) in {"unknown", "unavailable"})
@@ -1875,23 +1919,21 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
 
     sys_stats = [
         f"{_fmt_num(total_entities, 0)} entities  |  {_fmt_num(available_pct, 1)}% available  |  {_fmt_num(unavailable, 0)} unavailable",
-        f"Automations: {_fmt_num(automations_on, 0)}/{_fmt_num(len(automations), 0)} active  |  Lights: {_fmt_num(lights_on, 0)}/{_fmt_num(len(lights), 0)} on  |  Switches: {_fmt_num(switches_on, 0)}/{_fmt_num(len(switches), 0)} on",
+        f"Automations: {_fmt_num(automations_on, 0)}/{_fmt_num(len(automations), 0)} active  |  Lights: {_fmt_num(lights_on, 0)}/{_fmt_num(len(lights), 0)} on",
+        f"Switches: {_fmt_num(switches_on, 0)}/{_fmt_num(len(switches), 0)} on",
     ]
     if updates_available:
         sys_stats.append(f"Updates available: {_fmt_num(updates_available, 0)}")
 
     for line in sys_stats:
         draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
-        y += line_height(FONT_BODY) + 8
-    y += 16
+        y += line_height(FONT_BODY) + 10
+    y += 20
 
-    # ── Section: Sensor Usage Stats ──
-    _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (30, 100, 70), (60, 160, 100))
-    draw.text((140, y + 8), "SENSOR ACTIVITY", font=FONT_SECTION, fill=(255, 255, 255))
-    y += 64
+    # ── Section: Sensor Activity ──
+    y = _section_banner(draw, y, "SENSOR ACTIVITY", (30, 100, 70), (60, 160, 100))
 
-    # Count entities by state rather than just by domain
-    domain_active: dict[str, tuple[int, int]] = {}  # domain -> (active, total)
+    domain_active: dict[str, tuple[int, int]] = {}
     for s in states:
         eid = str(s.get("entity_id", ""))
         if "." not in eid:
@@ -1914,30 +1956,34 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
     }
     top_domains = sorted(domain_active.items(), key=lambda x: -x[1][1])[:8]
 
+    # Measure widest domain label to position bars consistently
+    max_label_w = max((_text_width(FONT_BODY, d[0]) for d, _ in top_domains), default=200) + 30
+    bar_left = 140 + max_label_w
+    bar_max_w = PAGE_WIDTH - bar_left - 120 - 400
+    row_h = line_height(FONT_BODY) + 14
+
     for domain, (active, total) in top_domains:
         color = domain_colors.get(domain, (100, 100, 180))
         pct = (active / max(1, total)) * 100
-        bar_w = max(4, int((pct / 100) * (PAGE_WIDTH - 640)))
-        _draw_gradient_rect(draw, 380, y, 380 + bar_w, y + 28, color, (min(255, color[0] + 60), min(255, color[1] + 60), min(255, color[2] + 60)), vertical=False)
-        draw.rectangle((380, y, 380 + bar_w, y + 28), outline=(30, 30, 30), width=1)
-        draw.text((140, y + 2), domain[:20], font=FONT_BODY, fill=(30, 30, 30))
-        draw.text((390 + bar_w, y + 2), f"{_fmt_num(active, 0)}/{_fmt_num(total, 0)} active ({_fmt_num(pct, 0)}%)", font=FONT_BODY, fill=(60, 60, 60))
-        y += 36
-    y += 16
+        bar_w = max(6, int((pct / 100) * bar_max_w))
+        bar_top = y + 4
+        bar_bot = y + row_h - 6
+        _draw_gradient_rect(draw, bar_left, bar_top, bar_left + bar_w, bar_bot, color, (min(255, color[0] + 60), min(255, color[1] + 60), min(255, color[2] + 60)), vertical=False)
+        draw.rectangle((bar_left, bar_top, bar_left + bar_w, bar_bot), outline=(30, 30, 30), width=1)
+        draw.text((140, y), domain[:20], font=FONT_BODY, fill=(30, 30, 30))
+        draw.text((bar_left + bar_w + 12, y), f"{_fmt_num(active, 0)}/{_fmt_num(total, 0)} ({_fmt_num(pct, 0)}%)", font=FONT_BODY, fill=(60, 60, 60))
+        y += row_h
+    y += 20
 
     # ── Section: Utility Usage (energy, water, solar, gas) ──
     utility_sensors = _detect_utility_sensors(states)
     if utility_sensors:
-        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (180, 80, 20), (220, 140, 40))
-        draw.text((140, y + 8), "UTILITY USAGE", font=FONT_SECTION, fill=(255, 255, 255))
-        y += 64
+        y = _section_banner(draw, y, "UTILITY USAGE", (180, 80, 20), (220, 140, 40))
 
-        # Group by category
         by_cat: dict[str, list[dict[str, Any]]] = {}
         for util in utility_sensors.values():
             by_cat.setdefault(util["category"], []).append(util)
 
-        cat_icons = {"Energy": "\u26a1", "Solar": "\u2600", "Solar Export": "\u2197", "Water": "\U0001f4a7", "Gas": "\U0001f525"}
         cat_colors = {
             "Energy": (52, 152, 219),
             "Solar": (241, 196, 15),
@@ -1950,7 +1996,6 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
             cat_sensors = by_cat.get(cat_name, [])
             if not cat_sensors or y > PAGE_HEIGHT - 500:
                 continue
-            icon = cat_icons.get(cat_name, "")
             color = cat_colors.get(cat_name, (100, 100, 100))
 
             for util in cat_sensors[:3]:
@@ -1958,35 +2003,33 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
                 unit = util["unit"]
                 label = util["label"]
 
-                # Fetch 30-day history for rolling average
                 history = _fetch_history_stats(util["entity_id"], days=30)
                 avg_30d = sum(history) / max(1, len(history)) if history else None
 
-                line = f"{icon} {label}: {_fmt_num(val)} {unit}"
-                draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
-                y += line_height(FONT_BODY) + 4
+                # Colored indicator dot instead of emoji
+                dot_y = y + line_height(FONT_BODY) // 2
+                draw.ellipse((140, dot_y - 8, 156, dot_y + 8), fill=color)
+                draw.text((170, y), f"{label}: {_fmt_num(val)} {unit}", font=FONT_BODY, fill=(35, 35, 35))
+                y += line_height(FONT_BODY) + 6
 
                 if avg_30d is not None and avg_30d > 0:
                     diff_pct = ((val - avg_30d) / avg_30d) * 100
                     direction = "\u2191" if diff_pct > 0 else "\u2193" if diff_pct < 0 else "\u2194"
                     trend_color = (200, 50, 50) if diff_pct > 10 else (50, 150, 50) if diff_pct < -10 else (100, 100, 100)
-                    trend_line = f"  30-day avg: {_fmt_num(avg_30d)} {unit}  {direction} {_fmt_num(abs(diff_pct), 1)}%"
-                    draw.text((160, y), trend_line, font=FONT_SMALL, fill=trend_color)
+                    trend_line = f"30-day avg: {_fmt_num(avg_30d)} {unit}  {direction} {_fmt_num(abs(diff_pct), 1)}%"
+                    draw.text((170, y), trend_line, font=FONT_SMALL, fill=trend_color)
                     y += line_height(FONT_SMALL) + 4
 
-                # Cost and bill projection
                 cost = util.get("cost_sensor")
                 if cost:
                     cost_val = cost["value"]
                     cost_unit = cost["unit"]
-                    days_in_month = 30
-                    daily_cost = cost_val  # Assume current value is today's cost
-                    projected = daily_cost * days_in_month
-                    cost_line = f"  Today: {cost_unit}{_fmt_num(cost_val)} | Projected monthly: {cost_unit}{_fmt_num(projected)}"
-                    draw.text((160, y), cost_line, font=FONT_SMALL, fill=(120, 80, 20))
+                    projected = cost_val * 30
+                    cost_line = f"Today: {cost_unit}{_fmt_num(cost_val)} | Projected monthly: {cost_unit}{_fmt_num(projected)}"
+                    draw.text((170, y), cost_line, font=FONT_SMALL, fill=(120, 80, 20))
                     y += line_height(FONT_SMALL) + 4
 
-                y += 4
+                y += 8
 
         # Climate entities
         climate_entities = [s for s in states if str(s.get("entity_id", "")).startswith("climate.")]
@@ -1997,37 +2040,34 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
             state_val = s.get("state", "unknown")
             temp = s.get("attributes", {}).get("current_temperature", "")
             target = s.get("attributes", {}).get("temperature", "")
-            line = f"\U0001f321 {friendly}: {state_val}"
+            line = f"{friendly}: {state_val}"
             if temp:
-                line += f" ({_fmt_num(float(temp))}°"
+                line += f" ({_fmt_num(float(temp))}\u00b0"
                 if target:
-                    line += f" \u2192 {_fmt_num(float(target))}°"
+                    line += f" \u2192 {_fmt_num(float(target))}\u00b0"
                 line += ")"
             draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
             y += line_height(FONT_BODY) + 6
         y += 16
 
-    # ── Section: Weather (yesterday + today + 5-day forecast) ──
+    # ── Section: Weather ──
     weather_entity = detect_weather_entity(printer, states)
     weather = indexed.get(weather_entity)
     if weather:
-        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (40, 80, 140), (80, 140, 210))
-        draw.text((140, y + 8), "WEATHER", font=FONT_SECTION, fill=(255, 255, 255))
-        y += 64
+        y = _section_banner(draw, y, "WEATHER", (40, 80, 140), (80, 140, 210))
         attrs = weather.get("attributes", {}) or {}
         condition = weather.get("state", "unknown")
         temp = attrs.get("temperature", "")
-        temp_unit = attrs.get("temperature_unit", "°")
+        temp_unit = attrs.get("temperature_unit", "\u00b0")
         humidity = attrs.get("humidity", "")
         wind = attrs.get("wind_speed", "")
         wind_unit = attrs.get("wind_speed_unit", "")
 
-        # Current conditions with large text
         draw.text((140, y), f"Now: {condition.replace('_', ' ').title()}", font=FONT_SECTION, fill=(25, 60, 120))
-        y += line_height(FONT_SECTION) + 4
+        y += line_height(FONT_SECTION) + 8
         if temp:
             draw.text((140, y), f"{_fmt_num(float(temp))}{temp_unit}", font=FONT_TITLE, fill=(35, 35, 35))
-            y += line_height(FONT_TITLE) + 4
+            y += line_height(FONT_TITLE) + 8
 
         details = []
         if humidity:
@@ -2036,17 +2076,15 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
             details.append(f"Wind: {_fmt_num(float(wind))} {wind_unit}".strip())
         if details:
             draw.text((140, y), "  |  ".join(details), font=FONT_BODY, fill=(60, 60, 60))
-            y += line_height(FONT_BODY) + 8
+            y += line_height(FONT_BODY) + 16
 
-        # Fetch 5-day forecast via HA service
         forecast = _fetch_weather_forecast(weather_entity, "daily")
 
-        # Draw forecast as a mini-table
         if forecast:
-            y += 8
-            _draw_gradient_rect(draw, 140, y, PAGE_WIDTH - 140, y + 40, (220, 235, 250), (200, 220, 245))
+            fc_banner_h = line_height(FONT_SMALL) + 16
+            _draw_gradient_rect(draw, 140, y, PAGE_WIDTH - 140, y + fc_banner_h, (220, 235, 250), (200, 220, 245))
             draw.text((160, y + 6), "5-DAY FORECAST", font=FONT_SMALL, fill=(40, 60, 100))
-            y += 48
+            y += fc_banner_h + 8
 
             for fc in forecast[:5]:
                 if y > PAGE_HEIGHT - 350:
@@ -2061,45 +2099,42 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
                 fc_lo = fc.get("templow", "")
                 fc_precip = fc.get("precipitation_probability", "")
 
-                fc_line = f"  {fc_day}: {fc_cond}"
+                fc_line = f"{fc_day}: {fc_cond}"
                 if fc_hi:
-                    fc_line += f"  H: {_fmt_num(float(fc_hi), 0)}°"
+                    fc_line += f"   H: {_fmt_num(float(fc_hi), 0)}\u00b0"
                 if fc_lo:
-                    fc_line += f"  L: {_fmt_num(float(fc_lo), 0)}°"
-                if fc_precip:
-                    fc_line += f"  \U0001f4a7{_fmt_num(float(fc_precip), 0)}%"
+                    fc_line += f"  L: {_fmt_num(float(fc_lo), 0)}\u00b0"
+                if fc_precip and float(fc_precip) >= 20:
+                    fc_line += f"   Rain: {_fmt_num(float(fc_precip), 0)}%"
 
-                draw.text((140, y), fc_line, font=FONT_BODY, fill=(35, 35, 35))
-                y += line_height(FONT_BODY) + 4
+                draw.text((160, y), fc_line, font=FONT_BODY, fill=(35, 35, 35))
+                y += line_height(FONT_BODY) + 6
 
             y += 8
 
-        # AI weather preparation tip
         ai_desc = _get_ai_weather_description(weather, forecast)
         if ai_desc:
             _draw_gradient_rect(draw, 140, y, PAGE_WIDTH - 140, y + 6, (80, 140, 210), (40, 80, 140))
-            y += 12
-            y = draw_wrapped_text(draw, 140, y, f"\U0001f4a1 {ai_desc}", FONT_BODY, (40, 60, 100), PAGE_WIDTH - 280)
+            y += 14
+            y = draw_wrapped_text(draw, 140, y, f"Tip: {ai_desc}", FONT_BODY, (40, 60, 100), PAGE_WIDTH - 280)
             y += 8
 
-        y += 16
+        y += 20
 
-    # ── Section: Family Highlights ──
+    # ── Section: Household ──
     person_entities = [s for s in states if str(s.get("entity_id", "")).startswith("person.")]
     device_trackers = sum(1 for s in states if str(s.get("entity_id", "")).startswith("device_tracker."))
     doors_open = sum(1 for s in states if str(s.get("entity_id", "")).startswith("binary_sensor.") and "door" in str(s.get("entity_id", "")).lower() and str(s.get("state")) == "on")
     locks = [s for s in states if str(s.get("entity_id", "")).startswith("lock.")]
 
     if person_entities or lights:
-        _draw_gradient_rect(draw, 120, y, PAGE_WIDTH - 120, y + 50, (120, 50, 130), (180, 80, 180))
-        draw.text((140, y + 8), "HOUSEHOLD", font=FONT_SECTION, fill=(255, 255, 255))
-        y += 64
+        y = _section_banner(draw, y, "HOUSEHOLD", (120, 50, 130), (180, 80, 180))
 
         for p in person_entities[:6]:
             name = p.get("attributes", {}).get("friendly_name", p.get("entity_id", ""))
             loc = p.get("state", "unknown")
             draw.text((140, y), f"{name}: {loc}", font=FONT_BODY, fill=(35, 35, 35))
-            y += line_height(FONT_BODY) + 6
+            y += line_height(FONT_BODY) + 8
 
         household_lines = [f"Lights: {_fmt_num(lights_on, 0)}/{_fmt_num(len(lights), 0)} on  |  Tracked devices: {_fmt_num(device_trackers, 0)}"]
         if doors_open:
@@ -2110,13 +2145,12 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
 
         for line in household_lines:
             draw.text((140, y), line, font=FONT_BODY, fill=(35, 35, 35))
-            y += line_height(FONT_BODY) + 6
-        y += 16
+            y += line_height(FONT_BODY) + 8
+        y += 20
 
     # ── Bottom color exercise pattern ──
     if y < PAGE_HEIGHT - 200:
-        pattern_y = max(y, PAGE_HEIGHT - 200)
-        # Rainbow gradient strip
+        pattern_y = max(y + 40, PAGE_HEIGHT - 200)
         rainbow_w = PAGE_WIDTH - 240
         for px in range(rainbow_w):
             ratio = px / max(1, rainbow_w - 1)
@@ -2138,18 +2172,19 @@ def build_daily_summary_page(printer: PrinterConfig, print_context: dict[str, An
                 r, g, b = 255, 0, int(255 * (1 - frac))
             draw.line([(120 + px, pattern_y), (120 + px, pattern_y + 20)], fill=(r, g, b))
 
-        # Fine dot grid
         for gx in range(120, PAGE_WIDTH - 120, 8):
             for gy in range(pattern_y + 28, pattern_y + 60, 8):
                 c = ((gx * 13 + gy * 7) % 200 + 40, (gx * 7 + gy * 11) % 180 + 50, (gx * 3 + gy * 5) % 160 + 70)
                 draw.point((gx, gy), fill=c)
 
     # ── Footer ──
-    footer_y = PAGE_HEIGHT - 100
-    draw.line([(120, footer_y - 20), (PAGE_WIDTH - 120, footer_y - 20)], fill=(200, 200, 200), width=2)
+    footer_y = PAGE_HEIGHT - 80
+    draw.line([(120, footer_y - 16), (PAGE_WIDTH - 120, footer_y - 16)], fill=(200, 200, 200), width=2)
     footer_text = printer.footer or f"{APP_NAME} v{APP_VERSION}"
     draw.text((120, footer_y), footer_text, font=FONT_SMALL, fill=(100, 100, 100))
-    draw.text((PAGE_WIDTH - 600, footer_y), f"Keeping {printer.name} healthy", font=FONT_SMALL, fill=(100, 100, 100))
+    rhs_text = f"Keeping {printer.name} healthy"
+    rhs_w = _text_width(FONT_SMALL, rhs_text)
+    draw.text((PAGE_WIDTH - 120 - rhs_w, footer_y), rhs_text, font=FONT_SMALL, fill=(100, 100, 100))
 
     utility_count = len(utility_sensors)
     domain_count = len(domain_active)
