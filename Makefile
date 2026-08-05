@@ -1,4 +1,4 @@
-.PHONY: pk-dev-init pk-dev-up pk-dev-down pk-dev-restart pk-dev-logs pk-dev-health pk-dev-discovery pk-dev-rescan
+.PHONY: pk-dev-init pk-dev-up pk-dev-down pk-dev-restart pk-dev-logs pk-dev-health pk-dev-discovery pk-dev-rescan pk-ui-dev pk-ui-build
 
 PK_DEV_COMPOSE := printer_keepalive/dev/docker-compose.yml
 PK_DEV_DATA := printer_keepalive/dev/data
@@ -29,3 +29,9 @@ pk-dev-discovery:
 
 pk-dev-rescan:
 	@curl -sSf --retry 10 --retry-connrefused --retry-delay 1 "http://127.0.0.1:18099/discovery?force=true" | python3 -m json.tool
+
+pk-ui-dev:
+	cd printer_keepalive/ui && npm run dev
+
+pk-ui-build:
+	cd printer_keepalive/ui && npm run build

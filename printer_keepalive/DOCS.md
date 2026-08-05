@@ -20,12 +20,24 @@ The add-on uses print history plus a per-printer cadence:
 
 1. It tracks the last known print time from:
    - Keepalive jobs submitted by this add-on.
-   - External printing (when `job-impressions-completed` increases via IPP).
+   - External printing and activity hints from layered IPP signals:
+     - High confidence: `printer-impressions-completed` increases.
+     - High confidence fallback: a new retained completed IPP job ID appears.
+     - Medium confidence: `printer-media-sheets-completed` increases.
+     - Low confidence hint: `processing -> idle` with queue decrease.
    - Initial history anchor at first startup.
 2. It calculates `next_keepalive_due_at = last_print + cadence_hours`.
 3. Scheduler/API calls with `only_if_needed` will print only when due.
 
+When a keepalive is due but a low-confidence activity hint is recent, the
+add-on defers conservatively for a grace window.
+
 This avoids unnecessary prints while still preventing long idle periods.
+
+Completed-job history is especially important for consumer printers such as
+the Epson ET-3850, which supports `Get-Jobs` but does not publish cumulative
+Printer counters. The add-on records job IDs returned by its own submissions
+and excludes those IDs from external-activity detection.
 
 ## Inkjet vs Laser Guidance
 
@@ -121,6 +133,19 @@ discovery_ipp_query_timeout_seconds: 8
 discovery_include_ipps: true
 ```
 
+### External Activity Detection
+
+External-usage detection is enabled by default and can be tuned:
+
+```yaml
+external_activity_detection_enabled: true
+external_activity_hint_grace_minutes: 120
+```
+
+- `external_activity_detection_enabled`: enables layered external-print detection.
+- `external_activity_hint_grace_minutes`: if a keepalive is due and a recent
+  low-confidence hint exists, defer printing for this many minutes.
+
 Discovery uses zeroconf/mDNS and returns suggested config payloads from:
 
 - Service metadata (`rp`, `ty`, hostname/address)
@@ -202,10 +227,16 @@ Per printer, the add-on publishes:
   - `button.<printer_id>_print_now`
 - Key status:
   - `binary_sensor.<printer_id>_keepalive_needed`
+  - `binary_sensor.<printer_id>_keepalive_skipped_recent_print`
   - `sensor.<printer_id>_time_since_last_print`
+  - `sensor.<printer_id>_last_print`
+  - `sensor.<printer_id>_last_external_print`
   - `sensor.<printer_id>_keepalive_print_count`
+  - `sensor.<printer_id>_keepalive_skip_count`
   - `sensor.<printer_id>_next_keepalive_due`
   - `sensor.<printer_id>_last_keepalive_result`
+  - `sensor.<printer_id>_last_keepalive_decision`
+  - `sensor.<printer_id>_last_keepalive_skip_reason`
   - `sensor.<printer_id>_printer_state`
   - `sensor.<printer_id>_health`
 - IPP stats:
@@ -216,6 +247,10 @@ Per printer, the add-on publishes:
   - `sensor.<printer_id>_lowest_marker_level`
 
 Health sensor attributes include richer IPP data and maintenance guidance.
+The cadence control is recorded by Home Assistant as
+`number.<printer_id>_cadence_hours`. The decision and skip entities explicitly
+show when a maintenance print was suppressed because a recent real print reset
+the cadence window.
 
 ### Native HA IPP Integration
 

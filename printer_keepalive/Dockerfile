@@ -1,3 +1,10 @@
+FROM node:20-alpine AS ui-build
+WORKDIR /ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci
+COPY ui/ .
+RUN npm run build
+
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
@@ -11,7 +18,7 @@ WORKDIR /app
 ARG BUILD_VERSION=unknown
 LABEL io.hass.version="${BUILD_VERSION}"
 COPY app.py /app/app.py
-COPY designs/ /app/designs/
+COPY --from=ui-build /ui/dist /app/ui-dist
 COPY fonts/ /app/fonts/
 
 EXPOSE 8099

@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.6.3
+
+- Added persistent health-print decisions and skip telemetry.
+- Records an explicit `skipped_recent_print` result whenever confirmed printer
+  activity resets the maintenance cadence.
+- Added Home Assistant MQTT entities for last detected print, last external
+  print, next due time, health-print decision, skip reason, skip count, and a
+  binary skipped-for-recent-print indicator.
+- Renamed the cadence control in Home Assistant to **Health Print Cadence** and
+  exposed the same cadence and skip details in the ingress printer card.
+- Generated Lovelace cards now include cadence timing and skipped-print status.
+
+## 0.6.2
+
+- Fixed lull detection for printers that do not expose cumulative page counters,
+  including the Epson ET-3850.
+- Corrected the cumulative IPP attribute names to
+  `printer-impressions-completed` and `printer-media-sheets-completed`.
+- Added a completed-job-history fallback using retained IPP job IDs.
+- Captures the job ID of each keepalive submission so the add-on does not
+  mistake its own completed job for external printer activity.
+- Resets completed-job baselines safely after printer restarts and bounds all
+  retained ID lists.
+
+## 0.6.1
+
+- Hardened external activity detection with a layered strategy:
+  - High confidence: `job-impressions-completed` increases.
+  - Medium confidence: `media-sheets-completed` increases (outside self-keepalive exclusion window).
+  - Low confidence: `processing -> idle` with queue drop hint.
+- Added per-printer state metadata for activity baselines and confidence:
+  - `last_seen_media_sheets`
+  - `last_activity_hint_at`
+  - `last_activity_hint_reason`
+  - `last_activity_confidence`
+- Added conservative keepalive deferral when a due print has a recent low-confidence hint.
+  - New option `external_activity_detection_enabled` (default `true`)
+  - New option `external_activity_hint_grace_minutes` (default `120`)
+  - Self-keepalive exclusion window defaulted to 10 minutes.
+- Extended runtime/API/MQTT printer payloads with:
+  - `last_activity_hint_at`
+  - `last_activity_hint_reason`
+  - `last_activity_confidence`
+  - `keepalive_deferred_by_activity_hint`
+- Added ingress printer-card status fields for activity confidence/reason and deferred keepalive state.
+- Added unit tests covering layered detection and keepalive deferral edge cases.
+
+## 0.6.0
+
+- **UI migration to React**: Rebuilt ingress dashboard as a React SPA using TanStack Router, TanStack Query, and Tailwind CSS. Replaces 5 duplicated design HTML files (~500KB total) with a single shared codebase.
+- **Component architecture**: Reusable React components for printer cards, ink level bars, config sections, and toast notifications. All 7 tabs ported to route-based views.
+- **Theme system**: All 5 design variants (Bento Grid, Glassmorphism, Neubrutalist, Cinematic Dark, Home Assistant Native) implemented via CSS custom properties with `[data-design]` attribute. Light/dark/system theme switching preserved.
+- **TanStack Query**: Server state managed with automatic polling (60s health refresh), query invalidation on mutations, and proper loading/error states.
+- **Multi-stage Docker build**: Node.js build stage compiles the React UI, output copied into the Python runtime image as static files. No Node.js in production.
+- **SPA serving**: Python backend serves the built UI from `/app/ui-dist/` with SPA fallback routing. Legacy design HTML files removed.
+- **Dev workflow**: Vite dev server with proxy to Python backend on :8099. Added `pk-ui-dev` and `pk-ui-build` Makefile targets.
+
 ## 0.5.6
 
 - **Static preview images**: template previews are now pre-generated at startup with sample data, eliminating HA API calls and PIL renders on every preview request. Preview endpoint returns instantly from an in-memory cache.
