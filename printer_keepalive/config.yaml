@@ -1,5 +1,5 @@
 name: "Printer Keepalive"
-version: "0.5.6"
+version: "0.6.3"
 slug: "printer_keepalive"
 description: "Multi-printer IPP keepalive printing with HA device discovery and IPP health telemetry."
 url: "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
@@ -29,6 +29,8 @@ options:
   auto_print_interval_hours: 168
   status_poll_interval_minutes: 15
   failure_retry_minutes: 60
+  external_activity_detection_enabled: true
+  external_activity_hint_grace_minutes: 120
   discovery_enabled: true
   discovery_interval_minutes: 180
   discovery_timeout_seconds: 6
@@ -69,6 +71,8 @@ schema:
   auto_print_interval_hours: int(1,720)
   status_poll_interval_minutes: int(1,1440)
   failure_retry_minutes: int(1,1440)
+  external_activity_detection_enabled: bool
+  external_activity_hint_grace_minutes: int(0,10080)
   discovery_enabled: bool
   discovery_interval_minutes: int(1,1440)
   discovery_timeout_seconds: int(1,30)

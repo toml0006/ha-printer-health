@@ -9,6 +9,8 @@ Features:
 - Multi-printer support with per-printer cadence/template/type.
 - Built-in network printer discovery (`/discovery`) for IPP/IPPS services.
 - History-aware keepalive logic (print only when due).
+- Layered external-usage detection (correct cumulative Printer counters,
+  completed-job history, and low-confidence activity hints).
 - Printed context on keepalive pages (trigger, reason, cadence timing, and printer-specific HA signals).
 - Printed QR code that opens the add-on page/docs URL.
 - Ingress dashboard UI for full config editing, status, printer overrides, print-now, poll-now, and discovery rescan.

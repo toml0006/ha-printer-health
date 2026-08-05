@@ -46,7 +46,10 @@ Full configuration reference and API docs: [`printer_keepalive/DOCS.md`](printer
 Each printer has a cadence (default: 168 hours / 7 days). The app tracks the last known print time from three sources:
 
 1. Keepalive jobs it submits.
-2. External printing detected via IPP `job-impressions-completed` counters.
+2. External printing/activity detected via layered IPP signals:
+   - `job-impressions-completed` increases (high confidence)
+   - `media-sheets-completed` increases (medium confidence)
+   - `processing -> idle` with queue drop hint (low confidence, used for conservative deferral)
 3. An initial anchor at first startup.
 
 When `last_print + cadence_hours` has passed, the next scheduler cycle generates and prints a maintenance page. If someone printed recently, the keepalive is skipped.

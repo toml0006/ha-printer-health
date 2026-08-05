@@ -38,7 +38,7 @@ try:
 except ImportError:
     qrcode = None
 
-APP_VERSION = "0.5.6"
+APP_VERSION = "0.6.3"
 APP_NAME = "Printer Keepalive"
 APP_URL = "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
 ADDON_SLUG = "printer_keepalive"
@@ -49,6 +49,7 @@ OPTIONS_PATH = Path("/data/options.json")
 STATE_PATH = Path("/data/state.json")
 PRINT_JOB_TEST = "/usr/share/cups/ipptool/print-job.test"
 GET_ATTRS_TEST = "/usr/share/cups/ipptool/get-printer-attributes.test"
+GET_COMPLETED_JOBS_TEST = "/usr/share/cups/ipptool/get-completed-jobs.test"
 
 REQUEST_TIMEOUT_SECONDS = 120
 IPP_QUERY_TIMEOUT_SECONDS = 45
@@ -75,6 +76,8 @@ DEFAULT_FAILURE_RETRY_MINUTES = 60
 DEFAULT_DISCOVERY_INTERVAL_MINUTES = 180
 DEFAULT_DISCOVERY_TIMEOUT_SECONDS = 6
 DEFAULT_DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS = 8
+DEFAULT_EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES = 120
+SELF_KEEPALIVE_EXCLUSION_MINUTES = 10
 
 IPP_STATE_MAP = {
     3: "idle",
@@ -283,6 +286,7 @@ def reload_config() -> str:
     global FAILURE_RETRY_MINUTES, DISCOVERY_ENABLED, DISCOVERY_INTERVAL_SECONDS
     global DISCOVERY_TIMEOUT_SECONDS, DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS
     global DISCOVERY_INCLUDE_IPPS, MQTT_CONFIG, ADDON_PAGE_URL
+    global EXTERNAL_ACTIVITY_DETECTION_ENABLED, EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES
     global SELECTED_HA_URL, SELECTED_HA_TOKEN, HASS_API_BASE, HASS_AUTH_TOKEN
 
     try:
@@ -308,6 +312,14 @@ def reload_config() -> str:
     DISCOVERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_timeout_seconds", DEFAULT_DISCOVERY_TIMEOUT_SECONDS, 1, 30)
     DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS = option_int(OPTIONS, "discovery_ipp_query_timeout_seconds", DEFAULT_DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS, 1, 30)
     DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
+    EXTERNAL_ACTIVITY_DETECTION_ENABLED = option_bool(OPTIONS, "external_activity_detection_enabled", True)
+    EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES = option_int(
+        OPTIONS,
+        "external_activity_hint_grace_minutes",
+        DEFAULT_EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES,
+        0,
+        10080,
+    )
 
     # Reload HA API connection settings
     SELECTED_HA_URL = option_str(OPTIONS, "ha_url") or os.environ.get("HA_URL", "").strip()
@@ -729,6 +741,14 @@ DISCOVERY_IPP_QUERY_TIMEOUT_SECONDS = option_int(
     30,
 )
 DISCOVERY_INCLUDE_IPPS = option_bool(OPTIONS, "discovery_include_ipps", True)
+EXTERNAL_ACTIVITY_DETECTION_ENABLED = option_bool(OPTIONS, "external_activity_detection_enabled", True)
+EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES = option_int(
+    OPTIONS,
+    "external_activity_hint_grace_minutes",
+    DEFAULT_EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES,
+    0,
+    10080,
+)
 
 MQTT_CONFIG = parse_mqtt_config(OPTIONS)
 
@@ -758,10 +778,24 @@ DEFAULT_PRINTER_STATE: dict[str, Any] = {
     "last_keepalive_result": "never",
     "last_keepalive_error": "",
     "last_keepalive_attempt_at": "",
+    "last_keepalive_decision": "never",
+    "last_keepalive_decision_at": "",
+    "last_keepalive_decision_reason": "",
+    "last_keepalive_skipped_at": "",
+    "last_keepalive_skip_reason": "",
+    "last_keepalive_skip_activity_at": "",
+    "keepalive_skip_count": 0,
     "keepalive_print_count": 0,
     "last_external_print_at": "",
     "external_print_count": 0,
     "last_seen_job_impressions": None,
+    "last_seen_media_sheets": None,
+    "completed_jobs_baselined": False,
+    "last_seen_completed_job_ids": [],
+    "self_keepalive_job_ids": [],
+    "last_activity_hint_at": "",
+    "last_activity_hint_reason": "",
+    "last_activity_confidence": "none",
     "job_impressions_completed": None,
     "queued_job_count": None,
     "printer_state": "unknown",
@@ -782,7 +816,7 @@ DEFAULT_PRINTER_STATE: dict[str, Any] = {
     "enabled_override": None,
 }
 DEFAULT_STATE: dict[str, Any] = {
-    "version": 2,
+    "version": 5,
     "printers": {},
 }
 DEFAULT_DISCOVERY_STATE: dict[str, Any] = {
@@ -2301,10 +2335,11 @@ def generate_template_image(
         return handle.name, metadata
 
 
-def submit_print_job(printer_uri: str, file_path: str) -> tuple[bool, str]:
+def submit_print_job(printer_uri: str, file_path: str) -> tuple[bool, str, int | None]:
     command = [
         "ipptool",
-        "-q",
+        "-t",
+        "-v",
         "-d",
         "filetype=image/jpeg",
         "-f",
@@ -2321,11 +2356,24 @@ def submit_print_job(printer_uri: str, file_path: str) -> tuple[bool, str]:
     )
     output = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
     if result.returncode == 0:
-        return True, output or "Print job submitted."
-    return False, output or f"ipptool returned {result.returncode}"
+        job_ids = _extract_ipp_integer_attributes(output, "job-id")
+        return True, output or "Print job submitted.", job_ids[-1] if job_ids else None
+    return False, output or f"ipptool returned {result.returncode}", None
 
 
 _ATTR_RE = re.compile(r"^\s*([a-zA-Z0-9\-]+)\s+\([^)]*\)\s+=\s*(.*)$")
+
+
+def _extract_ipp_integer_attributes(output: str, attribute_name: str) -> list[int]:
+    values: list[int] = []
+    for line in output.splitlines():
+        match = _ATTR_RE.match(line)
+        if not match or match.group(1).strip() != attribute_name:
+            continue
+        parsed = _parse_ipp_scalar(match.group(2))
+        if isinstance(parsed, int) and parsed not in values:
+            values.append(parsed)
+    return values
 
 
 def _parse_ipp_scalar(value: str) -> Any:
@@ -2383,6 +2431,38 @@ def query_ipp_attributes(printer_uri: str, timeout_seconds: int = IPP_QUERY_TIME
         attrs[key] = _parse_ipp_value(raw_value)
 
     return attrs, None
+
+
+def query_completed_job_ids(
+    printer_uri: str,
+    timeout_seconds: int = IPP_QUERY_TIMEOUT_SECONDS,
+) -> tuple[list[int], str | None]:
+    """Return retained completed IPP job IDs, when the printer supports Get-Jobs."""
+    timeout = max(1, timeout_seconds)
+    command = [
+        "ipptool",
+        "-t",
+        "-v",
+        "-T",
+        str(timeout),
+        printer_uri,
+        GET_COMPLETED_JOBS_TEST,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout + 5,
+            check=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return [], f"IPP completed-job query exception: {exc}"
+
+    output = "\n".join(part for part in (result.stdout, result.stderr) if part)
+    if result.returncode != 0:
+        return [], output.strip() or f"ipptool returned {result.returncode}"
+    return _extract_ipp_integer_attributes(output, "job-id"), None
 
 
 def normalize_state_name(raw: Any) -> str:
@@ -2899,17 +2979,142 @@ def evaluate_health(state: dict[str, Any]) -> tuple[str, str]:
     return "healthy", "Printer appears healthy."
 
 
-def compute_need_for_keepalive(printer: PrinterConfig, state: dict[str, Any], now: datetime) -> tuple[bool, datetime | None, datetime | None]:
+def normalize_activity_confidence(raw: Any) -> str:
+    value = str(raw or "").strip().lower()
+    if value in {"high", "medium", "low", "none"}:
+        return value
+    return "none"
+
+
+def in_self_keepalive_exclusion_window(state: dict[str, Any], now: datetime) -> bool:
+    if SELF_KEEPALIVE_EXCLUSION_MINUTES <= 0:
+        return False
+    last_keepalive_at = parse_iso(state.get("last_keepalive_at"))
+    if last_keepalive_at is None:
+        return False
+    elapsed = now - last_keepalive_at
+    if elapsed.total_seconds() < 0:
+        return False
+    return elapsed <= timedelta(minutes=SELF_KEEPALIVE_EXCLUSION_MINUTES)
+
+
+def mark_activity_hint(state: dict[str, Any], now: datetime, confidence: str, reason: str) -> None:
+    state["last_activity_hint_at"] = iso_utc(now)
+    state["last_activity_hint_reason"] = reason
+    state["last_activity_confidence"] = normalize_activity_confidence(confidence)
+
+
+def record_recent_print_skip(
+    state: dict[str, Any],
+    now: datetime,
+    cadence_hours: int,
+    activity_reason: str,
+) -> bool:
+    """Record one logical health-print skip for each confirmed external print event."""
+    activity_at = str(state.get("last_external_print_at", "")) or iso_utc(now)
+    if str(state.get("last_keepalive_skip_activity_at", "")) == activity_at:
+        return False
+
+    next_due_at = now + timedelta(hours=cadence_hours)
+    reason = (
+        "Health print skipped because a recent printer job was detected"
+        f" ({activity_reason}). Cadence reset to {cadence_hours}h; "
+        f"next health print is due {iso_utc(next_due_at)}."
+    )
+    state["last_keepalive_result"] = "skipped_recent_print"
+    state["last_keepalive_decision"] = "skipped_recent_print"
+    state["last_keepalive_decision_at"] = iso_utc(now)
+    state["last_keepalive_decision_reason"] = reason
+    state["last_keepalive_skipped_at"] = iso_utc(now)
+    state["last_keepalive_skip_reason"] = reason
+    state["last_keepalive_skip_activity_at"] = activity_at
+    state["keepalive_skip_count"] = int(state.get("keepalive_skip_count", 0)) + 1
+    return True
+
+
+def should_defer_keepalive_due_to_activity_hint(state: dict[str, Any], now: datetime) -> bool:
+    if not EXTERNAL_ACTIVITY_DETECTION_ENABLED:
+        return False
+    if EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES <= 0:
+        return False
+
+    confidence = normalize_activity_confidence(state.get("last_activity_confidence"))
+    if confidence != "low":
+        return False
+
+    hint_at = parse_iso(state.get("last_activity_hint_at"))
+    if hint_at is None:
+        return False
+
+    elapsed = now - hint_at
+    if elapsed.total_seconds() < 0:
+        return False
+    return elapsed <= timedelta(minutes=EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES)
+
+
+def detect_external_activity(
+    previous_impressions: int | None,
+    impressions: int | None,
+    previous_media_sheets: int | None,
+    media_sheets: int | None,
+    previous_printer_state: str,
+    current_printer_state: str,
+    previous_queue_count: int | None,
+    current_queue_count: int | None,
+    self_keepalive_exclusion_active: bool,
+) -> tuple[bool, int, bool, str, str]:
+    # Layer 1 (high): printer-impressions-completed increased.
+    if impressions is not None and previous_impressions is not None and impressions > previous_impressions:
+        delta = impressions - previous_impressions
+        return True, delta, False, "high", f"printer-impressions-completed increased by {delta}"
+
+    # Layer 2 (medium): printer-media-sheets-completed increased, excluding self keepalive window.
+    if (
+        not self_keepalive_exclusion_active
+        and media_sheets is not None
+        and previous_media_sheets is not None
+        and media_sheets > previous_media_sheets
+    ):
+        delta = media_sheets - previous_media_sheets
+        return True, delta, False, "medium", f"printer-media-sheets-completed increased by {delta}"
+
+    # Layer 3 (low): processing -> idle with queue decrease.
+    if not self_keepalive_exclusion_active:
+        if (
+            previous_printer_state == "processing"
+            and current_printer_state == "idle"
+            and previous_queue_count is not None
+            and current_queue_count is not None
+            and current_queue_count < previous_queue_count
+        ):
+            reason = (
+                "printer-state transitioned processing->idle and queued-job-count "
+                f"dropped ({previous_queue_count} -> {current_queue_count})"
+            )
+            return False, 0, True, "low", reason
+
+    return False, 0, False, "none", ""
+
+
+def compute_need_for_keepalive(
+    printer: PrinterConfig,
+    state: dict[str, Any],
+    now: datetime,
+) -> tuple[bool, datetime | None, datetime | None, bool]:
     if not effective_enabled(printer, state):
-        return False, None, None
+        return False, None, None, False
 
     cadence = effective_cadence_hours(printer, state)
     last_print_time = compute_last_print_time(state)
     if last_print_time is None:
-        return False, None, None
+        return False, None, None, False
 
     due_at = last_print_time + timedelta(hours=cadence)
-    return now >= due_at, last_print_time, due_at
+    due = now >= due_at
+    deferred = due and should_defer_keepalive_due_to_activity_hint(state, now)
+    if deferred:
+        return False, last_print_time, due_at, True
+    return due, last_print_time, due_at, False
 
 
 def print_trigger_label(source: str) -> str:
@@ -2977,7 +3182,8 @@ def build_printer_payload(printer: PrinterConfig, now: datetime | None = None) -
     with STATE_LOCK:
         state = dict(ensure_printer_state_locked(printer.printer_id))
 
-    keepalive_needed, last_print_time, due_at = compute_need_for_keepalive(printer, state, current)
+    keepalive_needed, last_print_time, due_at, deferred_by_hint = compute_need_for_keepalive(printer, state, current)
+    completed_job_ids = to_int_list(state.get("last_seen_completed_job_ids"))
 
     elapsed_hours: float | None = None
     if last_print_time:
@@ -3002,8 +3208,25 @@ def build_printer_payload(printer: PrinterConfig, now: datetime | None = None) -
         "last_keepalive_at": str(state.get("last_keepalive_at", "")),
         "last_keepalive_result": str(state.get("last_keepalive_result", "never")),
         "last_keepalive_error": str(state.get("last_keepalive_error", "")),
+        "last_keepalive_decision": str(state.get("last_keepalive_decision", "never")),
+        "last_keepalive_decision_at": str(state.get("last_keepalive_decision_at", "")),
+        "last_keepalive_decision_reason": str(state.get("last_keepalive_decision_reason", "")),
+        "last_keepalive_skipped_at": str(state.get("last_keepalive_skipped_at", "")),
+        "last_keepalive_skip_reason": str(state.get("last_keepalive_skip_reason", "")),
+        "keepalive_skip_count": int(state.get("keepalive_skip_count", 0)),
+        "last_keepalive_was_skipped_for_recent_print": (
+            str(state.get("last_keepalive_decision", "")) == "skipped_recent_print"
+        ),
         "last_external_print_at": str(state.get("last_external_print_at", "")),
         "external_print_count": int(state.get("external_print_count", 0)),
+        "completed_job_history_supported": bool(state.get("completed_jobs_baselined")),
+        "last_seen_completed_job_id": (
+            max(completed_job_ids) if completed_job_ids else None
+        ),
+        "last_activity_hint_at": str(state.get("last_activity_hint_at", "")),
+        "last_activity_hint_reason": str(state.get("last_activity_hint_reason", "")),
+        "last_activity_confidence": normalize_activity_confidence(state.get("last_activity_confidence")),
+        "keepalive_deferred_by_activity_hint": deferred_by_hint,
         "last_polled_at": str(state.get("last_polled_at", "")),
         "job_impressions_completed": state.get("job_impressions_completed"),
         "queued_job_count": state.get("queued_job_count"),
@@ -3050,6 +3273,7 @@ def poll_printer(printer: PrinterConfig, force: bool = False) -> dict[str, Any]:
             return build_printer_payload(printer, now)
 
     attrs, error = query_ipp_attributes(printer.printer_uri)
+    completed_job_ids, completed_jobs_error = query_completed_job_ids(printer.printer_uri)
 
     with STATE_LOCK:
         state = ensure_printer_state_locked(printer.printer_id)
@@ -3062,11 +3286,22 @@ def poll_printer(printer: PrinterConfig, force: bool = False) -> dict[str, Any]:
             return build_printer_payload(printer, now)
 
         state["last_error"] = ""
-        state["printer_state"] = normalize_state_name(attrs.get("printer-state", state.get("printer_state")))
+        previous_printer_state = normalize_state_name(state.get("printer_state"))
+        previous_queue_count = to_int_or_none(state.get("queued_job_count"))
+        previous_impressions = to_int_or_none(state.get("last_seen_job_impressions"))
+        previous_media_sheets = to_int_or_none(state.get("last_seen_media_sheets"))
+        previous_uptime = to_int_or_none(state.get("printer_up_time_seconds"))
+        previous_completed_job_ids = set(to_int_list(state.get("last_seen_completed_job_ids")))
+        self_keepalive_job_ids = set(to_int_list(state.get("self_keepalive_job_ids")))
+        completed_jobs_baselined = bool(state.get("completed_jobs_baselined"))
+
+        current_printer_state = normalize_state_name(attrs.get("printer-state", state.get("printer_state")))
+        state["printer_state"] = current_printer_state
         state["printer_state_reasons"] = normalize_reason_list(attrs.get("printer-state-reasons", state.get("printer_state_reasons")))
         queued_jobs = to_int_or_none(attrs.get("queued-job-count"))
         if queued_jobs is not None:
             state["queued_job_count"] = queued_jobs
+        current_queue_count = queued_jobs if queued_jobs is not None else previous_queue_count
         state["printer_is_accepting_jobs"] = attrs.get("printer-is-accepting-jobs", state.get("printer_is_accepting_jobs"))
         state["printer_state_message"] = str(attrs.get("printer-state-message", state.get("printer_state_message", "")))
         state["printer_make_and_model"] = str(attrs.get("printer-make-and-model", state.get("printer_make_and_model", "")))
@@ -3078,26 +3313,106 @@ def poll_printer(printer: PrinterConfig, force: bool = False) -> dict[str, Any]:
         printer_uptime = to_int_or_none(attrs.get("printer-up-time"))
         if printer_uptime is not None:
             state["printer_up_time_seconds"] = printer_uptime
-        media_sheets = to_int_or_none(attrs.get("media-sheets-completed"))
-        if media_sheets is not None:
-            state["media_sheets_completed"] = media_sheets
+        # These are Printer Status attributes. The similarly named
+        # job-*-completed attributes belong to individual Job objects and are
+        # not returned by Get-Printer-Attributes on conforming printers.
+        media_sheets = to_int_or_none(
+            attrs.get("printer-media-sheets-completed", attrs.get("media-sheets-completed"))
+        )
 
-        raw_impressions = attrs.get("job-impressions-completed")
-        impressions: int | None = None
-        if isinstance(raw_impressions, int):
-            impressions = raw_impressions
-        elif isinstance(raw_impressions, str) and raw_impressions.strip().isdigit():
-            impressions = int(raw_impressions.strip())
+        raw_impressions = attrs.get("printer-impressions-completed", attrs.get("job-impressions-completed"))
+        impressions = to_int_or_none(raw_impressions)
+        printer_restarted = bool(
+            previous_uptime is not None
+            and printer_uptime is not None
+            and printer_uptime < previous_uptime
+        )
 
-        previous_impressions = state.get("last_seen_job_impressions")
+        self_keepalive_exclusion_active = in_self_keepalive_exclusion_window(state, now)
+        external_detected = False
+        confirmed_external_reason = ""
+        if EXTERNAL_ACTIVITY_DETECTION_ENABLED:
+            external_detected, external_delta, hint_detected, confidence, reason = detect_external_activity(
+                previous_impressions=previous_impressions,
+                impressions=impressions,
+                previous_media_sheets=previous_media_sheets,
+                media_sheets=media_sheets,
+                previous_printer_state=previous_printer_state,
+                current_printer_state=current_printer_state,
+                previous_queue_count=previous_queue_count,
+                current_queue_count=current_queue_count,
+                self_keepalive_exclusion_active=self_keepalive_exclusion_active,
+            )
+            if external_detected:
+                state["last_external_print_at"] = iso_utc(now)
+                if external_delta > 0:
+                    state["external_print_count"] = int(state.get("external_print_count", 0)) + external_delta
+                mark_activity_hint(state, now, confidence, reason)
+                confirmed_external_reason = reason
+            elif hint_detected:
+                mark_activity_hint(state, now, confidence, reason)
+
+            # Many consumer printers, including the Epson ET-3850, expose no
+            # cumulative Printer counters but do retain completed IPP jobs.
+            # Detect new completed job IDs and exclude IDs submitted by us.
+            if not completed_jobs_error:
+                current_completed_job_ids = set(completed_job_ids)
+                if completed_jobs_baselined and not printer_restarted:
+                    newly_completed = current_completed_job_ids - previous_completed_job_ids
+                    external_job_ids = newly_completed - self_keepalive_job_ids
+                    if external_job_ids and not external_detected:
+                        state["last_external_print_at"] = iso_utc(now)
+                        state["external_print_count"] = int(state.get("external_print_count", 0)) + len(external_job_ids)
+                        sorted_ids = sorted(external_job_ids)
+                        completed_reason = (
+                            "completed IPP job ID(s) detected: "
+                            f"{', '.join(str(job_id) for job_id in sorted_ids)}"
+                        )
+                        mark_activity_hint(
+                            state,
+                            now,
+                            "high",
+                            completed_reason,
+                        )
+                        confirmed_external_reason = completed_reason
+
+                state["completed_jobs_baselined"] = True
+                state["last_seen_completed_job_ids"] = sorted(current_completed_job_ids)[-100:]
+                # Keep submitted IDs until they appear as completed. This
+                # covers jobs that take longer than one polling interval.
+                remaining_self_ids = self_keepalive_job_ids - current_completed_job_ids
+                state["self_keepalive_job_ids"] = sorted(remaining_self_ids)[-20:]
+            elif not completed_jobs_baselined:
+                # Leave this false so the first successful query establishes
+                # a baseline without treating retained history as new work.
+                state["completed_jobs_baselined"] = False
+
+            if confirmed_external_reason:
+                if record_recent_print_skip(
+                    state,
+                    now,
+                    effective_cadence_hours(printer, state),
+                    confirmed_external_reason,
+                ):
+                    log(f"{printer.name}: {state['last_keepalive_skip_reason']}")
+
         if impressions is not None:
+            if previous_impressions is not None and impressions < previous_impressions:
+                log(
+                    f"{printer.name}: job-impressions-completed reset detected "
+                    f"({previous_impressions} -> {impressions}); baseline updated."
+                )
             state["job_impressions_completed"] = impressions
-            if isinstance(previous_impressions, int):
-                if impressions > previous_impressions:
-                    state["last_external_print_at"] = iso_utc(now)
-                    delta = impressions - previous_impressions
-                    state["external_print_count"] = int(state.get("external_print_count", 0)) + delta
             state["last_seen_job_impressions"] = impressions
+
+        if media_sheets is not None:
+            if previous_media_sheets is not None and media_sheets < previous_media_sheets:
+                log(
+                    f"{printer.name}: media-sheets-completed reset detected "
+                    f"({previous_media_sheets} -> {media_sheets}); baseline updated."
+                )
+            state["media_sheets_completed"] = media_sheets
+            state["last_seen_media_sheets"] = media_sheets
 
         save_state_locked()
 
@@ -3119,12 +3434,32 @@ def run_keepalive_print(
         state = ensure_printer_state_locked(printer.printer_id)
         cadence_hours = effective_cadence_hours(printer, state)
         if only_if_needed:
-            needed, last_print_time, due_at = compute_need_for_keepalive(printer, state, now)
+            needed, last_print_time, due_at, deferred_by_hint = compute_need_for_keepalive(printer, state, now)
             if not needed:
+                reason = "Keepalive not due based on print history."
+                if deferred_by_hint:
+                    reason = (
+                        "Keepalive due but deferred because a recent external-activity hint "
+                        f"was seen (grace {EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES} minutes)."
+                    )
+                    state["last_keepalive_decision"] = "deferred_activity_hint"
+                    state["last_keepalive_decision_at"] = iso_utc(now)
+                    state["last_keepalive_decision_reason"] = reason
+                    state["last_keepalive_result"] = "deferred_activity_hint"
+                    save_state_locked()
+                else:
+                    external_time = parse_iso(state.get("last_external_print_at"))
+                    if external_time is not None and last_print_time == external_time:
+                        activity_reason = str(
+                            state.get("last_activity_hint_reason", "external printer activity")
+                        )
+                        record_recent_print_skip(state, now, cadence_hours, activity_reason)
+                        reason = str(state.get("last_keepalive_skip_reason", reason))
+                        save_state_locked()
                 return {
                     "ok": True,
                     "skipped": True,
-                    "reason": "Keepalive not due based on print history.",
+                    "reason": reason,
                     "next_keepalive_due_at": iso_utc(due_at) if due_at else "",
                     "printer": build_printer_payload(printer, now),
                 }
@@ -3160,7 +3495,7 @@ def run_keepalive_print(
                     "printer": build_printer_payload(printer, now),
                 }
         else:
-            _, last_print_time, due_at = compute_need_for_keepalive(printer, state, now)
+            _, last_print_time, due_at, _ = compute_need_for_keepalive(printer, state, now)
 
     print_context = build_print_context(
         printer=printer,
@@ -3177,10 +3512,11 @@ def run_keepalive_print(
         metadata: dict[str, Any] = {}
         try:
             image_path, metadata = generate_template_image(printer, template, print_context=print_context)
-            ok, details = submit_print_job(printer.printer_uri, image_path)
+            ok, details, submitted_job_id = submit_print_job(printer.printer_uri, image_path)
         except Exception as exc:  # noqa: BLE001
             ok = False
             details = str(exc)
+            submitted_job_id = None
         finally:
             if image_path and Path(image_path).exists():
                 try:
@@ -3194,11 +3530,24 @@ def run_keepalive_print(
         if ok:
             state["last_keepalive_at"] = iso_utc(now)
             state["keepalive_print_count"] = int(state.get("keepalive_print_count", 0)) + 1
+            if submitted_job_id is not None:
+                self_job_ids = to_int_list(state.get("self_keepalive_job_ids"))
+                if submitted_job_id not in self_job_ids:
+                    self_job_ids.append(submitted_job_id)
+                state["self_keepalive_job_ids"] = self_job_ids[-20:]
             state["last_keepalive_result"] = "success"
+            state["last_keepalive_decision"] = "printed"
+            state["last_keepalive_decision_at"] = iso_utc(now)
+            state["last_keepalive_decision_reason"] = str(
+                print_context.get("reason", "Health print submitted.")
+            )
             state["last_keepalive_error"] = ""
             state["last_error"] = ""
         else:
             state["last_keepalive_result"] = "failed"
+            state["last_keepalive_decision"] = "failed"
+            state["last_keepalive_decision_at"] = iso_utc(now)
+            state["last_keepalive_decision_reason"] = details
             state["last_keepalive_error"] = details
             state["last_error"] = details
         save_state_locked()
@@ -3284,10 +3633,16 @@ def _lovelace_full(pid: str, name: str) -> str:
         f"      - sensor.{pid}_printer_state",
         f"      - sensor.{pid}_health",
         f"      - sensor.{pid}_last_keepalive_result",
+        f"      - sensor.{pid}_last_keepalive_decision",
+        f"      - sensor.{pid}_last_keepalive_skip_reason",
+        f"      - binary_sensor.{pid}_keepalive_skipped_recent_print",
         f"      - binary_sensor.{pid}_keepalive_needed",
+        f"      - sensor.{pid}_last_print",
+        f"      - sensor.{pid}_last_external_print",
         f"      - sensor.{pid}_time_since_last_print",
         f"      - sensor.{pid}_next_keepalive_due",
         f"      - sensor.{pid}_keepalive_print_count",
+        f"      - sensor.{pid}_keepalive_skip_count",
         f"      - sensor.{pid}_queued_job_count",
         f"      - sensor.{pid}_job_impressions_completed",
         f"      - sensor.{pid}_media_sheets_completed",
@@ -3323,7 +3678,9 @@ def _lovelace_compact(pid: str, name: str) -> str:
         f"      - sensor.{pid}_health",
         f"      - sensor.{pid}_lowest_marker_level",
         f"      - binary_sensor.{pid}_keepalive_needed",
+        f"      - binary_sensor.{pid}_keepalive_skipped_recent_print",
         f"      - sensor.{pid}_next_keepalive_due",
+        f"      - sensor.{pid}_last_keepalive_decision",
         "  - type: entities",
         "    entities:",
         f"      - switch.{pid}_keepalive_enabled",
@@ -3358,8 +3715,13 @@ def _lovelace_status(pid: str, name: str) -> str:
         f"  - sensor.{pid}_health",
         f"  - sensor.{pid}_lowest_marker_level",
         f"  - sensor.{pid}_time_since_last_print",
+        f"  - sensor.{pid}_last_print",
+        f"  - sensor.{pid}_last_external_print",
         f"  - sensor.{pid}_next_keepalive_due",
         f"  - sensor.{pid}_last_keepalive_result",
+        f"  - sensor.{pid}_last_keepalive_decision",
+        f"  - sensor.{pid}_last_keepalive_skip_reason",
+        f"  - binary_sensor.{pid}_keepalive_skipped_recent_print",
     ])
 
 
@@ -3496,6 +3858,37 @@ class MqttBridge:
 
         entities.append(
             (
+                f"{dp}/sensor/{object_prefix}_last_print/config",
+                {
+                    **base,
+                    "name": "Last Detected Print",
+                    "object_id": f"{printer.printer_id}_last_print",
+                    "unique_id": f"{object_prefix}_last_print",
+                    "state_topic": state_topic,
+                    "value_template": "{{ value_json.last_print_at }}",
+                    "device_class": "timestamp",
+                    "icon": "mdi:printer-clock",
+                },
+            )
+        )
+
+        entities.append(
+            (
+                f"{dp}/sensor/{object_prefix}_last_external_print/config",
+                {
+                    **base,
+                    "name": "Last External Print",
+                    "object_id": f"{printer.printer_id}_last_external_print",
+                    "unique_id": f"{object_prefix}_last_external_print",
+                    "state_topic": state_topic,
+                    "value_template": "{{ value_json.last_external_print_at or 'never' }}",
+                    "icon": "mdi:printer-eye",
+                },
+            )
+        )
+
+        entities.append(
+            (
                 f"{dp}/sensor/{object_prefix}_keepalive_print_count/config",
                 {
                     **base,
@@ -3514,7 +3907,7 @@ class MqttBridge:
                 f"{dp}/sensor/{object_prefix}_last_keepalive_result/config",
                 {
                     **base,
-                    "name": "Last Keepalive Result",
+                    "name": "Last Health Print Result",
                     "object_id": f"{printer.printer_id}_last_keepalive_result",
                     "unique_id": f"{object_prefix}_last_keepalive_result",
                     "state_topic": state_topic,
@@ -3534,7 +3927,59 @@ class MqttBridge:
                     "unique_id": f"{object_prefix}_next_keepalive_due",
                     "state_topic": state_topic,
                     "value_template": "{{ value_json.next_keepalive_due_at }}",
+                    "device_class": "timestamp",
                     "icon": "mdi:calendar-clock",
+                },
+            )
+        )
+
+        entities.append(
+            (
+                f"{dp}/sensor/{object_prefix}_last_keepalive_decision/config",
+                {
+                    **base,
+                    "name": "Last Health Print Decision",
+                    "object_id": f"{printer.printer_id}_last_keepalive_decision",
+                    "unique_id": f"{object_prefix}_last_keepalive_decision",
+                    "state_topic": state_topic,
+                    "value_template": "{{ value_json.last_keepalive_decision }}",
+                    "json_attributes_topic": state_topic,
+                    "json_attributes_template": (
+                        "{{ {'decision_at': value_json.last_keepalive_decision_at, "
+                        "'reason': value_json.last_keepalive_decision_reason} | tojson }}"
+                    ),
+                    "icon": "mdi:printer-check",
+                },
+            )
+        )
+
+        entities.append(
+            (
+                f"{dp}/sensor/{object_prefix}_last_keepalive_skip_reason/config",
+                {
+                    **base,
+                    "name": "Last Health Print Skip Reason",
+                    "object_id": f"{printer.printer_id}_last_keepalive_skip_reason",
+                    "unique_id": f"{object_prefix}_last_keepalive_skip_reason",
+                    "state_topic": state_topic,
+                    "value_template": "{{ value_json.last_keepalive_skip_reason or 'none' }}",
+                    "icon": "mdi:printer-off-outline",
+                },
+            )
+        )
+
+        entities.append(
+            (
+                f"{dp}/sensor/{object_prefix}_keepalive_skip_count/config",
+                {
+                    **base,
+                    "name": "Health Print Skip Count",
+                    "object_id": f"{printer.printer_id}_keepalive_skip_count",
+                    "unique_id": f"{object_prefix}_keepalive_skip_count",
+                    "state_topic": state_topic,
+                    "value_template": "{{ value_json.keepalive_skip_count | int(0) }}",
+                    "state_class": "total_increasing",
+                    "icon": "mdi:counter",
                 },
             )
         )
@@ -3635,6 +4080,25 @@ class MqttBridge:
 
         entities.append(
             (
+                f"{dp}/binary_sensor/{object_prefix}_keepalive_skipped_recent_print/config",
+                {
+                    **base,
+                    "name": "Health Print Skipped for Recent Print",
+                    "object_id": f"{printer.printer_id}_keepalive_skipped_recent_print",
+                    "unique_id": f"{object_prefix}_keepalive_skipped_recent_print",
+                    "state_topic": state_topic,
+                    "value_template": (
+                        "{{ 'ON' if value_json.last_keepalive_was_skipped_for_recent_print else 'OFF' }}"
+                    ),
+                    "payload_on": "ON",
+                    "payload_off": "OFF",
+                    "icon": "mdi:printer-off-outline",
+                },
+            )
+        )
+
+        entities.append(
+            (
                 f"{dp}/switch/{object_prefix}_keepalive_enabled/config",
                 {
                     **base,
@@ -3675,7 +4139,7 @@ class MqttBridge:
                 f"{dp}/number/{object_prefix}_cadence_hours/config",
                 {
                     **base,
-                    "name": "Cadence Hours",
+                    "name": "Health Print Cadence",
                     "object_id": f"{printer.printer_id}_cadence_hours",
                     "unique_id": f"{object_prefix}_cadence_hours",
                     "state_topic": state_topic,
@@ -3887,6 +4351,9 @@ def global_payload() -> dict[str, Any]:
         "version": APP_VERSION,
         "auto_print_enabled": AUTO_PRINT_ENABLED,
         "status_poll_interval_seconds": STATUS_POLL_INTERVAL_SECONDS,
+        "external_activity_detection_enabled": EXTERNAL_ACTIVITY_DETECTION_ENABLED,
+        "external_activity_hint_grace_minutes": EXTERNAL_ACTIVITY_HINT_GRACE_MINUTES,
+        "self_keepalive_exclusion_minutes": SELF_KEEPALIVE_EXCLUSION_MINUTES,
         "mqtt_enabled": MQTT_BRIDGE.started,
         "mqtt": {
             "enabled": MQTT_BRIDGE.config.enabled,
@@ -5169,6 +5636,8 @@ def ui_dashboard_html() -> str:
           if (p.keepalive_needed) {
             due.textContent = "Keepalive due";
             due.classList.add("overdue");
+          } else if (p.keepalive_deferred_by_activity_hint) {
+            due.textContent = "Deferred by activity hint";
           } else {
             due.textContent = relativeTime(p.next_keepalive_due_at);
           }
@@ -5268,13 +5737,18 @@ def ui_dashboard_html() -> str:
         var statPairs = [
           ["Health", String(printer.health_status || "unknown")],
           ["State", String(printer.printer_state || "unknown")],
-          ["Keepalive", printer.keepalive_needed ? "needed" : "not due"],
+          ["Keepalive", printer.keepalive_needed ? "needed" : (printer.keepalive_deferred_by_activity_hint ? "deferred by hint" : "not due")],
           ["Template", String(printer.template || "n/a")],
           ["Cadence", String(printer.cadence_hours || "n/a") + "h"],
           ["Last Keepalive", relativeTime(printer.last_keepalive_at)],
           ["Last Print", relativeTime(printer.last_print_at)],
-          ["Next Due", relativeTime(printer.next_keepalive_due_at)]
+          ["Next Due", relativeTime(printer.next_keepalive_due_at)],
+          ["Activity", String(printer.last_activity_confidence || "none")],
+          ["Activity Hint", relativeTime(printer.last_activity_hint_at)]
         ];
+        if (printer.last_activity_hint_reason) {
+          statPairs.push(["Hint Reason", String(printer.last_activity_hint_reason)]);
+        }
         for (var s = 0; s < statPairs.length; s++) {
           var stat = document.createElement("div");
           stat.className = "stat";
@@ -5586,6 +6060,48 @@ def _load_design_file(variant: str) -> str | None:
     return None
 
 
+# SPA static file serving
+_UI_DIST_DIRS = [
+    Path(__file__).parent / "ui" / "dist",
+    Path("/app/ui-dist"),
+]
+
+_MIME_TYPES: dict[str, str] = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".map": "application/json",
+}
+
+
+def _find_ui_dist() -> Path | None:
+    """Return the first ui-dist directory that exists."""
+    for d in _UI_DIST_DIRS:
+        if d.is_dir():
+            return d
+    return None
+
+
+def _serve_static_file(handler: "RequestHandler", file_path: Path) -> bool:
+    """Serve a static file from disk. Returns True if served."""
+    if not file_path.is_file():
+        return False
+    suffix = file_path.suffix.lower()
+    content_type = _MIME_TYPES.get(suffix, "application/octet-stream")
+    data = file_path.read_bytes()
+    handler._write_bytes(HTTPStatus.OK, data, content_type)
+    return True
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
         log(format % args)
@@ -5647,54 +6163,68 @@ class RequestHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        if path in {"", "/", "/index.html"}:
-            # Check cookie for design preference and serve that design
-            cookie_header = self.headers.get("Cookie", "")
-            design_choice = ""
-            for part in cookie_header.split(";"):
-                part = part.strip()
-                if part.startswith("pk_design="):
-                    design_choice = part.split("=", 1)[1].strip()
-                    break
-            if design_choice not in {"v1", "v2", "v3", "v4", "v5"}:
-                design_choice = "v1"
-            design_html = _load_design_file(design_choice)
-            if design_html is not None:
-                self._write_html(HTTPStatus.OK, design_html)
+        # --- SPA static file serving ---
+        ui_dist = _find_ui_dist()
+        if ui_dist:
+            if path in {"", "/", "/index.html"}:
+                _serve_static_file(self, ui_dist / "index.html")
                 return
-            self._write_html(HTTPStatus.OK, ui_dashboard_html())
-            return
 
-        if path == "/ui":
-            self.send_response(HTTPStatus.FOUND)
-            self.send_header("Location", "./")
-            self.end_headers()
-            return
+            if path == "/favicon.ico":
+                if not _serve_static_file(self, ui_dist / "favicon.ico"):
+                    self.send_response(HTTPStatus.NO_CONTENT)
+                    self.end_headers()
+                return
 
-        if path == "/ui/":
-            self.send_response(HTTPStatus.FOUND)
-            self.send_header("Location", "../")
-            self.end_headers()
-            return
-
-        if path == "/favicon.ico":
-            self.send_response(HTTPStatus.NO_CONTENT)
-            self.end_headers()
-            return
-
-        if path.startswith("/design/"):
-            variant = path.split("/design/", 1)[1].rstrip("/")
-            if variant in {"v1", "v2", "v3", "v4", "v5"}:
-                design_html = _load_design_file(variant)
+            # Serve static assets (js, css, images, fonts)
+            if path.startswith("/assets/") or "." in path.split("/")[-1]:
+                clean = path.lstrip("/")
+                candidate = ui_dist / clean
+                # Prevent path traversal
+                try:
+                    candidate.resolve().relative_to(ui_dist.resolve())
+                except ValueError:
+                    pass
+                else:
+                    if _serve_static_file(self, candidate):
+                        return
+        else:
+            # Fallback: serve legacy design HTML files
+            if path in {"", "/", "/index.html"}:
+                cookie_header = self.headers.get("Cookie", "")
+                design_choice = ""
+                for part in cookie_header.split(";"):
+                    part = part.strip()
+                    if part.startswith("pk_design="):
+                        design_choice = part.split("=", 1)[1].strip()
+                        break
+                if design_choice not in {"v1", "v2", "v3", "v4", "v5"}:
+                    design_choice = "v1"
+                design_html = _load_design_file(design_choice)
                 if design_html is not None:
                     self._write_html(HTTPStatus.OK, design_html)
+                    return
+                self._write_html(HTTPStatus.OK, ui_dashboard_html())
+                return
+
+            if path == "/favicon.ico":
+                self.send_response(HTTPStatus.NO_CONTENT)
+                self.end_headers()
+                return
+
+            if path.startswith("/design/"):
+                variant = path.split("/design/", 1)[1].rstrip("/")
+                if variant in {"v1", "v2", "v3", "v4", "v5"}:
+                    design_html = _load_design_file(variant)
+                    if design_html is not None:
+                        self._write_html(HTTPStatus.OK, design_html)
+                    else:
+                        self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": f"Design file {variant} not found"})
                 else:
-                    self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": f"Design file {variant} not found"})
-            else:
-                designs = {"v1": "Bento Grid", "v2": "Glassmorphism", "v3": "Neubrutalist", "v4": "Cinematic Dark", "v5": "Home Assistant"}
-                items = "".join(f'<li style="margin:8px 0"><a href="/design/{k}" style="font-size:18px">{k} &mdash; {v}</a></li>' for k, v in designs.items())
-                self._write_html(HTTPStatus.OK, f'<html><head><title>Design Picker</title></head><body style="font-family:system-ui;max-width:600px;margin:40px auto;padding:20px"><h2>Choose a Design</h2><ul style="list-style:none;padding:0">{items}</ul><p style="color:#888;font-size:14px;margin-top:24px">Your choice is saved automatically. Switch anytime from the dropdown in the top bar.</p></body></html>')
-            return
+                    designs = {"v1": "Bento Grid", "v2": "Glassmorphism", "v3": "Neubrutalist", "v4": "Cinematic Dark", "v5": "Home Assistant"}
+                    items = "".join(f'<li style="margin:8px 0"><a href="/design/{k}" style="font-size:18px">{k} &mdash; {v}</a></li>' for k, v in designs.items())
+                    self._write_html(HTTPStatus.OK, f'<html><head><title>Design Picker</title></head><body style="font-family:system-ui;max-width:600px;margin:40px auto;padding:20px"><h2>Choose a Design</h2><ul style="list-style:none;padding:0">{items}</ul><p style="color:#888;font-size:14px;margin-top:24px">Your choice is saved automatically. Switch anytime from the dropdown in the top bar.</p></body></html>')
+                return
 
         if path == "/config":
             if not self._is_authorized():
@@ -5821,6 +6351,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                     self._write_bytes(HTTPStatus.OK, data, "image/jpeg")
                 else:
                     self._write_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": "Preview not available"})
+                return
+
+        # SPA fallback: serve index.html for unmatched routes (client-side routing)
+        if ui_dist:
+            index = ui_dist / "index.html"
+            if index.is_file():
+                _serve_static_file(self, index)
                 return
 
         self._write_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not Found"})
