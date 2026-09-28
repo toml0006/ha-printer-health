@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.4
+
+- Restored optional `mqtt.host`, `mqtt.port`, `mqtt.username`,
+  `mqtt.password`, and `mqtt.tls` options so the add-on can connect to an
+  external MQTT broker. They were dropped from the schema in an earlier release
+  while `app.py` still read them, so Supervisor stripped any values and the
+  add-on could only ever use the Supervisor-provided broker (`core-mosquitto`).
+- Leave `mqtt.host` unset (or empty) to keep using Supervisor MQTT service
+  discovery; no change for existing installs.
+
 ## 0.6.3
 
 - Added persistent health-print decisions and skip telemetry.
