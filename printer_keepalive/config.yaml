@@ -1,5 +1,5 @@
 name: "Printer Keepalive"
-version: "0.6.3"
+version: "0.6.4"
 slug: "printer_keepalive"
 description: "Multi-printer IPP keepalive printing with HA device discovery and IPP health telemetry."
 url: "https://github.com/toml0006/ha-printer-health/tree/main/printer_keepalive"
@@ -85,6 +85,11 @@ schema:
     - str?
   mqtt:
     enabled: bool
+    host: str?
+    port: port?
+    username: str?
+    password: password?
+    tls: bool?
     discovery_prefix: str
     topic_prefix: str
     retain: bool

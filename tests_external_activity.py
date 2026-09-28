@@ -518,5 +518,78 @@ class PayloadSmokeTests(unittest.TestCase):
             self.assertIn(f"{topic_prefix}/{suffix}", published)
 
 
+class MqttConfigTests(unittest.TestCase):
+    SERVICE = {
+        "host": "core-mosquitto",
+        "port": 1884,
+        "username": "addons",
+        "password": "service-secret",
+        "ssl": False,
+        "protocol": "3.1.1",
+    }
+
+    def _parse(self, mqtt_opts):
+        with patch.dict(app.os.environ, {"SUPERVISOR_TOKEN": "token"}), patch.object(
+            app, "supervisor_get_service", return_value=dict(self.SERVICE)
+        ) as get_service:
+            cfg = app.parse_mqtt_config({"mqtt": mqtt_opts})
+        return cfg, get_service
+
+    def test_no_host_uses_supervisor_service_discovery(self):
+        cfg, get_service = self._parse({"enabled": True})
+        get_service.assert_called_once_with("mqtt")
+        self.assertTrue(cfg.enabled)
+        self.assertEqual(cfg.host, "core-mosquitto")
+        self.assertEqual(cfg.port, 1884)
+        self.assertEqual(cfg.username, "addons")
+        self.assertEqual(cfg.password, "service-secret")
+        self.assertFalse(cfg.tls)
+
+    def test_empty_host_uses_supervisor_service_discovery(self):
+        cfg, _ = self._parse({"enabled": True, "host": "", "port": 1883})
+        self.assertEqual((cfg.host, cfg.port, cfg.username), ("core-mosquitto", 1884, "addons"))
+
+    def test_external_host_skips_supervisor_defaults(self):
+        cfg, _ = self._parse(
+            {
+                "enabled": True,
+                "host": "10.0.10.32",
+                "port": 8883,
+                "username": "printer",
+                "password": "own-secret",
+                "tls": True,
+            }
+        )
+        self.assertTrue(cfg.enabled)
+        self.assertEqual(cfg.host, "10.0.10.32")
+        self.assertEqual(cfg.port, 8883)
+        self.assertEqual(cfg.username, "printer")
+        self.assertEqual(cfg.password, "own-secret")
+        self.assertTrue(cfg.tls)
+
+    def test_schema_declares_optional_connection_options(self):
+        # app.py reads these keys; if the add-on schema omits them, Supervisor
+        # drops the values and an external broker can never be configured.
+        try:
+            import yaml
+        except ImportError:  # pragma: no cover
+            self.skipTest("PyYAML not installed")
+        config_path = Path(__file__).resolve().parent / "printer_keepalive" / "config.yaml"
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        schema = config["schema"]["mqtt"]
+        for key in ("host", "port", "username", "password", "tls"):
+            self.assertIn(key, schema)
+            self.assertTrue(schema[key].endswith("?"), f"mqtt.{key} must be optional")
+            self.assertNotIn(key, config["options"]["mqtt"])
+
+    def test_external_host_without_port_or_auth_defaults_to_1883_no_auth(self):
+        cfg, _ = self._parse({"enabled": True, "host": "10.0.10.32"})
+        self.assertEqual(cfg.host, "10.0.10.32")
+        self.assertEqual(cfg.port, 1883)
+        self.assertEqual(cfg.username, "")
+        self.assertEqual(cfg.password, "")
+        self.assertFalse(cfg.tls)
+
+
 if __name__ == "__main__":
     unittest.main()

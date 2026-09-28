@@ -110,15 +110,24 @@ host/port/auth defaults when left unset.
 ```yaml
 mqtt:
   enabled: true
-  host: core-mosquitto
-  port: 1883
-  username: ""
-  password: ""
   discovery_prefix: homeassistant
   topic_prefix: printer_keepalive
   retain: true
-  tls: false
   client_id: printer_keepalive
+```
+
+To use an external broker instead of the Supervisor-provided one, set `host`
+(and any of the other connection options). When `host` is set to anything other
+than the Supervisor MQTT service host, Supervisor defaults are not applied:
+
+```yaml
+mqtt:
+  enabled: true
+  host: 192.168.1.50   # optional; unset or empty = use Supervisor MQTT service
+  port: 1883           # optional; default 1883
+  username: printer    # optional
+  password: secret     # optional
+  tls: false           # optional; default false
 ```
 
 ### Printer Discovery (network scan)

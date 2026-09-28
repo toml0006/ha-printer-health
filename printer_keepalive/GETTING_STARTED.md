@@ -53,18 +53,27 @@ To expose each printer as a Home Assistant device with sensors/controls, set:
 ```yaml
 mqtt:
   enabled: true
-  host: core-mosquitto
-  port: 1883
-  username: ""
-  password: ""
   discovery_prefix: homeassistant
   topic_prefix: printer_keepalive
   retain: true
-  tls: false
   client_id: printer_keepalive
 ```
 
-Defaults already assume Home Assistant Mosquitto (`enabled: true`, `host: core-mosquitto`).
+To use an external broker instead of the Supervisor-provided one, set `host`
+(and any of the other connection options). When `host` is set to anything other
+than the Supervisor MQTT service host, Supervisor defaults are not applied:
+
+```yaml
+mqtt:
+  enabled: true
+  host: 192.168.1.50   # optional; unset or empty = use Supervisor MQTT service
+  port: 1883           # optional; default 1883
+  username: printer    # optional
+  password: secret     # optional
+  tls: false           # optional; default false
+```
+
+Defaults already assume Home Assistant Mosquitto (`enabled: true`, `host` unset).
 On Supervisor installs, the add-on also reads `services/mqtt` and can auto-fill
 broker host/port/credentials when those values are not explicitly set.
 Set `username`/`password` if your broker requires authentication for this add-on.
